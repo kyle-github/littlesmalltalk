@@ -1,0 +1,4 @@
+littlesmalltalk
+===============
+
+Little Smalltalk fork
