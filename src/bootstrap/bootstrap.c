@@ -5,8 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "memory.h"
-#include "interp.h"
+#include "../vm/memory.h"
+#include "../vm/interp.h"
 
 static FILE *fin;
 static char inputBuffer[1500], *p, tokenBuffer[80];
@@ -16,7 +16,7 @@ static int parseStatement(void), parseExpression(void), parseTerm(void);
 static struct object *newOrderedArray(void), *newArray(int size);
 
 static
-void sysError(char * a)
+void sysError(const char * a)
 {
 	fprintf(stderr,"unrecoverable system error: %s\n", a);
 	exit(1);
@@ -24,15 +24,15 @@ void sysError(char * a)
 
 
 static void 
-sysErrorInt(char * a, int b)
+sysErrorInt(const char * a, intptr_t b)
 {
-	fprintf(stderr,"unrecoverable system error: %s %d\n", a, b);
+	fprintf(stderr,"unrecoverable system error: %s %ld\n", a, b);
 	exit(1);
 }
 
 
 static void 
-sysErrorStr(char * a, char * b)
+sysErrorStr(const char * a, const char * b)
 {
 	fprintf(stderr,"unrecoverable system error: %s %s\n", a, b);
 	exit(1);
@@ -44,11 +44,11 @@ sysErrorStr(char * a, char * b)
 	The following are roots for the file out
 */
 
-static struct object *nilObject, *trueObject, *falseObject,
+struct object *nilObject, *trueObject, *falseObject,
 	*globalValues, *SmallIntClass, *ArrayClass, *BlockClass,
 	*IntegerClass;
 
-static struct object * SymbolClass;
+struct object * SymbolClass;
 
 #ifdef gcalloc
 # undef gcalloc
@@ -262,10 +262,10 @@ readInteger()
 /* ------------------------------------------------------------- */
 
 static int symbolTop = 0;
-static struct object *oldSymbols[500];
+static struct object *oldSymbols[5000];
 
 static int
-symbolBareCmp(char * left, int leftsize, char * right, int rightsize)
+symbolBareCmp(const char * left, uint32_t leftsize, const char * right, uint32_t rightsize)
 {
 	int minsize = leftsize;
 	int i;
@@ -286,8 +286,8 @@ symbolBareCmp(char * left, int leftsize, char * right, int rightsize)
 static int
 symbolCmp(struct object * left, struct object * right)
 {
-	return symbolBareCmp(bytePtr(left), SIZE(left),
-		bytePtr(right), SIZE(right));
+	return symbolBareCmp((char *)bytePtr(left), SIZE(left),
+		(char *)bytePtr(right), SIZE(right));
 }
 
 static struct object *
@@ -299,7 +299,7 @@ newSymbol(char * text)
 		/* first see if it is already a symbol */
 	for (i = 0; i < symbolTop; i++) {
 		if (symbolBareCmp(text, strlen(text),
-			bytePtr(oldSymbols[i]), SIZE(oldSymbols[i])) == 0) {
+			(char *)bytePtr(oldSymbols[i]), SIZE(oldSymbols[i])) == 0) {
 			return oldSymbols[i];
 		}
 	}
@@ -691,8 +691,7 @@ lookupInstance(struct object *class, char *text, int *low)
 		size = 0;
 	}
 	for (i = 0; i < size; i++) {
-		if (symbolBareCmp(text, strlen(text),
-		 bytePtr(var->data[i]), (SIZE(var->data[i]))) == 0) {
+		if(symbolBareCmp(text, strlen(text),(char *)bytePtr(var->data[i]), (SIZE(var->data[i]))) == 0) {
 			return(*low);
 		}
 		*low += 1;
@@ -1608,7 +1607,7 @@ objectWrite(FILE * fp, struct object * obj)
 	/* check for illegal object */
 	if (obj == 0)
 	{
-		sysErrorInt("writing out a null object", (int)obj);
+		sysErrorInt("writing out a null object", (intptr_t)obj);
 	}
 
 	/* small integer?, if so, treat this specially as this is not a pointer */
@@ -1753,18 +1752,35 @@ checkGlobals(void)
 /*	main program   */
 /* ------------------------------------------------------------- */
 
-int
-main(void)
+int main(int argc, char **argv)
 {
+	const char *image_source = "imageSource";
+	const char *output_file = "lst.img";
 	FILE *fd;
 	struct object *bootMethod = 0;
+	int i;
+
+	printf("%d arguments\n",argc);
+	for(i=0; i<argc; i++) {
+		printf("argv[%d]=\"%s\"\n",i,argv[i]);
+	}
+
+	if(argc > 1) {
+		image_source = argv[1];
+		printf("Image source file: %s\n",image_source);
+	}
+
+	if(argc >= 2) {
+		output_file = argv[2];
+		printf("Image output file: %s\n", output_file);
+	}
 
 	/* big bang -- create the first classes */
 	bigBang();
 	addArgument("self");
 
-	if ((fin = fopen("imageSource", "r")) == NULL)
-		sysErrorStr("file in error", "imageSource");
+	if ((fin = fopen(image_source, "r")) == NULL)
+		sysErrorStr("file in error", image_source);
 
 	/* then read the image source file */
 	while(fgets((char *) inputBuffer, 1000, fin)) {
@@ -1797,9 +1813,10 @@ main(void)
 	/* see if anything was never defined in the class source */
 	checkGlobals();
 
-	if ((fd = fopen("image", "w")) == NULL) {
-		sysErrorStr("file out error", "image");
+	if ((fd = fopen(output_file, "w")) == NULL) {
+		sysErrorStr("file out error", output_file);
 	}
+
 	printf("starting to file out\n");
 	objectWrite(fd, nilObject);
 	objectWrite(fd, trueObject);

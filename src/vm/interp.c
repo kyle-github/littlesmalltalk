@@ -16,6 +16,8 @@
 	d) creating an integer
 
     otherwise simply loops until time slice has ended
+
+    Modified by Kyle Hayes for 64-bit systems.
 */
 
 #include "memory.h"
@@ -23,6 +25,7 @@
 #include "globs.h"
 #include <stdio.h>
 #include <string.h>	/* For bzero() */
+#include <stdint.h>
 
 extern int debugging;
 extern int cacheHit;
@@ -234,13 +237,15 @@ flushCache(void)
  *	Create new Integer (64-bit)
  */
 static struct object *
-newLInteger(long long val)
+newLInteger(int64_t val)
 {
 	struct object *res;
+	int64_t *tmp;
 
-	res = gcialloc(sizeof(long long));
+	res = gcialloc(sizeof(int64_t));
 	res->class = IntegerClass;
-	*(long long *)bytePtr(res) = val;
+	tmp = (int64_t *)bytePtr(res);
+	*tmp = val;
 	return(res);
 }
 
@@ -251,13 +256,15 @@ newLInteger(long long val)
  * Returns NULL on error, otherwise the resulting Integer or
  * Boolean (for comparisons) object.
  */
-static struct object *
-do_Integer(int op, struct object *low, struct object *high)
+static struct object *do_Integer(int op, struct object *low, struct object *high)
 {
-	long long l, h;
+	int64_t l, h;
+	int64_t *tmp;
 
-	l = *(long long *)bytePtr(low);
-	h = *(long long *)bytePtr(high);
+	tmp = (int64_t *)bytePtr(low);
+	l = *tmp;
+	tmp = (int64_t *)bytePtr(high);
+	h = *tmp;
 	switch (op) {
 	case 25:	/* Integer division */
 		if (h == 0LL) {
@@ -386,8 +393,9 @@ execute(struct object *aProcess, int ticks)
 	    *instanceVariables, *literals, *stack,
 	    *returnedValue = nilObject, *messageSelector,
 	    *receiverClass, *op;
-    unsigned char *bp;
-    long long l;
+    uint8_t *bp;
+    int64_t l;
+    int64_t *i64p;
 
     /* push process, so as to save it */
     rootStack[rootTop++] = aProcess;
@@ -398,7 +406,7 @@ execute(struct object *aProcess, int ticks)
     method = context->data[methodInContext];
 
 	/* load byte pointer */
-    bp = (unsigned char *)bytePtr(method->data[byteCodesInMethod]);
+    bp = (uint8_t *)bytePtr(method->data[byteCodesInMethod]);
     bytePointer = integerValue(context->data[bytePointerInContext]);
 
 	/* load stack */
@@ -586,8 +594,8 @@ findMethodFromSymbol:
 		    bytePtr(receiverClass->data[nameInClass]),
 		    bytePtr(messageSelector));
 checkCache:
-	    low = (((uint) messageSelector) +
-		    ((uint) receiverClass)) % cacheSize;
+	    low = (int)((((intptr_t) messageSelector) +
+		    ((intptr_t) receiverClass)) % cacheSize);
 	    if ((cache[low].name == messageSelector) &&
 		(cache[low].class == receiverClass)) {
 		    method = cache[low].method;
@@ -674,7 +682,7 @@ checkCache:
 	    instanceVariables = literals = 0;
 	    context->data[bytePointerInContext] = newInteger(0);
 	    bytePointer = 0;
-	    bp = (char *) method->data[byteCodesInMethod]->data;
+	    bp = (uint8_t *) (method->data[byteCodesInMethod]->data);
 		    /* now go execute new method */
 	    break;
 
@@ -903,7 +911,7 @@ checkCache:
 		     ((high < 0) && (low < 0) && (x > high))) {
 			    /* overflow... do it with 64 bits */
 			    returnedValue = newLInteger(
-				    (long long)high + (long long)low);
+				    (int64_t)high + (int64_t)low);
 		    } else {
 			    if (!FITS_SMALLINT(x)) {
 				    returnedValue = newLInteger(x);
@@ -961,7 +969,7 @@ checkCache:
 		    } else {
 			    /* overflow... do it with 64 bits */
 			    returnedValue = newLInteger(
-				    (long long)high * (long long)low);
+				    (int64_t)high * (int64_t)low);
 		    }
 		    break;
 
@@ -970,7 +978,7 @@ checkCache:
 		    x = high - low;
 		    if ((low > 0) && (high < 0) && (x > high)) {
 			    returnedValue = newLInteger(
-				    (long long)high - (long long)low);
+				    (int64_t)high - (int64_t)low);
 		    } else {
 			    if (!FITS_SMALLINT(x)) {
 				    returnedValue = newLInteger(x);
@@ -1079,7 +1087,8 @@ checkCache:
 
 	    case 33:	/* Low order of Integer -> SmallInt */
 		    op = stack->data[--stackTop];
-		    l = *(long long *)bytePtr(op);
+		    i64p = (int64_t *)bytePtr(op);
+		    l = *i64p;
 		    x = l;
 		    if (!FITS_SMALLINT(x)) {
 			    goto failPrimitive;
@@ -1136,12 +1145,30 @@ checkCache:
 
 	    case 38:	/* replaceFrom:... */
 		returnedValue = stack->data[--stackTop];
-	    	if (bulkReplace(returnedValue,
-			stack->data[--stackTop],
-			stack->data[--stackTop],
-			stack->data[--stackTop],
-			stack->data[--stackTop])) {
-		    goto failPrimitive;
+			/* compiler is getting cranky.  Original code in comments:
+			 *
+			 *  if (bulkReplace(returnedValue,
+				stack->data[--stackTop],
+				stack->data[--stackTop],
+				stack->data[--stackTop],
+				stack->data[--stackTop])) {
+		    		goto failPrimitive;
+		    	}
+
+		    	It complains that the operation of -- may be undefined.  This seems
+		    	like it should be a fully defined operation, but prefix subtraction
+		    	may be compiled out in some optimization settings and hoisted above the
+		    	block for the function arguments?  Not sure.
+
+		    	At any rate, the code below replaces this.
+			 */
+		stackTop -= 4;
+		if (bulkReplace(returnedValue,
+				stack->data[stackTop+3],
+				stack->data[stackTop+2],
+				stack->data[stackTop+1],
+				stack->data[stackTop])) {
+			goto failPrimitive;
 		}
 		break;
 
@@ -1171,8 +1198,9 @@ checkCache:
 		break;
 
 	    case 40:	/* Truncate Integer -> SmallInt */
-	    	op = stack->data[--stackTop];
-		l = *(long long *)bytePtr(op);
+	   	op = stack->data[--stackTop];
+	    i64p = (int64_t *)bytePtr(op);
+		l = *i64p;
 		x = l;
 		returnedValue = newInteger(x);
 		break;

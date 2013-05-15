@@ -1,17 +1,20 @@
 /*
 	Little Smalltalk memory management
 	Written by Tim Budd, budd@cs.orst.edu
-	All rights reserved, no guarantees given whatsoever.
-	May be freely redistributed if not for profit.
 
 	Uses baker two-space garbage collection algorithm
+
+	Relicensed under BSD 3-clause license per permission from Dr. Budd by
+	Kyle Hayes.
+
+	See LICENSE file.
 */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
-# include "memory.h"
-# include "globs.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "memory.h"
+#include "globs.h"
 
 extern int debugging;	/* true if we are debugging */
 
@@ -78,10 +81,10 @@ gcinit(int staticsz, int dynamicsz)
 	memoryBase = spaceOne;
 	memoryPointer = memoryBase + spaceSize;
 	if (debugging) {
-		printf("space one 0x%x, top 0x%x,"
-				" space two 0x%x , top 0x%x\n",
-			(uint)spaceOne, (uint)(spaceOne + spaceSize),
-			(uint)spaceTwo, (uint)(spaceTwo + spaceSize));
+		printf("space one 0x%lx, top 0x%lx,"
+				" space two 0x%lx , top 0x%lx\n",
+			(intptr_t)spaceOne, (intptr_t)(spaceOne + spaceSize),
+			(intptr_t)spaceTwo, (intptr_t)(spaceTwo + spaceSize));
 	}
 	inSpaceOne = 1;
 }
@@ -97,11 +100,9 @@ struct mobject {
 	struct mobject *data[0];
 };
 
-static struct object *
-gc_move(struct mobject * ptr)
+static struct object *gc_move(struct mobject * ptr)
 {
-	struct mobject *old_address = ptr, *previous_object = 0,
-		*new_address = 0, *replacement  = 0;
+	struct mobject *old_address = ptr, *previous_object = 0,*new_address = 0, *replacement  = 0;
 	int sz;
 
 	while (1) {
@@ -130,9 +131,8 @@ gc_move(struct mobject * ptr)
 			} else if ((old_address >=
 			 (struct mobject *) memoryBase)
 			 && (old_address <= (struct mobject *) memoryTop)) {
-				sysErrorInt(
-				 "GC invariant failure -- address in new space",
-					(unsigned int)old_address);
+				sysErrorInt("GC invariant failure -- address in new space",
+					(intptr_t)old_address);
 
 			/* else see if not  in old space */
 			} else if ((old_address < (struct mobject *) oldBase) ||
@@ -239,6 +239,9 @@ gc_move(struct mobject * ptr)
 			}
 		}
 	}
+
+	/* make the compiler happy */
+	return (struct object *)0;
 }
 
 /*
@@ -449,7 +452,9 @@ objectRead(FILE * fp)
 	switch(type)
 	{
 		case LST_ERROR_TYPE:	/* nil obj */
-			sysErrorInt("Read in a null object", (int)newObj);
+			sysErrorInt("Read in a null object", (intptr_t)newObj);
+
+			break;
 
 		case LST_OBJ_TYPE:	/* ordinary object */
 			size = val;
@@ -589,7 +594,7 @@ objectWrite(FILE * fp, struct object * obj)
 	/* check for illegal object */
 	if (obj == 0)
 	{
-		sysErrorInt("writing out a null object", (int)obj);
+		sysErrorInt("writing out a null object", (intptr_t)obj);
 	}
 
 	/* small integer?, if so, treat this specially as this is not a pointer */
@@ -710,7 +715,7 @@ addStaticRoot(struct object **objp)
 	}
 	if (staticRootTop >= STATICROOTLIMIT) {
 		sysErrorInt("addStaticRoot: too many static references",
-			(unsigned int)objp);
+			(intptr_t)objp);
 	}
 	staticRoots[staticRootTop++] = objp;
 }

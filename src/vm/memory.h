@@ -22,9 +22,10 @@
 	This improves speed, as these items are not moved during GC
 */
 #include <sys/types.h>
+#include <stdint.h>
 
 struct object {
-	uint size;
+	uint32_t size;
 	struct object *class;
 	struct object *data[0];
 };
@@ -35,15 +36,14 @@ struct object {
 */
 
 struct byteObject {
-	uint size;
+	uint32_t size;
 	struct object *class;
-	unsigned char bytes[0];
+	uint8_t bytes[0];
 };
 
-# define BytesPerWord 4
-# define bytePtr(x) (((struct byteObject *) x)->bytes)
-#define WORDSUP(ptr, amt) ((struct object *)(((char *)(ptr)) + \
-	((amt) * BytesPerWord)))
+#define BytesPerWord (sizeof (intptr_t))
+#define bytePtr(x) (((struct byteObject *) x)->bytes)
+#define WORDSUP(ptr, amt) ((struct object *)(((char *)(ptr)) + ((amt) * BytesPerWord)))
 #define WORDSDOWN(ptr, amt) WORDSUP(ptr, 0 - (amt))
 
 /*
@@ -54,12 +54,12 @@ struct byteObject {
  */
 #include <limits.h>
 
-#define IS_SMALLINT(x) ((((int)(x)) & 0x01) != 0)
-#define FITS_SMALLINT(x) ((((int)(x)) >= INT_MIN/2) && \
-	(((int)(x)) <= INT_MAX/2))
+#define IS_SMALLINT(x) ((((intptr_t)(x)) & 0x01) != 0)
+#define FITS_SMALLINT(x) ((((intptr_t)(x)) >= INT_MIN/2) && \
+	(((intptr_t)(x)) <= INT_MAX/2))
 #define CLASS(x) (IS_SMALLINT(x) ? SmallIntClass : ((x)->class))
-#define integerValue(x) (((int)(x)) >> 1)
-#define newInteger(x) ((struct object *)((((int)(x)) << 1) | 0x01))
+#define integerValue(x) (((intptr_t)(x)) >> 1)
+#define newInteger(x) ((struct object *)((((intptr_t)(x)) << 1) | 0x01))
 
 /*
  * The "size" field is the top 30 bits; the bottom two are flags
@@ -75,7 +75,6 @@ struct byteObject {
 	To allocate, decrement memoryPointer by the correct amount.
 	If the result is less than memoryBase, then garbage collection
 	must take place
-
 */
 
 extern struct object *memoryPointer, *memoryBase;
@@ -87,7 +86,7 @@ extern struct object *memoryPointer, *memoryBase;
 	staticRoots are values in static memory that point to
 	dynamic values
 */
-# define ROOTSTACKLIMIT 50
+# define ROOTSTACKLIMIT 500
 extern struct object *rootStack[];
 extern int rootTop;
 extern void addStaticRoot(struct object **);
@@ -106,12 +105,13 @@ extern struct object *nilObject, *trueObject,
 */
 
 extern void gcinit(int, int);
-extern struct object *gcollect(int), *staticAllocate(int),
-	*staticIAllocate(int), *gcialloc(int);
+extern struct object *gcollect(int);
+extern struct object *staticAllocate(int);
+extern struct object *staticIAllocate(int);
+extern struct object *gcialloc(int);
 extern void exchangeObjects(struct object *, struct object *, uint);
 extern int symstrcomp(struct object * left, const char *right);
 extern int strsymcomp(const char *left, struct object *right);
-
 extern int isDynamicMemory(struct object *);
 
 #define gcalloc(sz) (((memoryPointer = WORDSDOWN(memoryPointer, (sz) + 2)) < \

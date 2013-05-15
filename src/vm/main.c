@@ -28,7 +28,7 @@
 	the following defaults must be set
 
 */
-# define DefaultImageFile "ImageBuilder/image"
+# define DefaultImageFile "lst.img"
 # define DefaultStaticSize 100000
 # define DefaultDynamicSize 100000
 # define DefaultTmpdir "/tmp"
@@ -37,9 +37,9 @@
 --------------------
 */
 
-# include "memory.h"
-# include "interp.h"
-# include <stdio.h>
+#include "memory.h"
+#include "interp.h"
+#include <stdio.h>
 
 /* # define COUNTTEMPS */
 
@@ -57,9 +57,9 @@ sysError(char * a)
 
 
 void 
-sysErrorInt(char * a, int b)
+sysErrorInt(char * a, intptr_t b)
 {
-	fprintf(stderr,"unrecoverable system error: %s %d\n", a, b);
+	fprintf(stderr,"unrecoverable system error: %s %ld\n", a, b);
 	exit(1);
 }
 
@@ -123,7 +123,7 @@ main(int argc, char ** argv)
 	/* first parse arguments */
 	for (i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-v") == 0) {
-			printf("Little Smalltalk, version 4.01\n");
+			printf("Little Smalltalk, version 4.6.0\n");
 			}
 		else if (strcmp(argv[i], "-s") == 0) {
 			staticSize = atoi(argv[++i]);
@@ -449,8 +449,9 @@ primitive(int primitiveNumber, struct object *args, int *failed)
 {
 	struct object *returnedValue = nilObject;
 	int i, j;
+	int rc;
 	FILE *fp;
-	char *p;
+	uint8_t *p;
 	struct byteObject *stringReturn;
 	char nameBuffer[80], modeBuffer[80];
 	int subPrim=0;
@@ -532,8 +533,12 @@ primitive(int primitiveNumber, struct object *args, int *failed)
 	case 105:	/* edit a string */
 			/* first get the name of a temp file */
 		sprintf(nameBuffer, "%s/lsteditXXXXXX", tmpdir);
-		mkstemp(nameBuffer);
+		rc = mkstemp(nameBuffer);
 			/* copy string to file */
+		if(rc == -1) {
+			sysErrorInt("error making temporary file: %ld",(intptr_t)rc);
+		}
+
 		fp = fopen(nameBuffer, "w");
 		if (fp == NULL)
 			sysError("cannot open temp edit file");
@@ -546,16 +551,19 @@ primitive(int primitiveNumber, struct object *args, int *failed)
 			/* edit string */
 		strcpy(modeBuffer,"vi ");
 		strcat(modeBuffer,nameBuffer);
-		system(modeBuffer);
-			/* copy back to new string */
+		rc = system(modeBuffer);
+		if(rc == -1) {
+			sysErrorInt("error starting editor: %ld",(intptr_t)rc);
+		}
+
+		/* copy back to new string */
 		fp = fopen(nameBuffer, "r");
 		if (fp == NULL)
 			sysError("cannot open temp edit file");
 			/* get length of file */
 		fseek(fp, 0, 2);
 		j = (int) ftell(fp);
-		returnedValue =
-			(struct object *) stringReturn = gcialloc(j);
+		returnedValue = (struct object *)(stringReturn = (struct byteObject *)gcialloc(j));
 		returnedValue->class = args->data[0]->class;
 			/* reset to beginning, and read values */
 		fseek(fp, 0, 0);
@@ -807,13 +815,14 @@ printf("Read: %s\n",socketReadBuffer);
 
 			case 8: /* write to a socket, args: sock, data */
 				sock = integerValue(args->data[1]);
-				p = (char *)bytePtr(args->data[2]);
+				p = (uint8_t *)bytePtr(args->data[2]);
 				i = SIZE(args->data[2]);
 	
-printf("Writing: ");
+/*printf("Writing: ");
 snprintf(socketReadBuffer,i,"%s",p);
 socketReadBuffer[i] = (char)0;
 printf("%s\n",socketReadBuffer);
+*/
 
 				j = write(sock,(void *)p,(size_t)i);
 
