@@ -37,7 +37,7 @@ Copyright Changes
 Dr. Budd has indicated to me that he is abandoning the restrictions of the
 original copyright.  The message follows:
 
-'''
+```
 Return-path: <budd@ghost.CS.ORST.EDU>
 Received: from mta2.snfc21.pbi.net (mta2-pr.snfc21.pbi.net)
  by sims1.snfc21.pbi.net
@@ -64,7 +64,7 @@ X-Status: A
 
 well, I haven't touched LST since 94, you are welcome to any sources to
 do whatever you wish with it.
-'''
+```
 
 My version from 2001 was under the GPL.  I felt that this was the closest 
 license to the spirit of Dr. Budd's original.  However, it became apparent
