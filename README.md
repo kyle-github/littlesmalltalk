@@ -208,11 +208,11 @@ Building Little Smalltalk
 Decend into the "src" directory.  Run "make".  That's it.  There will be an executable
 for the VM "lst" and an image to use with it, "lst.img".  Run it on the command line:
 
-'''
+```
 littlesmalltalk/src$ ./lst ./lst.img 
 3227 objects in image
 -> 
-'''
+```
 
 That's it.  You are now in the command line read/execute loop.
 
@@ -220,7 +220,7 @@ To run the class browser, a few more steps are needed.  I'll assume that
 you are at the LST prompt.
 
 * Load the class browser source:
-'''
+```
 littlesmalltalk/src$ ./lst ./lst.img 
 3227 objects in image
 -> File fileIn: 'smalltalk/webui/classbrowser.st'.
@@ -279,15 +279,15 @@ method inserted: start
 method inserted: startOn:
 file in completed
 -> 
-'''
+```
 
 * Now start the class browser:
-'''
+```
 -> HTTPClassBrowser new start.
 Socket: 3
 IP: 127.0.0.1
 Port: 6789
-'''
+```
 
 LST will print out the socket file descriptor number, the IP it bound to
 and the port it is using.
