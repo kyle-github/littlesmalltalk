@@ -30,12 +30,12 @@ in them would be this in the image:
 
 ```
 Header	011  0  1010
-	|   |    |
-	|   |    +--- length = 12
-	|   |
-	|   +-------- short header
-	|
-	+------------ byte array type
+        |   |    |
+        |   |    +--- length = 12
+        |   |
+        |   +-------- short header
+        |
+        +------------ byte array type
 
 Data 'hello, world'
 ```
@@ -45,14 +45,14 @@ be stored as follows in the image:
 
 ```
 Header	011  1  0001	00010010
-	|   |    |         |
-	|   |    |         +-- length = 18
-	|   |    |
-	|   |    +------------ length of length = 1 byte
-	|   |
-	|   +----------------- long header
-	|
-	+--------------------- byte array type
+        |   |    |         |
+        |   |    |         +-- length = 18
+        |   |    |
+        |   |    +------------ length of length = 1 byte
+        |   |
+        |   +----------------- long header
+        |
+        +--------------------- byte array type
 
 Data 'hello there, world'
 ```
