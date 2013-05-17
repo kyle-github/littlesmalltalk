@@ -1,9 +1,10 @@
-Older Versions of Little Smalltalk
+Older/Other Versions of Little Smalltalk
 ==================================
 
-This directory includes older versions of Little Smalltalk.
+This directory includes older versions of Little Smalltalk.  It also includes some other versions
+of Smalltalk based on Little Smalltalk.
 
-These were gathered by Charles Childers and others over the years and
+These were gathered by Charles Childers, Danny Reinhold and others over the years and
 hosted on www.littlesmalltalk.org until that site went away.  These
 copies are curtesy of the Internet Archive.
 
@@ -166,6 +167,41 @@ I haven't tried this version, but it looks quite interesting.
 
 But since I am not a big fan of the GPL I don't want to take over parts of this fork 
 to our version to avoid mixing code of the different licenses.
+
+Little Smalltalk v5
+===================
+
+(This is Danny Reinhold's version, but I am not sure what it was based on.  He was rewriting
+it based on the original v4 and there do not seem to be any copies of that around.)
+
+*file:* lst-5-alpha-7.zip
+
+
+
+Parla
+=====
+
+By Michael Koehne (based on v3)
+
+*file:* parla-3.05p7.tar.gz
+
+
+
+PDST (Public Domain Smalltalk)
+==============================
+
+By Douglas Hammond (based on v3)
+
+*file:* pdst_20070506_01.zip
+
+
+
+Smallworld 2007
+===============
+
+By Russel Allen (based on Budd's original Smallworld in Java)
+
+*file:* SmallWorld2007.2.src.zip
 
 
 
