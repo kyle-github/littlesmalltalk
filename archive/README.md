@@ -140,6 +140,35 @@ Danny Reinhold / Reinhold Software Services and other contributors to the
 LittleSmalltalk project. Please don't bother Timothy Budd with errors in those versions. 
 
 
+Little Smalltalk v4.5
+=====================
+
+*file:* lst-4.5.tar.gz
+
+(This is my (Kyle Hayes) original version.  I think.  It is not clear what changes
+were made to my original version 4.5.  I do not seem to have an original copy of that
+archive.  So I am including this along with the text from www.littlesmalltalk.org.)
+
+This specific version of LittleSmalltalk is another fork of the system.
+It is called version 4.5 and is based either on a 4.0 version or of another
+modified 4.0 fork.
+
+I am not sure who made it.
+It seems to be the basis for the LittleSmalltalk version that comes with Minix 3.
+License: GPL
+
+Different than what I intend with LittleSmalltalk version 5 this version doesn't come with
+a GUI toolkit. Instead it implements a small web server, so you should be able to
+create dynamic web sites with it.
+It seems to have a read only class browser (?).
+
+I haven't tried this version, but it looks quite interesting.
+
+But since I am not a big fan of the GPL I don't want to take over parts of this fork 
+to our version to avoid mixing code of the different licenses.
+
+
+
 
 
 
