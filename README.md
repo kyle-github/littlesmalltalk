@@ -2,7 +2,7 @@ What is Little Smalltalk?
 =========================
 
 Little Smalltalk is a version, or dialect, of Smalltalk that does not conform
-to the Smalltalk-80 standard.  Little Smalltalk has been around for about 30 years.  
+to the Smalltalk-80 standard.  Little Smalltalk has been around for about 30 years.
 In 1984, Dr. Timothy Budd of Oregon State University
 released the first version of Little Smalltalk.  It was a very simple, command-line
 system.  It ran well in small amounts of memory.  Though it is not fast, it is
@@ -18,6 +18,8 @@ TCP socket operations and wrote a very minimal class browser/editor web IDE.
 
 Version History
 ===============
+
+v4.6.1 - released 20181207 - by Kyle Hayes.  Made into CMake project.
 
 v4.6.0 - released 20130515 - by Kyle Hayes, ported to 64-bit, clean ups etc.
 
@@ -66,13 +68,13 @@ well, I haven't touched LST since 94, you are welcome to any sources to
 do whatever you wish with it.
 ```
 
-My version from 2001 was under the GPL.  I felt that this was the closest 
+My version from 2001 was under the GPL.  I felt that this was the closest
 license to the spirit of Dr. Budd's original.  However, it became apparent
 that the license was a problem when I look back over the last decade.  There
-have been other forks, but none based on my original version 4.5.  
+have been other forks, but none based on my original version 4.5.
 
 I have relicensed the code under the 3-clause BSD license (see the file
-LICENSE).  
+LICENSE).
 
 History
 =======
@@ -125,18 +127,18 @@ Performance and Size
 
 Little Smalltalk is not fast.  Not fast at all compared to modern JIT-powered
 VMs for Java and Smalltalk.  However, it is very small and very accessible.  It is
-a good tool to learn how to do a complete language implementation including 
-garbage collection, compiling, interpretation etc.  
+a good tool to learn how to do a complete language implementation including
+garbage collection, compiling, interpretation etc.
 
 A stripped image on a 64-bit Linux machine (Ubuntu 12.04) is about 27kB.  The base
-image is about 92kB.  The whole thing will easily fit into L2 cache on most modern 
+image is about 92kB.  The whole thing will easily fit into L2 cache on most modern
 desktop CPUs.
 
 It is a basic bytecoded VM with bytecodes much like those used in other languages.
 The VM implements a simple stack-based execution environment for compiled Smalltalk
 code.
 
-The base image has about 3200 objects.  
+The base image has about 3200 objects.
 
 New Features and Changes from Version 4.0
 =========================================
@@ -153,17 +155,17 @@ to be more platform independent.
 * A web-based class browser/editor has been added.
 
 * The code has been moved around and split and several changes to the directory
-structure have been done.  The eventual goal is to have the bootstrapping code share 
+structure have been done.  The eventual goal is to have the bootstrapping code share
 as much as possible with the VM code to reduce duplication.
 
 * Makefiles were added (not yet fully complete).
 
-* Primitives were added to implement #position: for String and several more for 
+* Primitives were added to implement #position: for String and several more for
 TCP socket support.
 
 * Bug fixes (mostly from merged code from Andy Valencia)
 
-* Dictionary now uses a sorted array instead of a tree internally (Andy Valencia).  
+* Dictionary now uses a sorted array instead of a tree internally (Andy Valencia).
 
 * Method cache changes to enable cache flushing when methods are updated (Andy Valencia).
 
@@ -171,7 +173,7 @@ TCP socket support.
 calling the primitive is called only if the primitive fails (Andy Valencia).  I adopted this
 for some of the primitives I added.
 
-* I added a StringBuffer class.  Using the VM and bytecodes to do all the string 
+* I added a StringBuffer class.  Using the VM and bytecodes to do all the string
 concatenation and minipulation needed for a web server was too slow on the systems
 I had at the time without this.
 
@@ -195,7 +197,7 @@ that in JSP or mod_perl, only much more primitive.  Methods exist for getting th
 path, action (GET or POST) or URL arguments from a request.
 
 * **HTTPDispatcher** This class provides a mechanism to associate URL paths with
-specific blocks.  When a request matches the path (exact, not REGEX matching), the 
+specific blocks.  When a request matches the path (exact, not REGEX matching), the
 block is called with the HTTPRequest object for the request.
 
 * **HTTPBrowserWindow** This class builds on the others to implement a very simple
@@ -209,9 +211,9 @@ Decend into the "src" directory.  Run "make".  That's it.  There will be an exec
 for the VM "lst" and an image to use with it, "lst.img".  Run it on the command line:
 
 ```
-littlesmalltalk/src$ ./lst ./lst.img 
+littlesmalltalk/src$ ./lst ./lst.img
 3227 objects in image
--> 
+->
 ```
 
 That's it.  You are now in the command line read/execute loop.
@@ -221,7 +223,7 @@ you are at the LST prompt.
 
 * Load the class browser source:
 ```
-littlesmalltalk/src$ ./lst ./lst.img 
+littlesmalltalk/src$ ./lst ./lst.img
 3227 objects in image
 -> File fileIn: 'smalltalk/webui/classbrowser.st'.
 method inserted: subclass:variables:classVariables:
@@ -278,7 +280,7 @@ method inserted: showErrorOn:
 method inserted: start
 method inserted: startOn:
 file in completed
--> 
+->
 ```
 
 * Now start the class browser:
@@ -295,8 +297,8 @@ and the port it is using.
 Fire up your favorite browser (I haven't tried a text-only browser, but you need frames) and
 point it to 'http://localhost:6789'.
 
-It takes a couple of seconds to get all the frames loaded on an old P-II 400.  On my Core i5 laptop, it is 
-almost immediate.  
+It takes a couple of seconds to get all the frames loaded on an old P-II 400.  On my Core i5 laptop, it is
+almost immediate.
 
 LST will ignore the command line prompt unless you click the button to stop the
 class browser in the lower left corner of the browser window.
@@ -309,12 +311,12 @@ are many bugs.  They just have not been found yet.
 
 Actually, the largest two bugs are that I haven't written any C socket code for about a
 decade and what I have written is fairly Linux specific.  I do not have access to any
-other OSes to test.  It would be wonderful if someone could make this code POSIX 
+other OSes to test.  It would be wonderful if someone could make this code POSIX
 compliant and also add in #define's and the rest to make it compile under that
 OS from Redmond.
 
 I recently ported LST to a 64-bit platform (Ubuntu 12.04).  It seems to run the basic operations
-and I can at least browse around in the web-based class browser.  I have not tried to 
+and I can at least browse around in the web-based class browser.  I have not tried to
 change methods.
 
 If you find a bug, let me know!
