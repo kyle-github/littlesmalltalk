@@ -1,4 +1,7 @@
 .cproject
-.project
+*.project
+*.workspace
+cmake-build-*
+.codelite
 *.o
 *~
