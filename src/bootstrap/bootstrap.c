@@ -38,11 +38,14 @@ static int readInteger();
 
 static int symbolBareCmp(const char * left, uint32_t leftsize, const char * right, uint32_t rightsize);
 static int symbolCmp(struct object * left, struct object * right);
+static struct object *newString(char * text);
 static struct object *newSymbol(char * text);
 static struct object *newClass(char * name);
 static struct object *newNode(struct object *v, struct object *l, struct object *r);
 static struct object *newTree(void);
 static struct object *newDictionary(void);
+static struct object *newArray(int size);
+static struct object *newOrderedArray(void);
 
 static void genByte(int v);
 static void genVal(int v);
@@ -56,12 +59,52 @@ static void addTemporary(char *name);
 
 static int parseInteger(void);
 static int parsePrimitive(void);
-static struct object *newString(char * text);
 static int parseString(void);
 
+static int lookupInstance(struct object *class, char *text, int *low);
 
+static int nameTerm(char *name);
+static int parseBlock(void);
+static int parseSymbol(void);
+static int parseChar(void);
+static int parseTerm(void);
+static int parseUnaryContinuation(void);
+static int parseBinaryContinuation(void);
+static int optimizeBlock(void);
+static int controlFlow(int opt1, char * rest, int opt2);
+static int optimizeLoop(int branchInstruction);
+static int parseKeywordContinuation(void);
+static int doAssignment(char * name);
+static int parseExpression(void);
+static int parseStatement(void);
+static int parseBody(void);
+static int parseMethodHeader(struct object * theMethod);
+static int parseTemporaries(void);
+static int parseMethod(struct object * theMethod);
+
+static struct object *BeginCommand(void);
+static struct object *insert(struct object *array, int index, struct object *val);
+static void dictionaryInsert(struct object *dict, struct object *index, struct object *value);
+
+static void MethodCommand(void);
+static void RawClassCommand(void);
+static void ClassCommand(void);
+static int getIntSize(int val);
+static void writeTag(FILE *fp, int type, int val);
+
+
+
+static void objectWrite(FILE * fp, struct object * obj);
+static struct object *symbolTreeInsert(struct object * base, struct object * symNode);
+static struct object *fixSymbols(void);
+static void fixGlobals(void);
+static void checkGlobals(void);
 
 static void bigBang(void);
+
+
+
+
 
 
 /* ------------------------------------------------------------- */
@@ -81,6 +124,222 @@ struct object *ArrayClass;
 struct object *BlockClass;
 struct object *IntegerClass;
 struct object * SymbolClass;
+
+static struct object * currentClass;
+
+#define imageMaxNumberOfObjects 5000
+static struct object * writtenObjects[imageMaxNumberOfObjects];
+static int imageTop = 0;
+
+
+
+/* ------------------------------------------------------------- */
+/*	main program   */
+/* ------------------------------------------------------------- */
+
+int main(int argc, char **argv)
+{
+    const char *image_source = "imageSource";
+    const char *output_file = "lst.img";
+    FILE *fd;
+    struct object *bootMethod = 0;
+    int i;
+
+    printf("%d arguments\n",argc);
+    for(i=0; i<argc; i++) {
+        printf("argv[%d]=\"%s\"\n",i,argv[i]);
+    }
+
+    if(argc > 1) {
+        image_source = argv[1];
+        printf("Image source file: %s\n",image_source);
+    }
+
+    if(argc >= 2) {
+        output_file = argv[2];
+        printf("Image output file: %s\n", output_file);
+    }
+
+    /* big bang -- create the first classes */
+    bigBang();
+    addArgument("self");
+
+    if ((fin = fopen(image_source, "r")) == NULL)
+        sysErrorStr("file in error", image_source);
+
+    /* then read the image source file */
+    while(fgets((char *) inputBuffer, 1000, fin)) {
+        p = inputBuffer;
+        skipSpaces();
+        readIdentifier();
+
+        if (strcmp(tokenBuffer, "BEGIN") == 0) {
+            bootMethod = BeginCommand();
+        } else if (strcmp(tokenBuffer, "RAWCLASS") == 0) {
+            RawClassCommand();
+        } else if (strcmp(tokenBuffer, "CLASS") == 0) {
+            ClassCommand();
+        } else if (strcmp(tokenBuffer, "COMMENT") == 0) {
+            /* nothing */ ;
+        } else if (strcmp(tokenBuffer, "METHOD") == 0) {
+            MethodCommand();
+        } else if (strcmp(tokenBuffer, "END") == 0) {
+            break;
+        } else {
+            sysErrorStr("unknown command ", tokenBuffer);
+        }
+    }
+
+    fclose(fin);
+
+    /* then create the tree of symbols */
+    SymbolClass->data[symbolsInSymbol] = fixSymbols();
+    fixGlobals();
+
+    /* see if anything was never defined in the class source */
+    checkGlobals();
+
+    if ((fd = fopen(output_file, "w")) == NULL) {
+        sysErrorStr("file out error", output_file);
+    }
+
+    printf("starting to file out\n");
+    objectWrite(fd, nilObject);
+    objectWrite(fd, trueObject);
+    objectWrite(fd, falseObject);
+    objectWrite(fd, globalValues);
+    objectWrite(fd, SmallIntClass);
+    objectWrite(fd, IntegerClass);
+    objectWrite(fd, ArrayClass);
+    objectWrite(fd, BlockClass);
+    objectWrite(fd, lookupGlobalName("Context", 0));
+    objectWrite(fd, bootMethod);
+    objectWrite(fd, newSymbol("<"));
+    objectWrite(fd, newSymbol("<="));
+    objectWrite(fd, newSymbol("+"));
+    objectWrite(fd, newSymbol("doesNotUnderstand:"));
+    fclose(fd);
+    printf("%d objects written\n", imageTop);
+    printf("bye for now!\n");
+    return(0);
+}
+
+
+
+
+/* ------------------------------------------------------------- */
+/*	big bang                                                     */
+/* ------------------------------------------------------------- */
+
+void bigBang(void)
+{
+    struct object *ObjectClass;
+    struct object *MetaObjectClass;
+    struct object *ClassClass;
+    struct object *NilClass;
+    struct object *TrueClass;
+    struct object *FalseClass;
+    struct object *StringClass;
+    struct object *TreeClass;
+    struct object *DictionaryClass;
+    struct object *OrderedArrayClass;
+    struct object *MetaClassClass;
+    struct object *ByteArrayClass;
+
+    /*
+     * First, make the nil (undefined) object;
+     * notice its class is wrong
+     */
+    nilObject = gcalloc(0);
+
+    /*
+     * Second, make class for Symbol;
+     * this will allow newClass to work correctly
+     */
+    SymbolClass = gcalloc(ClassSize + 1);
+    addGlobalName("Symbol", SymbolClass);
+    SymbolClass->data[nameInClass] = newSymbol("Symbol");
+
+    /* now we can fix up nil's class */
+    NilClass = newClass("Undefined");
+    addGlobalName("Undefined", NilClass);
+    nilObject->class = NilClass;
+    addGlobalName("nil", nilObject);
+
+    /* make up the object / metaobject mess */
+    ObjectClass = newClass("Object");
+    addGlobalName("Object", ObjectClass);
+    MetaObjectClass = newClass("MetaObject");
+    addGlobalName("MetaObject", MetaObjectClass);
+    ObjectClass->class = MetaObjectClass;
+    ObjectClass->data[parentClassInClass] = nilObject;
+
+    /* And the Class/MetaClass mess */
+    ClassClass = newClass("Class");
+    addGlobalName("Class", ClassClass);
+    MetaClassClass = newClass("MetaClass");
+    addGlobalName("MetaClass", MetaClassClass);
+    ClassClass->class = MetaClassClass;
+
+    /* now make up a bunch of other classes */
+    BlockClass = newClass("Block");
+    addGlobalName("Block", BlockClass);
+
+    /* SmallInt has an extra class variable, just like Symbol */
+    SmallIntClass = gcalloc(ClassSize + 1);
+    addGlobalName("SmallInt", SmallIntClass);
+    SmallIntClass->data[nameInClass] = newSymbol("SmallInt");
+
+    IntegerClass = newClass("Integer");
+    addGlobalName("Integer", IntegerClass);
+
+    TrueClass = newClass("True");
+    addGlobalName("True", TrueClass);
+    trueObject = gcalloc(0);
+    trueObject->class = TrueClass;
+    addGlobalName("true", trueObject);
+
+    FalseClass = newClass("False");
+    addGlobalName("False", FalseClass);
+    falseObject = gcalloc(0);
+    falseObject->class = FalseClass;
+    addGlobalName("false", falseObject);
+
+    ArrayClass = newClass("Array");
+    addGlobalName("Array", ArrayClass);
+    ByteArrayClass = newClass("ByteArray");
+    addGlobalName("ByteArray", ByteArrayClass);
+
+    OrderedArrayClass = newClass("OrderedArray");
+    addGlobalName("OrderedArray", OrderedArrayClass);
+
+    StringClass = newClass("String");
+    addGlobalName("String", StringClass);
+
+    TreeClass = newClass("Tree");
+    addGlobalName("Tree", TreeClass);
+
+    DictionaryClass = newClass("Dictionary");
+    addGlobalName("Dictionary", DictionaryClass);
+
+    /* finally, we can fill in the fields in class Object */
+    ObjectClass->data[methodsInClass] = newDictionary();
+    ObjectClass->data[instanceSizeInClass] = newInteger(0);
+    ClassClass->data[instanceSizeInClass] = newInteger(0);
+
+    /* can make global name, but can't fill it in */
+    globalValues = gcalloc(2);
+    addGlobalName("globals", globalValues);
+}
+
+
+
+
+
+
+
+
+
 
 
 /* ------------------------------------------------------------- */
@@ -348,6 +607,19 @@ int symbolCmp(struct object * left, struct object * right)
                          (char *)bytePtr(right), SIZE(right));
 }
 
+struct object *newString(char * text)
+{
+    int size, i;
+    struct byteObject *newObj;
+
+    size = strlen(text);
+    newObj = binaryAlloc(size);
+    for (i = 0; i < size; i++)
+        newObj->bytes[i] = text[i];
+    newObj->class = lookupGlobalName("String", 0);
+    return (struct object *) newObj;
+}
+
 struct object *newSymbol(char * text)
 {
     int i;
@@ -410,6 +682,39 @@ struct object *newDictionary(void)
     result->data[1] = newArray(0);
     return result;
 }
+
+/*
+ * newArray()
+ *	Allocate a new array
+ *
+ * All slots are initialized to nil
+ */
+struct object *newArray(int size)
+{
+    struct object *result;
+    int i;
+
+    result = gcalloc(size);
+    result->class = lookupGlobalName("Array", 0);
+    for (i = 0; i < size; ++i) {
+        result->data[i] = nilObject;
+    }
+    return(result);
+}
+
+/*
+ * newOrderedArray()
+ *	Return a new, empty ordered array
+ */
+struct object *newOrderedArray(void)
+{
+    struct object *result;
+
+    result = gcalloc(0);
+    result->class = lookupGlobalName("OrderedArray", 0);
+    return(result);
+}
+
 
 /* ------------------------------------------------------------- */
 /*	Code Generation   */
@@ -530,112 +835,6 @@ void addTemporary(char *name)
 
 
 /* ------------------------------------------------------------- */
-/*	big bang                                                     */
-/* ------------------------------------------------------------- */
-static struct object * currentClass;
-
-void bigBang(void)
-{
-    struct object *ObjectClass;
-    struct object *MetaObjectClass;
-    struct object *ClassClass;
-    struct object *NilClass;
-    struct object *TrueClass;
-    struct object *FalseClass;
-    struct object *StringClass;
-    struct object *TreeClass;
-    struct object *DictionaryClass;
-    struct object *OrderedArrayClass;
-    struct object *MetaClassClass;
-    struct object *ByteArrayClass;
-
-    /*
-     * First, make the nil (undefined) object;
-     * notice its class is wrong
-     */
-    nilObject = gcalloc(0);
-
-    /*
-     * Second, make class for Symbol;
-     * this will allow newClass to work correctly
-     */
-    SymbolClass = gcalloc(ClassSize + 1);
-    addGlobalName("Symbol", SymbolClass);
-    SymbolClass->data[nameInClass] = newSymbol("Symbol");
-
-    /* now we can fix up nil's class */
-    NilClass = newClass("Undefined");
-    addGlobalName("Undefined", NilClass);
-    nilObject->class = NilClass;
-    addGlobalName("nil", nilObject);
-
-    /* make up the object / metaobject mess */
-    ObjectClass = newClass("Object");
-    addGlobalName("Object", ObjectClass);
-    MetaObjectClass = newClass("MetaObject");
-    addGlobalName("MetaObject", MetaObjectClass);
-    ObjectClass->class = MetaObjectClass;
-    ObjectClass->data[parentClassInClass] = nilObject;
-
-    /* And the Class/MetaClass mess */
-    ClassClass = newClass("Class");
-    addGlobalName("Class", ClassClass);
-    MetaClassClass = newClass("MetaClass");
-    addGlobalName("MetaClass", MetaClassClass);
-    ClassClass->class = MetaClassClass;
-
-    /* now make up a bunch of other classes */
-    BlockClass = newClass("Block");
-    addGlobalName("Block", BlockClass);
-
-    /* SmallInt has an extra class variable, just like Symbol */
-    SmallIntClass = gcalloc(ClassSize + 1);
-    addGlobalName("SmallInt", SmallIntClass);
-    SmallIntClass->data[nameInClass] = newSymbol("SmallInt");
-
-    IntegerClass = newClass("Integer");
-    addGlobalName("Integer", IntegerClass);
-
-    TrueClass = newClass("True");
-    addGlobalName("True", TrueClass);
-    trueObject = gcalloc(0);
-    trueObject->class = TrueClass;
-    addGlobalName("true", trueObject);
-
-    FalseClass = newClass("False");
-    addGlobalName("False", FalseClass);
-    falseObject = gcalloc(0);
-    falseObject->class = FalseClass;
-    addGlobalName("false", falseObject);
-
-    ArrayClass = newClass("Array");
-    addGlobalName("Array", ArrayClass);
-    ByteArrayClass = newClass("ByteArray");
-    addGlobalName("ByteArray", ByteArrayClass);
-
-    OrderedArrayClass = newClass("OrderedArray");
-    addGlobalName("OrderedArray", OrderedArrayClass);
-
-    StringClass = newClass("String");
-    addGlobalName("String", StringClass);
-
-    TreeClass = newClass("Tree");
-    addGlobalName("Tree", TreeClass);
-
-    DictionaryClass = newClass("Dictionary");
-    addGlobalName("Dictionary", DictionaryClass);
-
-    /* finally, we can fill in the fields in class Object */
-    ObjectClass->data[methodsInClass] = newDictionary();
-    ObjectClass->data[instanceSizeInClass] = newInteger(0);
-    ClassClass->data[instanceSizeInClass] = newInteger(0);
-
-    /* can make global name, but can't fill it in */
-    globalValues = gcalloc(2);
-    addGlobalName("globals", globalValues);
-}
-
-/* ------------------------------------------------------------- */
 /*	Parsing */
 /* ------------------------------------------------------------- */
 
@@ -689,20 +888,7 @@ int parsePrimitive(void)
     return(1);
 }
 
-struct object *newString(char * text)
-{
-    int size, i;
-    struct byteObject *newObj;
-
-    size = strlen(text);
-    newObj = binaryAlloc(size);
-    for (i = 0; i < size; i++)
-        newObj->bytes[i] = text[i];
-    newObj->class = lookupGlobalName("String", 0);
-    return (struct object *) newObj;
-}
-
-static int parseString(void)
+int parseString(void)
 {
     char *q;
 
@@ -718,12 +904,10 @@ static int parseString(void)
     return 1;
 }
 
-int
-lookupInstance(struct object *class, char *text, int *low)
+int lookupInstance(struct object *class, char *text, int *low)
 {
     struct object *var;
     int size, i;
-
 
     /* first check superclasses */
     var = class->data[parentClassInClass];
@@ -741,6 +925,7 @@ lookupInstance(struct object *class, char *text, int *low)
     } else {
         size = 0;
     }
+
     for (i = 0; i < size; i++) {
         if(symbolBareCmp(text, strlen(text),(char *)bytePtr(var->data[i]), (SIZE(var->data[i]))) == 0) {
             return(*low);
@@ -752,11 +937,10 @@ lookupInstance(struct object *class, char *text, int *low)
 
 static int superMessage = 0;
 
-static char *lowConstants[4] = {"nil", "true", "false", 0};
 
-static int
-nameTerm(char *name)
+int nameTerm(char *name)
 {
+    static char *lowConstants[4] = {"nil", "true", "false", 0};
     int i;
 
     /* see if temporary */
@@ -818,8 +1002,7 @@ nameTerm(char *name)
 static int returnOp;
 static char * blockbackup;
 
-static int
-parseBlock(void)
+int parseBlock(void)
 {
     int savedLocation, saveTop, argCount;
     char * savestart;
@@ -882,8 +1065,12 @@ parseBlock(void)
     return 1;
 }
 
-static int
-parseSymbol(void)
+static int parseSymbol(void);
+static int parseChar(void);
+static int parseTerm(void);
+
+
+int parseSymbol(void)
 {
     char *q;
 
@@ -896,8 +1083,7 @@ parseSymbol(void)
     return 1;
 }
 
-static int
-parseChar(void)
+int parseChar(void)
 {
     struct object * newObj;
 
@@ -911,8 +1097,7 @@ parseChar(void)
     return 1;
 }
 
-static int
-parseTerm(void)
+int parseTerm(void)
 {
     /* make it so anything other than a block zeros out backup var */
     blockbackup = 0;
@@ -941,12 +1126,11 @@ parseTerm(void)
     return parseError("illegal start of expression");
 }
 
-static char *unaryBuiltIns[] = {"isNil", "notNil", 0};
-static char *binaryBuiltIns[] = {"<", "<=", "+", 0};
 
-static int
-parseUnaryContinuation(void)
+
+int parseUnaryContinuation(void)
 {
+    static char *unaryBuiltIns[] = {"isNil", "notNil", 0};
     int litNumber, done;
     char *q;
 
@@ -980,8 +1164,9 @@ parseUnaryContinuation(void)
     return 1;
 }
 
-static int
-parseBinaryContinuation(void)
+static char *binaryBuiltIns[] = {"<", "<=", "+", 0};
+
+int parseBinaryContinuation(void)
 {
     int messLiteral, i, done;
     char messbuffer[80];
@@ -1016,8 +1201,7 @@ parseBinaryContinuation(void)
     return 1;
 }
 
-static int
-optimizeBlock(void)
+int optimizeBlock(void)
 {
     if (*p != '[') {
         if (! parseTerm()) return 0;
@@ -1044,8 +1228,7 @@ optimizeBlock(void)
     return 1;
 }
 
-static int
-controlFlow(int opt1, char * rest, int opt2)
+int controlFlow(int opt1, char * rest, int opt2)
 {
     int save1, save2;
     char *q;
@@ -1073,8 +1256,7 @@ controlFlow(int opt1, char * rest, int opt2)
     return 1;
 }
 
-static int
-optimizeLoop(int branchInstruction)
+int optimizeLoop(int branchInstruction)
 {
     int L1, L2;
 
@@ -1097,8 +1279,8 @@ optimizeLoop(int branchInstruction)
     return 1;
 }
 
-static int
-parseKeywordContinuation(void)
+
+int parseKeywordContinuation(void)
 {
     int argCount, i, done, saveSuper;
     char messageBuffer[100];
@@ -1152,8 +1334,7 @@ parseKeywordContinuation(void)
     return 1;
 }
 
-static int
-doAssignment(char * name)
+int doAssignment(char * name)
 {
     int i;
 
@@ -1175,8 +1356,7 @@ doAssignment(char * name)
     return parseError("unknown target of assignment");
 }
 
-static int
-parseExpression(void)
+int parseExpression(void)
 {
     char nameBuffer[60];
 
@@ -1208,8 +1388,7 @@ parseExpression(void)
     return 1;
 }
 
-static int
-parseStatement(void)
+int parseStatement(void)
 {
     if (*p == '^') {	/* return statement */
         p++;
@@ -1223,8 +1402,7 @@ parseStatement(void)
     return 1;
 }
 
-static int
-parseBody(void)
+int parseBody(void)
 {
     returnOp = StackReturn;
     while (*p) {
@@ -1239,8 +1417,7 @@ parseBody(void)
     return 1;
 }
 
-static int
-parseMethodHeader(struct object * theMethod)
+int parseMethodHeader(struct object * theMethod)
 {
     char messageBuffer[100], *q;
     int keyflag;
@@ -1278,8 +1455,7 @@ parseMethodHeader(struct object * theMethod)
     return 1;
 }
 
-static int
-parseTemporaries(void)
+int parseTemporaries(void)
 {
     tempTop = 0;
     maxTemp = 0;
@@ -1296,8 +1472,7 @@ parseTemporaries(void)
     return 1;
 }
 
-static int
-parseMethod(struct object * theMethod)
+int parseMethod(struct object * theMethod)
 {
     if (! parseMethodHeader(theMethod))
         return 0;
@@ -1320,9 +1495,10 @@ parseMethod(struct object * theMethod)
 /*	Input Processing   */
 /* ------------------------------------------------------------- */
 
+
+
 /*	read the expression beyond the begin statement */
-static struct object *
-BeginCommand(void)
+struct object *BeginCommand(void)
 {
     struct object * bootMethod;
 
@@ -1355,8 +1531,7 @@ BeginCommand(void)
  * Creates a new Array-ish object of the same class as "array",
  * and returns it filled in as requested.
  */
-static struct object *
-insert(struct object *array, int index, struct object *val)
+struct object *insert(struct object *array, int index, struct object *val)
 {
     int i, j;
     struct object *o;
@@ -1394,9 +1569,7 @@ insert(struct object *array, int index, struct object *val)
  * dictionaryInsert()
  *	Insert a key/value pair into the Dictionary
  */
-static void
-dictionaryInsert(struct object *dict, struct object *index,
-                 struct object *value)
+void dictionaryInsert(struct object *dict, struct object *index, struct object *value)
 {
     struct object *keys = dict->data[0], *vals = dict->data[1];
     int i, lim, res;
@@ -1428,42 +1601,14 @@ dictionaryInsert(struct object *dict, struct object *index,
     dict->data[1] = insert(vals, i, value);
 }
 
-/*
- * newArray()
- *	Allocate a new array
- *
- * All slots are initialized to nil
- */
-static struct object *
-newArray(int size)
-{
-    struct object *result;
-    int i;
+static void MethodCommand(void);
+static void RawClassCommand(void);
+static void ClassCommand(void);
+static int getIntSize(int val);
+static void writeTag(FILE *fp, int type, int val);
 
-    result = gcalloc(size);
-    result->class = lookupGlobalName("Array", 0);
-    for (i = 0; i < size; ++i) {
-        result->data[i] = nilObject;
-    }
-    return(result);
-}
 
-/*
- * newOrderedArray()
- *	Return a new, empty ordered array
- */
-static struct object *
-newOrderedArray(void)
-{
-    struct object *result;
-
-    result = gcalloc(0);
-    result->class = lookupGlobalName("OrderedArray", 0);
-    return(result);
-}
-
-static void
-MethodCommand(void)
+void MethodCommand(void)
 {
     struct object *theMethod;
 
@@ -1496,8 +1641,7 @@ MethodCommand(void)
     }
 }
 
-static void
-RawClassCommand(void)
+void RawClassCommand(void)
 {
     struct object *nClass, *supClass, *instClass;
     int instsize;
@@ -1562,8 +1706,7 @@ RawClassCommand(void)
  * Doesn't support class variables, but handles most of imageSource
  * cases.
  */
-static void
-ClassCommand(void)
+void ClassCommand(void)
 {
     char *class, *super, *ivars;
 
@@ -1596,10 +1739,6 @@ ClassCommand(void)
 /*	writing image   */
 /* ------------------------------------------------------------- */
 
-# define imageMaxNumberOfObjects 5000
-static struct object * writtenObjects[imageMaxNumberOfObjects];
-static int imageTop = 0;
-
 
 /* return the size in bytes necessary to accurately handle the integer
 value passed.  Note that negatives will always get BytesPerWord size.
@@ -1607,8 +1746,7 @@ This will return zero if the passed value is less than LST_SMALL_TAG_LIMIT.
 In this case, the value can be packed into the tag it self when read or
 written. */
 
-static int
-getIntSize(int val)
+int getIntSize(int val)
 {
     int i;
     /* negatives need sign extension.  this is a to do. */
@@ -1636,8 +1774,7 @@ getIntSize(int val)
 * for a type field and five bits for either a value or a size.
 */
 
-static void
-writeTag(FILE *fp, int type, int val)
+void writeTag(FILE *fp, int type, int val)
 {
     int tempSize;
     int i;
@@ -1657,14 +1794,14 @@ writeTag(FILE *fp, int type, int val)
 }
 
 
+
 /**
 * objectWrite
 *
 * This routine writes an object to the output image file.
 */
 
-static void
-objectWrite(FILE * fp, struct object * obj)
+void objectWrite(FILE * fp, struct object * obj)
 {
     int i;
     int size;
@@ -1744,8 +1881,7 @@ objectWrite(FILE * fp, struct object * obj)
 /*	fix up symbol tables   */
 /* ------------------------------------------------------------- */
 
-struct object *
-symbolTreeInsert(struct object * base, struct object * symNode)
+struct object *symbolTreeInsert(struct object * base, struct object * symNode)
 {
     if (base == nilObject)
         return symNode;
@@ -1758,8 +1894,7 @@ symbolTreeInsert(struct object * base, struct object * symNode)
     return base;
 }
 
-static struct object *
-fixSymbols(void)
+static struct object *fixSymbols(void)
 {
     struct object * t;
     int i;
@@ -1771,8 +1906,7 @@ fixSymbols(void)
     return t;
 }
 
-static void
-fixGlobals(void)
+static void fixGlobals(void)
 {
     struct object *t;
     int i;
@@ -1803,8 +1937,7 @@ fixGlobals(void)
 /* ------------------------------------------------------------- */
 /*	checkGlobals   */
 /* ------------------------------------------------------------- */
-static void
-checkGlobals(void)
+static void checkGlobals(void)
 {
     int i;
     struct object *o;
@@ -1815,95 +1948,4 @@ checkGlobals(void)
             sysErrorStr("Never defined", globalNames[i]);
         }
     }
-}
-
-/* ------------------------------------------------------------- */
-/*	main program   */
-/* ------------------------------------------------------------- */
-
-int main(int argc, char **argv)
-{
-    const char *image_source = "imageSource";
-    const char *output_file = "lst.img";
-    FILE *fd;
-    struct object *bootMethod = 0;
-    int i;
-
-    printf("%d arguments\n",argc);
-    for(i=0; i<argc; i++) {
-        printf("argv[%d]=\"%s\"\n",i,argv[i]);
-    }
-
-    if(argc > 1) {
-        image_source = argv[1];
-        printf("Image source file: %s\n",image_source);
-    }
-
-    if(argc >= 2) {
-        output_file = argv[2];
-        printf("Image output file: %s\n", output_file);
-    }
-
-    /* big bang -- create the first classes */
-    bigBang();
-    addArgument("self");
-
-    if ((fin = fopen(image_source, "r")) == NULL)
-        sysErrorStr("file in error", image_source);
-
-    /* then read the image source file */
-    while(fgets((char *) inputBuffer, 1000, fin)) {
-        p = inputBuffer;
-        skipSpaces();
-        readIdentifier();
-
-        if (strcmp(tokenBuffer, "BEGIN") == 0) {
-            bootMethod = BeginCommand();
-        } else if (strcmp(tokenBuffer, "RAWCLASS") == 0) {
-            RawClassCommand();
-        } else if (strcmp(tokenBuffer, "CLASS") == 0) {
-            ClassCommand();
-        } else if (strcmp(tokenBuffer, "COMMENT") == 0) {
-            /* nothing */ ;
-        } else if (strcmp(tokenBuffer, "METHOD") == 0) {
-            MethodCommand();
-        } else if (strcmp(tokenBuffer, "END") == 0) {
-            break;
-        } else {
-            sysErrorStr("unknown command ", tokenBuffer);
-        }
-    }
-
-    fclose(fin);
-
-    /* then create the tree of symbols */
-    SymbolClass->data[symbolsInSymbol] = fixSymbols();
-    fixGlobals();
-
-    /* see if anything was never defined in the class source */
-    checkGlobals();
-
-    if ((fd = fopen(output_file, "w")) == NULL) {
-        sysErrorStr("file out error", output_file);
-    }
-
-    printf("starting to file out\n");
-    objectWrite(fd, nilObject);
-    objectWrite(fd, trueObject);
-    objectWrite(fd, falseObject);
-    objectWrite(fd, globalValues);
-    objectWrite(fd, SmallIntClass);
-    objectWrite(fd, IntegerClass);
-    objectWrite(fd, ArrayClass);
-    objectWrite(fd, BlockClass);
-    objectWrite(fd, lookupGlobalName("Context", 0));
-    objectWrite(fd, bootMethod);
-    objectWrite(fd, newSymbol("<"));
-    objectWrite(fd, newSymbol("<="));
-    objectWrite(fd, newSymbol("+"));
-    objectWrite(fd, newSymbol("doesNotUnderstand:"));
-    fclose(fd);
-    printf("%d objects written\n", imageTop);
-    printf("bye for now!\n");
-    return(0);
 }
