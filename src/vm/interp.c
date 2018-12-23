@@ -1,19 +1,19 @@
 /*
-	Little Smalltalk version 4
+    Little Smalltalk version 4
 
-	Written by Tim Budd, Oregon State University, July 1994
+    Written by Tim Budd, Oregon State University, July 1994
 
-    	budd@cs.orst.edu
+        budd@cs.orst.edu
 
     bytecode interpreter module
 
     given a process object, execute bytecodes in a tight loop.
 
     performs subroutine calls for
-	a) garbage collection
+    a) garbage collection
         b) finding a non-cached method
         c) executing a primitive
-	d) creating an integer
+    d) creating an integer
 
     otherwise simply loops until time slice has ended
 
@@ -33,7 +33,7 @@ extern int cacheHit;
 extern int cacheMiss;
 
 /*
-	The following are roots for the file out
+    The following are roots for the file out
 */
 
 struct object *nilObject, *trueObject, *falseObject,
@@ -88,7 +88,7 @@ indent(struct object *ctx)
 #endif
 
 /*
-	method lookup routine, used when cache miss occurs
+    method lookup routine, used when cache miss occurs
 */
 
 static int symbolcomp(struct object * left, struct object * right)
@@ -213,7 +213,7 @@ struct object * lookupGlobal(char * name)
 
 
 /*
-	method cache for speeding method lookup
+    method cache for speeding method lookup
 */
 
 # define cacheSize 703
@@ -1161,19 +1161,19 @@ checkCache:
                 /* compiler is getting cranky.  Original code in comments:
                  *
                  *  if (bulkReplace(returnedValue,
-                	stack->data[--stackTop],
-                	stack->data[--stackTop],
-                	stack->data[--stackTop],
-                	stack->data[--stackTop])) {
-                		goto failPrimitive;
-                	}
+                    stack->data[--stackTop],
+                    stack->data[--stackTop],
+                    stack->data[--stackTop],
+                    stack->data[--stackTop])) {
+                        goto failPrimitive;
+                    }
 
-                	It complains that the operation of -- may be undefined.  This seems
-                	like it should be a fully defined operation, but prefix subtraction
-                	may be compiled out in some optimization settings and hoisted above the
-                	block for the function arguments?  Not sure.
+                    It complains that the operation of -- may be undefined.  This seems
+                    like it should be a fully defined operation, but prefix subtraction
+                    may be compiled out in some optimization settings and hoisted above the
+                    block for the function arguments?  Not sure.
 
-                	At any rate, the code below replaces this.
+                    At any rate, the code below replaces this.
                  */
                 stackTop -= 4;
                 if (bulkReplace(returnedValue,

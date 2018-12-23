@@ -1,25 +1,25 @@
 /*
-	memory management for the Little Smalltalk system
-	Uses a variation on the Baker two-space algorithm
+    memory management for the Little Smalltalk system
+    Uses a variation on the Baker two-space algorithm
 
-	Written by Tim Budd, Oregon State University, 1994
-	Comments to budd@cs.orst.edu
-	All rights reserved, no guarantees given whatsoever.
-	May be freely redistributed if not for profit.
+    Written by Tim Budd, Oregon State University, 1994
+    Comments to budd@cs.orst.edu
+    All rights reserved, no guarantees given whatsoever.
+    May be freely redistributed if not for profit.
 */
 
 /*
-	The fundamental data type is the object.
-	The first field in an object is a size, the low order two
-		bits being used to maintain:
-			* binary flag, used if data is binary
-			* indirection flag, used if object has been relocated
-	The next data field is the class
-	The following fields are either objects, or character values
+    The fundamental data type is the object.
+    The first field in an object is a size, the low order two
+        bits being used to maintain:
+            * binary flag, used if data is binary
+            * indirection flag, used if object has been relocated
+    The next data field is the class
+    The following fields are either objects, or character values
 
-	The initial image is loaded into static memory space --
-	space which is never garbage collected
-	This improves speed, as these items are not moved during GC
+    The initial image is loaded into static memory space --
+    space which is never garbage collected
+    This improves speed, as these items are not moved during GC
 */
 
 #pragma once
@@ -29,20 +29,20 @@
 #include <stdint.h>
 
 struct object {
-	uint32_t size;
-	struct object *class;
-	struct object *data[0];
+    uint32_t size;
+    struct object *class;
+    struct object *data[0];
 };
 
 /*
-	byte objects are used to represent strings and symbols
-		bytes per word must be correct
+    byte objects are used to represent strings and symbols
+        bytes per word must be correct
 */
 
 struct byteObject {
-	uint32_t size;
-	struct object *class;
-	uint8_t bytes[0];
+    uint32_t size;
+    struct object *class;
+    uint8_t bytes[0];
 };
 
 #define BytesPerWord (sizeof (intptr_t))
@@ -60,7 +60,7 @@ struct byteObject {
 
 #define IS_SMALLINT(x) ((((intptr_t)(x)) & 0x01) != 0)
 #define FITS_SMALLINT(x) ((((intptr_t)(x)) >= INT_MIN/2) && \
-	(((intptr_t)(x)) <= INT_MAX/2))
+    (((intptr_t)(x)) <= INT_MAX/2))
 #define CLASS(x) (IS_SMALLINT(x) ? SmallIntClass : ((x)->class))
 #define integerValue(x) (((intptr_t)(x)) >> 1)
 #define newInteger(x) ((struct object *)((((intptr_t)(x)) << 1) | 0x01))
@@ -74,21 +74,21 @@ struct byteObject {
 #define FLAG_BIN (0x02)
 
 /*
-	memoryBase holds the pointer to the current space,
-	memoryPointer is the pointer into this space.
-	To allocate, decrement memoryPointer by the correct amount.
-	If the result is less than memoryBase, then garbage collection
-	must take place
+    memoryBase holds the pointer to the current space,
+    memoryPointer is the pointer into this space.
+    To allocate, decrement memoryPointer by the correct amount.
+    If the result is less than memoryBase, then garbage collection
+    must take place
 */
 
 extern struct object *memoryPointer, *memoryBase;
 
 /*
-	roots for the memory space
-	these are traced down during memory management
-	rootStack is the dynamic stack
-	staticRoots are values in static memory that point to
-	dynamic values
+    roots for the memory space
+    these are traced down during memory management
+    rootStack is the dynamic stack
+    staticRoots are values in static memory that point to
+    dynamic values
 */
 # define ROOTSTACKLIMIT 500
 extern struct object *rootStack[];
@@ -96,16 +96,16 @@ extern int rootTop;
 extern void addStaticRoot(struct object **);
 
 /*
-	The following are roots for the file out
+    The following are roots for the file out
 */
 
 extern struct object *nilObject, *trueObject,
-	*falseObject, *SmallIntClass, *ArrayClass, *BlockClass,
-	*ContextClass, *globalsObject, *initialMethod,
-	*binaryMessages[3], *IntegerClass, *badMethodSym;
+    *falseObject, *SmallIntClass, *ArrayClass, *BlockClass,
+    *ContextClass, *globalsObject, *initialMethod,
+    *binaryMessages[3], *IntegerClass, *badMethodSym;
 
 /*
-	entry points
+    entry points
 */
 
 extern void gcinit(int, int);
@@ -120,8 +120,8 @@ extern int isDynamicMemory(struct object *);
 extern int fileOut(FILE * fp);
 
 #define gcalloc(sz) (((memoryPointer = WORDSDOWN(memoryPointer, (sz) + 2)) < \
-	memoryBase) ? gcollect(sz) : \
-	(SETSIZE(memoryPointer, (sz)), memoryPointer))
+    memoryBase) ? gcollect(sz) : \
+    (SETSIZE(memoryPointer, (sz)), memoryPointer))
 
 #ifndef gcalloc
 extern struct object *gcalloc(int);

@@ -43,8 +43,8 @@ static struct object * urlToString(struct byteObject * from);
 
 
 /*
-	primitive handler
-	(note that many primitives are handled in the interpreter)
+    primitive handler
+    (note that many primitives are handled in the interpreter)
 */
 
 struct object *primitive(int primitiveNumber, struct object *args, int *failed)

@@ -1,5 +1,5 @@
 /*
-	image building utility
+    image building utility
 */
 
 #include <stdio.h>

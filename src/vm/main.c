@@ -1,11 +1,11 @@
 /*
-	Little Smalltalk main program, unix version
-	Written by Tim Budd, budd@cs.orst.edu
-	All rights reserved, no guarantees given whatsoever.
-	May be freely redistributed if not for profit.
+    Little Smalltalk main program, unix version
+    Written by Tim Budd, budd@cs.orst.edu
+    All rights reserved, no guarantees given whatsoever.
+    May be freely redistributed if not for profit.
 
-	starting point, primitive handler for unix
-	version of the little smalltalk system
+    starting point, primitive handler for unix
+    version of the little smalltalk system
 */
 #include <stdio.h>
 #include <errno.h>
@@ -19,12 +19,12 @@
 #include "prim.h"
 
 /*
-	the following defaults must be set
+    the following defaults must be set
 
 */
 # define DefaultImageFile "lst.img"
 # define DefaultStaticSize 100000
-# define DefaultDynamicSize 100000
+# define DefaultDynamicSize 200000
 # define DefaultTmpdir "/tmp"
 
 /*
