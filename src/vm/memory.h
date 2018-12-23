@@ -21,7 +21,11 @@
 	space which is never garbage collected
 	This improves speed, as these items are not moved during GC
 */
+
+#pragma once
+
 #include <sys/types.h>
+#include <stdio.h>
 #include <stdint.h>
 
 struct object {
@@ -92,7 +96,7 @@ extern int rootTop;
 extern void addStaticRoot(struct object **);
 
 /*
-	The following are roots for the file out 
+	The following are roots for the file out
 */
 
 extern struct object *nilObject, *trueObject,
@@ -113,6 +117,7 @@ extern void exchangeObjects(struct object *, struct object *, uint);
 extern int symstrcomp(struct object * left, const char *right);
 extern int strsymcomp(const char *left, struct object *right);
 extern int isDynamicMemory(struct object *);
+extern int fileOut(FILE * fp);
 
 #define gcalloc(sz) (((memoryPointer = WORDSDOWN(memoryPointer, (sz) + 2)) < \
 	memoryBase) ? gcollect(sz) : \

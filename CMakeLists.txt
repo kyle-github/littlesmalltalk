@@ -9,11 +9,15 @@ add_executable(bootstrap "${PROJECT_SOURCE_DIR}/src/bootstrap/bootstrap.c"
                          "${PROJECT_SOURCE_DIR}/src/vm/interp.h" )
 
 add_executable(lst "${PROJECT_SOURCE_DIR}/src/vm/main.c"
+                   "${PROJECT_SOURCE_DIR}/src/vm/err.c"
+                   "${PROJECT_SOURCE_DIR}/src/vm/err.h"
                    "${PROJECT_SOURCE_DIR}/src/vm/globs.h"
                    "${PROJECT_SOURCE_DIR}/src/vm/interp.c"
                    "${PROJECT_SOURCE_DIR}/src/vm/interp.h"
                    "${PROJECT_SOURCE_DIR}/src/vm/memory.c"
-                   "${PROJECT_SOURCE_DIR}/src/vm/memory.h" )
+                   "${PROJECT_SOURCE_DIR}/src/vm/memory.h"
+                   "${PROJECT_SOURCE_DIR}/src/vm/prim.c"
+                   "${PROJECT_SOURCE_DIR}/src/vm/prim.h" )
 
 #add_custom_command(
 #    OUTPUT  lst.img

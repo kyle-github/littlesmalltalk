@@ -387,7 +387,7 @@ static int getIntSize(int val)
 /* image file reading routines */
 
 
-static void 
+static void
 readTag(FILE *fp, int *type, int *val)
 {
 	int i;
@@ -659,8 +659,7 @@ objectWrite(FILE * fp, struct object * obj)
 
 
 
-int
-fileOut(FILE * fp)
+int fileOut(FILE * fp)
 {
 	int i;
 

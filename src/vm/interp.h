@@ -5,6 +5,10 @@
 	May be freely redistributed if not for profit.
 */
 
+#pragma once
+
+
+
 extern int execute(struct object *aProcess, int ticks);
 extern struct object * lookupGlobal(char * name);
 
@@ -56,7 +60,7 @@ extern struct object * lookupGlobal(char * name);
 #define ReturnBreak 6		/* Breakpoint instruction */
 
 /*
-	The following are the objects with ``hard-wired'' 
+	The following are the objects with ``hard-wired''
 	field offsets
 */
 /*

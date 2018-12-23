@@ -61,8 +61,6 @@ encodeHTML | transStr lt gt |
 	lt <- Char new: 60.  " < character"
 	gt <- Char new: 62.  " > character"
 
-
-
 	" transform the string into something that can be put into HTML. "
 	self do: [ :c | ( c = lt )
 				ifTrue: [ c <- '&lt;' ]
@@ -230,17 +228,17 @@ response: aResp  | responseSize tmpResponse lineTerm index |
 rawData		| i termString doubleTerm tempData contentLength |
 	" read the request raw data.  This does some parsing. "
 
+    " return the data if we already have it. "
 	reqRawData isNil ifFalse: [ ^ reqRawData ].
+
+	" is the socket nil? or not open? "
+	(sock isNil) ifTrue: [ ^ nil ].
 
 	" the line terminator for HTTP headers is CRLF "
 	termString <- ((Char new: 13) asString) + (Char newline asString).
 
 	" the terminator between the HTTP headers and body is CRLF CRLF "
 	doubleTerm <- termString + termString.
-
-	" is the socket nil? or not open? "
-
-	(sock isNil) ifTrue: [ ^ nil ].
 
 	" get the data from the socket until we see the header/body delimiter "
 
@@ -250,14 +248,13 @@ rawData		| i termString doubleTerm tempData contentLength |
 		whileTrue: [ tempData <- tempData + (sock read asString) ].
 
   	" OK, we have all the headers, what kind of request is it? "
-
 	reqRawData <- tempData.
 	reqLength <- tempData size.
 
 	" if this is a POST, we need to get the length and read the data "
-	((self action) = 'POST') ifTrue: [
-
-'Processing POST action.' printNl.
+	((self action) = 'POST')
+        ifTrue: [
+            'Processing POST action.' printNl.
 
 			i <- tempData position: 'Content-Length:' .
 			i isNil ifTrue: [ reqError <- '400 POST without Content-Length header'. ^ nil ].
@@ -314,22 +311,22 @@ action
 	" if it was set once, return it. "
 	reqAction isNil ifFalse: [ ^ reqAction.].
 
-'reqAction before parse: ' print.
-reqAction printString printNl.
+    'reqAction before parse: ' print.
+    reqAction printString printNl.
 
-'Position of GET: ' print.
-((self rawData) position: 'GET') printString printNl.
+    'Position of GET: ' print.
+    ((self rawData) position: 'GET') printString printNl.
 
-'Position of POST: ' print.
-((self rawData) position: 'POST') printString printNl.
+    'Position of POST: ' print.
+    ((self rawData) position: 'POST') printString printNl.
 
 	((self rawData) position: 'GET') = 1 ifTrue: [ reqAction <- 'GET'. ].
 	((self rawData) position: 'POST') = 1 ifTrue: [ reqAction <- 'POST'. ].
 
 	reqAction isNil ifTrue: [ reqAction <- 'UNKNOWN' ].
 
-'reqAction: ' print.
-reqAction printString printNl.
+    'reqAction: ' print.
+    reqAction printString printNl.
 
 	^ reqAction.
 !
@@ -375,7 +372,7 @@ args	| i pathArgField argsData keyValList key val argList|
 			]
    		].
 
-     	" copy data from the form data if this is a POST "
+    " copy data from the form data if this is a POST "
 	(self action) = 'POST' ifTrue: [
 		i <- ((self rawData size) + 1) - reqLength.
 
@@ -398,8 +395,7 @@ args	| i pathArgField argsData keyValList key val argList|
 		(argList size) = 0 ifTrue: [ val <- true asString ]
 				   ifFalse: [ val <- argList first asString ].
 		val isNil ifTrue: [ val <- 'no value' ].
-		reqArgs at: (key fromUrl asSymbol) put: (val fromUrl).
-
+                reqArgs at: (key fromUrl asSymbol) put: (val fromUrl).
        		].
 
 	^ reqArgs.
@@ -527,24 +523,26 @@ editMethodOn: aReq | outBuf classStr class methStr method |
 	" if there isn't a method string chosen "
 	methStr <- aReq at: #method.
 
-"debugging (aReq args) binaryDo: [ :key :val | outBuf addLast: ((key printString) + ' = ' + (val printString) + '<BR>') ]."
+    "debugging (aReq args) binaryDo: [ :key :val | outBuf addLast: ((key printString) + ' = ' + (val printString) + '<BR>') ]."
 
   	methStr = 'no value' ifTrue: [ outBuf addLast: '<B>No Value!</B></BODY></HTML>'. ^ aReq response: outBuf ].
-
-	methStr isNil ifTrue: [ outBuf addLast: '<B>No method chosen.</B></BODY></HTML>'.
-				 ^ aReq response: outBuf ].
+	methStr isNil ifTrue: [
+                outBuf addLast: '<B>No method chosen.</B></BODY></HTML>'.
+				 ^ aReq response: outBuf
+            ].
 
 	method <- (class methods) at: (methStr asSymbol) ifAbsent: [ nil ].
+	method isNil ifTrue: [
+        outBuf addLast: '<B>No such method!</B></BODY></HTML>'.
+        ^ aReq response: outBuf
+    ].
 
-	method isNil ifTrue: [ outBuf addLast: '<B>No such method!</B></BODY></HTML>'.
-				 ^ aReq response: outBuf ].
-
-     	outBuf addLast: '<FORM ACTION="/compile_method?class='.
+    outBuf addLast: '<FORM ACTION="/compile_method?class='.
 	outBuf addLast: classStr.
 	outBuf addLast: '&method='.
 	outBuf addLast: method name printString toUrl.
 	outBuf addLast: '" ENCTYPE="application/x-www-form-urlencoded" METHOD="POST">'.
-	outBuf addLast: '<TEXTAREA COLS=60 ROWS=40 NAME="methsrc" WRAP="OFF">'.
+	outBuf addLast: '<TEXTAREA style="width:95%; height:90%;" NAME="methsrc" WRAP="OFF">'.
 	outBuf addLast: (method text encodeHTML).
 	outBuf addLast: '</TEXTAREA>'.
 	outBuf addLast: '<BR><INPUT TYPE=SUBMIT NAME=compile VALUE="Compile"'.
@@ -573,7 +571,10 @@ compileMethodOn: aReq | outBuf classStr class methSrc action meth |
 
 	class <- globals at: (classStr asSymbol) ifAbsent: [ nil ].
 
-	class isNil ifTrue: [ outBuf addLast: '<B>No such class!</B></BODY></HTML>'.
+	class isNil ifTrue: [
+                outBuf addLast: '<B>No such class: '.
+                outBuf addLast: classStr.
+                outBuf addLast: '!</B></BODY></HTML>'.
 				 ^ aReq response: outBuf ].
 
 	" get the method source. "
@@ -598,7 +599,8 @@ compileMethodOn: aReq | outBuf classStr class methSrc action meth |
 	Method flushCache.
 
 	outBuf addLast: meth name printString.
-	outBuf addLast: ' added.'.
+	outBuf addLast: ' added to class '.
+    outBuf addLast: classStr.
 	outBuf addLast: '</BODY></HTML>'.
 
 	^ aReq response: outBuf.
