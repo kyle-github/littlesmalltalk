@@ -34,16 +34,16 @@
 
 /* # define COUNTTEMPS */
 
-unsigned int debugging = 0, cacheHit = 0, cacheMiss = 0, gccount = 0;
+unsigned int debugging = 0;
 
 extern int errno;
 
 
 # ifdef COUNTTEMPS
-FILE * tempFile;
+FILE *tempFile;
 # endif
 
-int main(int argc, char ** argv)
+int main(int argc, char **argv)
 {
     struct object *aProcess, *aContext, *o;
     int size, i, staticSize, dynamicSize;
@@ -148,15 +148,15 @@ int main(int argc, char ** argv)
 #if defined(VSTA) && defined(PROFILE)
     dump_samples();
 #endif
-    printf("cache hit %u miss %u", cacheHit, cacheMiss);
-#define SCALE (1000)
-    while ((cacheHit > INT_MAX/SCALE) || (cacheMiss > INT_MAX/SCALE)) {
-        cacheHit /= 10;
-        cacheMiss /= 10;
-    }
-    i = (SCALE * cacheHit) / (cacheHit + cacheMiss);
-    printf(" ratio %u.%u%%\n", i / 10, i % 10);
-    printf("%u garbage collections\n", gccount);
+
+    printf("\nCache statistics:\n");
+    printf("  %ld hit, %ld miss for %02.2f%% hit rate.\n", cache_hit, cache_miss, (float)((float)(cache_hit)*100.0/(float)(cache_hit + cache_miss)));
+    printf("\nGC statistics:\n");
+    printf("  %ld garbage collections\n", gc_count);
+    printf("  %ld total microseconds in GC for %ld microseconds per GC pass.\n", gc_total_time, gc_total_time/gc_count);
+    printf("  %ld microseconds for longest GC pause.\n", gc_max_time);
+    printf("  %ld total bytes copied for %ld bytes per GC on average.\n", gc_total_mem_copied, gc_total_mem_copied/gc_count);
+    printf("  %ld maximum bytes copied during GC.\n", gc_mem_max_copied);
     return(0);
 }
 
@@ -164,6 +164,5 @@ int main(int argc, char ** argv)
 These static character strings are used for URL conversion
 */
 
-static char * badURLChars = ";/?:@&=+!*'(),$-_.<>#%\"\t\n\r";
-static char * hexDigits = "0123456789ABCDEF";
-
+//static char *badURLChars = ";/?:@&=+!*'(),$-_.<>#%\"\t\n\r";
+//static char *hexDigits = "0123456789ABCDEF";

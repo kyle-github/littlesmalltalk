@@ -1,19 +1,22 @@
 /*
-	Little Smalltalk, version 4
-	Written by Tim Budd, Oregon State University, budd@cs.orst.edu
-	All rights reserved, no guarantees given whatsoever.
-	May be freely redistributed if not for profit.
+    Little Smalltalk, version 4
+    Written by Tim Budd, Oregon State University, budd@cs.orst.edu
+    All rights reserved, no guarantees given whatsoever.
+    May be freely redistributed if not for profit.
 */
 
 #pragma once
 
+#include <stdint.h>
 
+extern int64_t cache_hit;
+extern int64_t cache_miss;
 
 extern int execute(struct object *aProcess, int ticks);
-extern struct object * lookupGlobal(char * name);
+extern struct object *lookupGlobal(char *name);
 
 /*
-	symbolic definitions for the bytecodes
+    symbolic definitions for the bytecodes
 */
 
 # define Extended 0
@@ -53,20 +56,20 @@ extern struct object * lookupGlobal(char * name);
 # define falseConst 12
 
 /* Return values from doExecute: primitive */
-#define ReturnError 2		/* error: called */
-#define ReturnBadMethod 3	/* Unknown method for object */
-#define ReturnReturned 4	/* Top level method returned */
-#define ReturnTimeExpired 5	/* Time quantum exhausted */
-#define ReturnBreak 6		/* Breakpoint instruction */
+#define ReturnError 2       /* error: called */
+#define ReturnBadMethod 3   /* Unknown method for object */
+#define ReturnReturned 4    /* Top level method returned */
+#define ReturnTimeExpired 5 /* Time quantum exhausted */
+#define ReturnBreak 6       /* Breakpoint instruction */
 
 /*
-	The following are the objects with ``hard-wired''
-	field offsets
+    The following are the objects with ``hard-wired''
+    field offsets
 */
 /*
-	A Process has two fields
-		* a current context
-		* status of process (running, waiting, etc)
+    A Process has two fields
+        * a current context
+        * status of process (running, waiting, etc)
 */
 
 # define contextInProcess 0
@@ -74,12 +77,12 @@ extern struct object * lookupGlobal(char * name);
 # define resultInProcess 2
 
 /*
-	A Context has:
-		* method (which has bytecode pointer)
-		* bytecode offset (an integer)
-		* arguments
-		* temporaries and stack
-		* stack pointer
+    A Context has:
+        * method (which has bytecode pointer)
+        * bytecode offset (an integer)
+        * arguments
+        * temporaries and stack
+        * stack pointer
 */
 
 # define contextSize 7
@@ -92,8 +95,8 @@ extern struct object * lookupGlobal(char * name);
 # define previousContextInContext 6
 
 /*
-	A Block is subclassed from Context
-	shares fields with creator, plus a couple new ones
+    A Block is subclassed from Context
+    shares fields with creator, plus a couple new ones
 */
 
 # define blockSize 10
@@ -109,12 +112,12 @@ extern struct object * lookupGlobal(char * name);
 # define bytePointerInBlock 9
 
 /*
-	A Method has:
-		* name (a Symbol)
-		* bytecodes
-		* literals
-		* stack size
-		* temp size
+    A Method has:
+        * name (a Symbol)
+        * bytecodes
+        * literals
+        * stack size
+        * temp size
 */
 
 # define methodSize 7
@@ -127,9 +130,9 @@ extern struct object * lookupGlobal(char * name);
 # define textInMethod 6
 
 /*
-	A Class has:
-		* pointer to parent class
-		* pointer to tree of methods
+    A Class has:
+        * pointer to parent class
+        * pointer to tree of methods
 */
 
 # define ClassSize 5
@@ -140,10 +143,10 @@ extern struct object * lookupGlobal(char * name);
 # define variablesInClass 4
 
 /*
-	A node in a tree has
-		* value field
-		* left subtree
-		* right subtree
+    A node in a tree has
+        * value field
+        * left subtree
+        * right subtree
 */
 
 # define valueInNode 0
@@ -151,7 +154,7 @@ extern struct object * lookupGlobal(char * name);
 # define rightInNode 2
 
 /*
-	misc defines
+    misc defines
 */
 
 # define rootInTree 0

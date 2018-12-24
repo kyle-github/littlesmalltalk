@@ -25,12 +25,10 @@
 #include "prim.h"
 #include "globs.h"
 #include <stdio.h>
-#include <string.h>	/* For bzero() */
+#include <string.h> /* For bzero() */
 #include <stdint.h>
 
 extern int debugging;
-extern int cacheHit;
-extern int cacheMiss;
 
 /*
     The following are roots for the file out
@@ -91,14 +89,16 @@ indent(struct object *ctx)
     method lookup routine, used when cache miss occurs
 */
 
-static int symbolcomp(struct object * left, struct object * right)
+static int symbolcomp(struct object *left, struct object *right)
 {
     int leftsize = SIZE(left);
     int rightsize = SIZE(right);
     int minsize = leftsize;
     register int i;
 
-    if (rightsize < minsize) minsize = rightsize;
+    if (rightsize < minsize) {
+        minsize = rightsize;
+    }
     for (i = 0; i < minsize; i++) {
         if (bytePtr(left)[i] != bytePtr(right)[i]) {
             return bytePtr(left)[i]-bytePtr(right)[i];
@@ -163,12 +163,12 @@ lookupMethod(struct object *selector, struct object *class)
 
 /* look up a global entry by name */
 
-struct object * lookupGlobal(char * name)
+struct object *lookupGlobal(char *name)
 {
-    struct object * dict;
-    struct object * keys;
-    struct object * key;
-    struct object * vals;
+    struct object *dict;
+    struct object *keys;
+    struct object *key;
+    struct object *vals;
     int low,high,mid;
     int result;
 
@@ -219,28 +219,32 @@ struct object * lookupGlobal(char * name)
 # define cacheSize 703
 
 static struct {
-    struct object * name;
-    struct object * class;
-    struct object * method;
+    struct object *name;
+    struct object *class;
+    struct object *method;
 } cache[cacheSize];
 
+int64_t cache_hit = 0;
+int64_t cache_miss = 0;
+
+
+
+
 /* flush dynamic methods when GC occurs */
-void
-flushCache(void)
+void flushCache(void)
 {
     int i;
 
     for (i = 0; i < cacheSize; i++) {
-        cache[i].name = 0;	/* force refill */
+        cache[i].name = 0;  /* force refill */
     }
 }
 
 /*
  * newLInteger()
- *	Create new Integer (64-bit)
+ *  Create new Integer (64-bit)
  */
-static struct object *
-newLInteger(int64_t val)
+static struct object *newLInteger(int64_t val)
 {
     struct object *res;
     int64_t *tmp;
@@ -254,7 +258,7 @@ newLInteger(int64_t val)
 
 /*
  * do_Integer()
- *	Implement the appropriate 64-bit Integer operation
+ *  Implement the appropriate 64-bit Integer operation
  *
  * Returns NULL on error, otherwise the resulting Integer or
  * Boolean (for comparisons) object.
@@ -269,31 +273,31 @@ static struct object *do_Integer(int op, struct object *low, struct object *high
     tmp = (int64_t *)bytePtr(high);
     h = *tmp;
     switch (op) {
-    case 25:	/* Integer division */
+    case 25:    /* Integer division */
         if (h == 0LL) {
             return(NULL);
         }
         return(newLInteger(l/h));
 
-    case 26:	/* Integer remainder */
+    case 26:    /* Integer remainder */
         if (h == 0LL) {
             return(NULL);
         }
         return(newLInteger(l%h));
 
-    case 27:	/* Integer addition */
+    case 27:    /* Integer addition */
         return(newLInteger(l+h));
 
-    case 28:	/* Integer multiplication */
+    case 28:    /* Integer multiplication */
         return(newLInteger(l*h));
 
-    case 29:	/* Integer subtraction */
+    case 29:    /* Integer subtraction */
         return(newLInteger(l-h));
 
-    case 30:	/* Integer less than */
+    case 30:    /* Integer less than */
         return((l < h) ? trueObject : falseObject);
 
-    case 31:	/* Integer equality */
+    case 31:    /* Integer equality */
         return((l == h) ? trueObject : falseObject);
 
     default:
@@ -304,7 +308,7 @@ static struct object *do_Integer(int op, struct object *low, struct object *high
 
 /*
  * bulkReplace()
- *	Implement replaceFrom:to:with:startingAt: as a primitive
+ *  Implement replaceFrom:to:with:startingAt: as a primitive
  *
  * Return 1 if we couldn't do it, 0 on success.  This routine has
  * distinct code paths for plain old byte type arrays, and for
@@ -324,7 +328,7 @@ static int bulkReplace(struct object *dest, struct object *start,
      * values onto 0-based C array type values.
      */
     if (!IS_SMALLINT(repStart) || !IS_SMALLINT(start) ||
-        !IS_SMALLINT(stop)) {
+            !IS_SMALLINT(stop)) {
         return(1);
     }
     irepStart = integerValue(repStart)-1;
@@ -336,7 +340,7 @@ static int bulkReplace(struct object *dest, struct object *start,
      * Defend against goofy negative indices.
      */
     if ((irepStart < 0) || (istart < 0) || (istop < 0) ||
-        (count < 1)) {
+            (count < 1)) {
         return(1);
     }
 
@@ -344,7 +348,7 @@ static int bulkReplace(struct object *dest, struct object *start,
      * Range check
      */
     if ((SIZE(dest) < istop) ||
-        (SIZE(src) < (irepStart + count))) {
+            (SIZE(src) < (irepStart + count))) {
         return(1);
     }
 
@@ -446,8 +450,9 @@ execute(struct object *aProcess, int ticks)
 
         case PushInstance:
             DBG1("PushInstance", low);
-            if (! arguments)
+            if (! arguments) {
                 arguments = context->data[argumentsInContext];
+            }
             if (! instanceVariables)
                 instanceVariables =
                     arguments->data[receiverInArguments];
@@ -456,22 +461,25 @@ execute(struct object *aProcess, int ticks)
 
         case PushArgument:
             DBG1("PushArgument", low);
-            if (! arguments)
+            if (! arguments) {
                 arguments = context->data[argumentsInContext];
+            }
             stack->data[stackTop++] = arguments->data[low];
             break;
 
         case PushTemporary:
             DBG1("PushTemporary", low);
-            if (! temporaries)
+            if (! temporaries) {
                 temporaries = context->data[temporariesInContext];
+            }
             stack->data[stackTop++] = temporaries->data[low];
             break;
 
         case PushLiteral:
             DBG1("PushLiteral", low);
-            if (! literals)
+            if (! literals) {
                 literals = method->data[literalsInMethod];
+            }
             stack->data[stackTop++] = literals->data[low];
             break;
 
@@ -562,15 +570,16 @@ execute(struct object *aProcess, int ticks)
              * If changing a static area, need to add to roots
              */
             if (!isDynamicMemory(instanceVariables)
-                && isDynamicMemory(stack->data[stackTop-1])) {
+                    && isDynamicMemory(stack->data[stackTop-1])) {
                 addStaticRoot(&instanceVariables->data[low]);
             }
             break;
 
         case AssignTemporary:
             DBG1("AssignTemporary", low);
-            if (! temporaries)
+            if (! temporaries) {
                 temporaries = context->data[temporariesInContext];
+            }
             temporaries->data[low] = stack->data[stackTop-1];
             break;
 
@@ -596,8 +605,9 @@ execute(struct object *aProcess, int ticks)
             break;
 
         case SendMessage:
-            if (! literals)
+            if (! literals) {
                 literals = method->data[literalsInMethod];
+            }
             messageSelector = literals->data[low];
             arguments = stack->data[--stackTop];
 
@@ -610,11 +620,11 @@ checkCache:
             low = (int)((((intptr_t) messageSelector) +
                          ((intptr_t) receiverClass)) % cacheSize);
             if ((cache[low].name == messageSelector) &&
-                (cache[low].class == receiverClass)) {
+                    (cache[low].class == receiverClass)) {
                 method = cache[low].method;
-                cacheHit++;
+                cache_hit++;
             } else {
-                cacheMiss++;
+                cache_miss++;
                 method = lookupMethod(messageSelector, receiverClass);
                 if (!method) {
                     if (messageSelector == badMethodSym) {
@@ -663,7 +673,7 @@ checkCache:
                 }
                 rootStack[rootTop++] = temporaries; /* temporaries */
             } else {
-                rootStack[rootTop++] = NULL;	/* why bother */
+                rootStack[rootTop++] = NULL;    /* why bother */
             }
             context = rootStack[rootTop-3];
             context->data[stackTopInContext] = newInteger(stackTop);
@@ -699,21 +709,23 @@ checkCache:
             /* now go execute new method */
             break;
 
-        case SendUnary:	/* optimize certain unary messages */
+        case SendUnary: /* optimize certain unary messages */
             DBG1("SendUnary", low);
             returnedValue = stack->data[--stackTop];
             switch(low) {
-            case 0:	/* isNil */
-                if (returnedValue == nilObject)
+            case 0: /* isNil */
+                if (returnedValue == nilObject) {
                     returnedValue = trueObject;
-                else
+                } else {
                     returnedValue = falseObject;
+                }
                 break;
             case 1: /* notNil */
-                if (returnedValue == nilObject)
+                if (returnedValue == nilObject) {
                     returnedValue = falseObject;
-                else
+                } else {
                     returnedValue = trueObject;
+                }
                 break;
             default:
                 sysErrorInt("unimplemented SendUnary", low);
@@ -721,31 +733,31 @@ checkCache:
             stack->data[stackTop++] = returnedValue;
             break;
 
-        case SendBinary:	/* optimize certain binary messages */
+        case SendBinary:    /* optimize certain binary messages */
             DBG1("SendBinary", low);
             if (IS_SMALLINT(stack->data[stackTop-1])
-                && IS_SMALLINT(stack->data[stackTop-2])) {
+                    && IS_SMALLINT(stack->data[stackTop-2])) {
                 int i, j;
                 j = integerValue(stack->data[--stackTop]);
                 i = integerValue(stack->data[--stackTop]);
                 /* can only do operations that won't */
                 /* trigger garbage collection */
                 switch(low) {
-                case 0:	/* < */
+                case 0: /* < */
                     if (i < j) {
                         returnedValue = trueObject;
                     } else {
                         returnedValue = falseObject;
                     }
                     break;
-                case 1:	/* <= */
+                case 1: /* <= */
                     if (i <= j) {
                         returnedValue = trueObject;
                     } else {
                         returnedValue = falseObject;
                     }
                     break;
-                case 2:	/* + */
+                case 2: /* + */
                     /* no possibility of garbage col */
                     returnedValue = newInteger(i+j);
                     break;
@@ -797,7 +809,7 @@ checkCache:
             DBG1("DoPrimitive", high);
             rootStack[rootTop++] = context;
             switch (high) {
-            case 1:		/* object identity */
+            case 1:     /* object identity */
                 returnedValue = stack->data[--stackTop];
                 if (returnedValue == stack->data[--stackTop]) {
                     returnedValue = trueObject;
@@ -806,18 +818,18 @@ checkCache:
                 }
                 break;
 
-            case 2:		/* object class */
+            case 2:     /* object class */
                 returnedValue = stack->data[--stackTop];
                 returnedValue = CLASS(returnedValue);
                 break;
 
-            case 3:	/* print a single character */
+            case 3: /* print a single character */
                 low = integerValue(stack->data[--stackTop]);
                 putchar(low); /* fflush(stdout); */
                 returnedValue = nilObject;
                 break;
 
-            case 4:	/* object size */
+            case 4: /* object size */
                 returnedValue = stack->data[--stackTop];
                 if (IS_SMALLINT(returnedValue)) {
                     high  = 0;
@@ -827,7 +839,7 @@ checkCache:
                 returnedValue = newInteger(high);
                 break;
 
-            case 5:		/* Array at put */
+            case 5:     /* Array at put */
                 op = stack->data[--stackTop];
                 if (!IS_SMALLINT(op)) {
                     stackTop -= 2;
@@ -837,7 +849,7 @@ checkCache:
                 returnedValue = stack->data[--stackTop];
                 /* Bounds check */
                 if ((low < 0) ||
-                    (low >= SIZE(returnedValue))) {
+                        (low >= SIZE(returnedValue))) {
                     stackTop -= 1;
                     goto failPrimitive;
                 }
@@ -849,14 +861,14 @@ checkCache:
                  * register it for GC.
                  */
                 if (!isDynamicMemory(returnedValue)
-                    && isDynamicMemory(
-                        stack->data[stackTop])) {
+                        && isDynamicMemory(
+                            stack->data[stackTop])) {
                     addStaticRoot(
                         &returnedValue->data[low]);
                 }
                 break;
 
-            case 6:		/* new process execute */
+            case 6:     /* new process execute */
                 low = integerValue(stack->data[--stackTop]);
                 op = stack->data[--stackTop];
                 low = execute(op, low);
@@ -865,7 +877,7 @@ checkCache:
                 returnedValue = newInteger(low);
                 break;
 
-            case 7: 	/* new object allocation */
+            case 7:     /* new object allocation */
                 low = integerValue(stack->data[--stackTop]);
                 rootStack[rootTop++] = stack->data[--stackTop];
                 returnedValue = gcalloc(low);
@@ -875,7 +887,7 @@ checkCache:
                 }
                 break;
 
-            case 8:	/* block invocation */
+            case 8: /* block invocation */
                 /* low holds number of arguments */
                 returnedValue = stack->data[--stackTop];
                 /* put arguments in place */
@@ -908,7 +920,7 @@ checkCache:
                 --rootTop;
                 goto endPrimitive;
 
-            case 9:		/* read char from input */
+            case 9:     /* read char from input */
                 low = getchar();
                 if (low == EOF) {
                     returnedValue = nilObject;
@@ -917,11 +929,11 @@ checkCache:
                 }
                 break;
 
-            case 10: 	/* small integer addition */
+            case 10:    /* small integer addition */
                 GET_HIGH_LOW();
                 x = high + low;
                 if (((high > 0) && (low > 0) && (x < high)) ||
-                    ((high < 0) && (low < 0) && (x > high))) {
+                        ((high < 0) && (low < 0) && (x > high))) {
                     /* overflow... do it with 64 bits */
                     returnedValue = newLInteger(
                                         (int64_t)high + (int64_t)low);
@@ -934,7 +946,7 @@ checkCache:
                 }
                 break;
 
-            case 11: 	/* small integer division */
+            case 11:    /* small integer division */
                 GET_HIGH_LOW();
                 if (low == 0) {
                     goto failPrimitive;
@@ -943,7 +955,7 @@ checkCache:
                 returnedValue = newInteger(high);
                 break;
 
-            case 12:	/* small integer remainder */
+            case 12:    /* small integer remainder */
                 GET_HIGH_LOW();
                 if (low == 0) {
                     goto failPrimitive;
@@ -952,7 +964,7 @@ checkCache:
                 returnedValue = newInteger(high);
                 break;
 
-            case 13:	/* small integer less than */
+            case 13:    /* small integer less than */
                 GET_HIGH_LOW();
                 if (high < low) {
                     returnedValue = trueObject;
@@ -961,7 +973,7 @@ checkCache:
                 }
                 break;
 
-            case 14:	/* small integer equality */
+            case 14:    /* small integer equality */
                 GET_HIGH_LOW();
                 if (high == low) {
                     returnedValue = trueObject;
@@ -970,7 +982,7 @@ checkCache:
                 }
                 break;
 
-            case 15:	/* small integer multiplication */
+            case 15:    /* small integer multiplication */
                 GET_HIGH_LOW();
                 x = high*low;
                 if ((low == 0) || (x/low == high)) {
@@ -986,7 +998,7 @@ checkCache:
                 }
                 break;
 
-            case 16:	/* small integer subtraction */
+            case 16:    /* small integer subtraction */
                 GET_HIGH_LOW();
                 x = high - low;
                 if ((low > 0) && (high < 0) && (x > high)) {
@@ -1001,18 +1013,18 @@ checkCache:
                 }
                 break;
 
-            case 18: 	/* turn on debugging */
+            case 18:    /* turn on debugging */
                 debugging = 1;
                 returnedValue = nilObject;
                 break;
 
-            case 19:	/* error trap -- halt execution */
+            case 19:    /* error trap -- halt execution */
                 --rootTop; /* pop context */
                 aProcess = rootStack[--rootTop];
                 aProcess->data[contextInProcess] = context;
                 return(ReturnError);
 
-            case 20:	/* byteArray allocation */
+            case 20:    /* byteArray allocation */
                 low = integerValue(stack->data[--stackTop]);
                 rootStack[rootTop++] = stack->data[--stackTop];
                 returnedValue = gcialloc(low);
@@ -1020,22 +1032,22 @@ checkCache:
                 bzero(bytePtr(returnedValue), low);
                 break;
 
-            case 21:	/* string at */
+            case 21:    /* string at */
                 low = integerValue(stack->data[--stackTop])-1;
                 returnedValue = stack->data[--stackTop];
                 if ((low < 0) ||
-                    (low >= SIZE(returnedValue))) {
+                        (low >= SIZE(returnedValue))) {
                     goto failPrimitive;
                 }
                 low = bytePtr(returnedValue)[low];
                 returnedValue = newInteger(low);
                 break;
 
-            case 22:	/* string at put */
+            case 22:    /* string at put */
                 low = integerValue(stack->data[--stackTop])-1;
                 returnedValue = stack->data[--stackTop];
                 if ((low < 0) ||
-                    (low >= SIZE(returnedValue))) {
+                        (low >= SIZE(returnedValue))) {
                     stackTop -= 1;
                     goto failPrimitive;
                 }
@@ -1043,7 +1055,7 @@ checkCache:
                     integerValue(stack->data[--stackTop]);
                 break;
 
-            case 23:	/* string clone */
+            case 23:    /* string clone */
                 rootStack[rootTop++] = stack->data[--stackTop];
                 rootStack[rootTop++] = returnedValue
                                        = stack->data[--stackTop];
@@ -1056,24 +1068,24 @@ checkCache:
                 returnedValue->class = rootStack[--rootTop];
                 break;
 
-            case 24:	/* array at */
+            case 24:    /* array at */
                 low = integerValue(stack->data[--stackTop])-1;
                 returnedValue = stack->data[--stackTop];
                 if ((low < 0) ||
-                    (low >= SIZE(returnedValue))) {
+                        (low >= SIZE(returnedValue))) {
                     goto failPrimitive;
                 }
                 returnedValue = returnedValue->data[low];
                 break;
 #undef GET_HIGH_LOW
 
-            case 25:	/* Integer division */
-            case 26:	/* Integer remainder */
-            case 27:	/* Integer addition */
-            case 28:	/* Integer multiplication */
-            case 29:	/* Integer subtraction */
-            case 30:	/* Integer less than */
-            case 31:	/* Integer equality */
+            case 25:    /* Integer division */
+            case 26:    /* Integer remainder */
+            case 27:    /* Integer addition */
+            case 28:    /* Integer multiplication */
+            case 29:    /* Integer subtraction */
+            case 30:    /* Integer less than */
+            case 31:    /* Integer equality */
                 op = stack->data[--stackTop];
                 if (CLASS(op) != IntegerClass) {
                     stackTop -= 1;
@@ -1090,7 +1102,7 @@ checkCache:
                 }
                 break;
 
-            case 32:	/* Integer allocation */
+            case 32:    /* Integer allocation */
                 op = stack->data[--stackTop];
                 if (!IS_SMALLINT(op)) {
                     goto failPrimitive;
@@ -1098,7 +1110,7 @@ checkCache:
                 returnedValue = newLInteger(integerValue(op));
                 break;
 
-            case 33:	/* Low order of Integer -> SmallInt */
+            case 33:    /* Low order of Integer -> SmallInt */
                 op = stack->data[--stackTop];
                 i64p = (int64_t *)bytePtr(op);
                 l = *i64p;
@@ -1109,11 +1121,11 @@ checkCache:
                 returnedValue = newInteger(x);
                 break;
 
-            case 34:	/* Flush method cache */
+            case 34:    /* Flush method cache */
                 flushCache();
                 break;
 
-            case 35:	/* Bulk object exchange */
+            case 35:    /* Bulk object exchange */
                 op = stack->data[--stackTop];
                 if (op->class != ArrayClass) {
                     goto failPrimitive;
@@ -1128,7 +1140,7 @@ checkCache:
                 exchangeObjects(op, returnedValue, SIZE(op));
                 break;
 
-            case 36:	/* bitOr: */
+            case 36:    /* bitOr: */
                 op = stack->data[--stackTop];
                 if (!IS_SMALLINT(op)) {
                     --stackTop;
@@ -1142,7 +1154,7 @@ checkCache:
                 returnedValue = newInteger(integerValue(op) | high);
                 break;
 
-            case 37:	/* bitAnd: */
+            case 37:    /* bitAnd: */
                 op = stack->data[--stackTop];
                 if (!IS_SMALLINT(op)) {
                     --stackTop;
@@ -1156,7 +1168,7 @@ checkCache:
                 returnedValue = newInteger(integerValue(op) & high);
                 break;
 
-            case 38:	/* replaceFrom:... */
+            case 38:    /* replaceFrom:... */
                 returnedValue = stack->data[--stackTop];
                 /* compiler is getting cranky.  Original code in comments:
                  *
@@ -1185,7 +1197,7 @@ checkCache:
                 }
                 break;
 
-            case 39:	/* bitShift: */
+            case 39:    /* bitShift: */
                 op = stack->data[--stackTop];
                 if (!IS_SMALLINT(op)) {
                     --stackTop;
@@ -1210,7 +1222,7 @@ checkCache:
                 returnedValue = newInteger(low);
                 break;
 
-            case 40:	/* Truncate Integer -> SmallInt */
+            case 40:    /* Truncate Integer -> SmallInt */
                 op = stack->data[--stackTop];
                 i64p = (int64_t *)bytePtr(op);
                 l = *i64p;
@@ -1276,8 +1288,9 @@ endPrimitive:
             DBG1("DoSpecial", low);
             switch(low) {
             case SelfReturn:
-                if (! arguments)
+                if (! arguments) {
                     arguments = context->data[argumentsInContext];
+                }
                 returnedValue = arguments->data[receiverInArguments];
                 goto doReturn;
 

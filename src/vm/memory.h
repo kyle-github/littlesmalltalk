@@ -60,7 +60,7 @@ struct byteObject {
 
 #define IS_SMALLINT(x) ((((intptr_t)(x)) & 0x01) != 0)
 #define FITS_SMALLINT(x) ((((intptr_t)(x)) >= INT_MIN/2) && \
-    (((intptr_t)(x)) <= INT_MAX/2))
+                          (((intptr_t)(x)) <= INT_MAX/2))
 #define CLASS(x) (IS_SMALLINT(x) ? SmallIntClass : ((x)->class))
 #define integerValue(x) (((intptr_t)(x)) >> 1)
 #define newInteger(x) ((struct object *)((((intptr_t)(x)) << 1) | 0x01))
@@ -100,9 +100,9 @@ extern void addStaticRoot(struct object **);
 */
 
 extern struct object *nilObject, *trueObject,
-    *falseObject, *SmallIntClass, *ArrayClass, *BlockClass,
-    *ContextClass, *globalsObject, *initialMethod,
-    *binaryMessages[3], *IntegerClass, *badMethodSym;
+        *falseObject, *SmallIntClass, *ArrayClass, *BlockClass,
+        *ContextClass, *globalsObject, *initialMethod,
+        *binaryMessages[3], *IntegerClass, *badMethodSym;
 
 /*
     entry points
@@ -114,14 +114,14 @@ extern struct object *staticAllocate(int);
 extern struct object *staticIAllocate(int);
 extern struct object *gcialloc(int);
 extern void exchangeObjects(struct object *, struct object *, uint);
-extern int symstrcomp(struct object * left, const char *right);
+extern int symstrcomp(struct object *left, const char *right);
 extern int strsymcomp(const char *left, struct object *right);
 extern int isDynamicMemory(struct object *);
-extern int fileOut(FILE * fp);
+extern int fileOut(FILE *fp);
 
 #define gcalloc(sz) (((memoryPointer = WORDSDOWN(memoryPointer, (sz) + 2)) < \
-    memoryBase) ? gcollect(sz) : \
-    (SETSIZE(memoryPointer, (sz)), memoryPointer))
+                      memoryBase) ? gcollect(sz) : \
+                     (SETSIZE(memoryPointer, (sz)), memoryPointer))
 
 #ifndef gcalloc
 extern struct object *gcalloc(int);
@@ -130,28 +130,35 @@ extern struct object *gcalloc(int);
 
 /* these define the flags used for writing and reading images.
 The bytes per word or size is usually stored in the lower bits */
-# define LST_ERROR_TYPE		(0)
+# define LST_ERROR_TYPE     (0)
 
 /* normal objects */
-# define LST_OBJ_TYPE		(1<<5)
+# define LST_OBJ_TYPE       (1<<5)
 
 /* positive small integers */
-# define LST_PINT_TYPE		(2<<5)
+# define LST_PINT_TYPE      (2<<5)
 
 /* negative small integers */
-# define LST_NINT_TYPE		(3<<5)
+# define LST_NINT_TYPE      (3<<5)
 
 /* byte arrays */
-# define LST_BARRAY_TYPE	(4<<5)
+# define LST_BARRAY_TYPE    (4<<5)
 
 /* previously dumped object */
-# define LST_POBJ_TYPE		(5<<5)
+# define LST_POBJ_TYPE      (5<<5)
 
 /* nil object */
-# define LST_NIL_TYPE		(6<<5)
+# define LST_NIL_TYPE       (6<<5)
 
-# define LST_SMALL_TAG_LIMIT	0x0F
-# define LST_LARGE_TAG_FLAG	0x10
-# define LST_TAG_SIZE_MASK	0x1F
+# define LST_SMALL_TAG_LIMIT    0x0F
+# define LST_LARGE_TAG_FLAG 0x10
+# define LST_TAG_SIZE_MASK  0x1F
 # define LST_TAG_VALUE_MASK     LST_SMALL_TAG_LIMIT
-# define LST_TAG_TYPE_MASK	0xE0
+# define LST_TAG_TYPE_MASK  0xE0
+
+
+extern int64_t gc_count;
+extern int64_t gc_total_time;
+extern int64_t gc_max_time;
+extern int64_t gc_total_mem_copied;
+extern int64_t gc_mem_max_copied;
