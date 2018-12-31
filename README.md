@@ -13,7 +13,7 @@ standalone version was version 4.0 released in about 1994.  He went on to create
 Small World, a version based on the Java VM.
 
 The version here is based on changes I made in 2000-2003 and combines some changes
-made by Andy Valencia.  I added some primitive to do basic
+made by Andy Valencia.  I added some primitives to do basic
 TCP socket operations and wrote a very minimal class browser/editor web IDE.
 
 Version History
