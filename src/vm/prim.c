@@ -11,6 +11,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <alloca.h>
 #include "prim.h"
 #include "err.h"
 #include "interp.h"
@@ -18,6 +19,8 @@
 
 
 /* temporary directory is shared. */
+//class getUnixString;
+//class getUnixString;
 char *tmpdir = NULL;
 
 
@@ -55,24 +58,33 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
     FILE *fp;
     uint8_t *p;
     struct byteObject *stringReturn;
-    char nameBuffer[80], modeBuffer[80];
+    //char nameBuffer[80], modeBuffer[80];
     int subPrim=0;
-    char netBuffer[16];
+    char netBuffer[18];
     struct sockaddr myAddr;
     struct sockaddr_in sin;
     struct in_addr iaddr;
     socklen_t myAddrSize;
     int sock;
+    int sock_opt;
     int port;
     struct byteObject *ba;
 
 
     *failed = 0;
     switch(primitiveNumber) {
-    case 100: 	/* open a file */
-        getUnixString(nameBuffer, 80, args->data[0]);
-        getUnixString(modeBuffer, 10, args->data[1]);
-        fp = fopen(nameBuffer, modeBuffer);
+    case 100:
+    {
+        /* open a file */
+        int pathSize = SIZE(args->data[0]) + 1;
+        char *pathBuffer = (char *)alloca(pathSize);
+        int modeSize = SIZE(args->data[1]) + 1;
+        char *modeBuffer = (char *)alloca(modeSize);
+
+        getUnixString(pathBuffer, pathSize, args->data[0]);
+        getUnixString(modeBuffer, modeSize, args->data[1]);
+
+        fp = fopen(pathBuffer, modeBuffer);
         if (fp != NULL) {
             for (i = 0; i < FILEMAX; ++i) {
                 if (filePointers[i] == NULL) {
@@ -90,7 +102,9 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
         } else {
             *failed = 1;
         }
-        break;
+    }
+
+    break;
 
     case 101:	/* read a single character from a file */
         i = integerValue(args->data[0]);
@@ -131,49 +145,78 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
         fileOut(fp);
         break;
 
-    case 105:	/* edit a string */
+    case 105:
+    {
+        /* edit a string */
+        char *tmpFileName = NULL;
+        int tmpFileNameSize = 0;
+
         /* first get the name of a temp file */
-        sprintf(nameBuffer, "%s/lsteditXXXXXX", tmpdir);
-        rc = mkstemp(nameBuffer);
+        tmpFileNameSize = sprintf(tmpFileName, "%s/lsteditXXXXXX", tmpdir) + 1;
+
+        tmpFileName = (char *)alloca(tmpFileNameSize);
+        snprintf(tmpFileName, tmpFileNameSize, "%s/lsteditXXXXXX", tmpdir) + 1;
+
+        rc = mkstemp(tmpFileName);
         /* copy string to file */
         if(rc == -1) {
             sysErrorInt("error making temporary file: %ld",(intptr_t)rc);
         }
 
-        fp = fopen(nameBuffer, "w");
-        if (fp == NULL)
+        fp = fopen(tmpFileName, "w");
+        if (fp == NULL) {
             sysError("cannot open temp edit file");
+        }
+
         j = SIZE(args->data[0]);
         p = ((struct byteObject *) args->data[0])->bytes;
-        for (i = 0; i < j; i++)
+
+        for (i = 0; i < j; i++) {
             fputc(*p++, fp);
+        }
         fputc('\n', fp);
+
         fclose(fp);
-        /* edit string */
-        strcpy(modeBuffer,"vi ");
-        strcat(modeBuffer,nameBuffer);
-        rc = system(modeBuffer);
+
+        /* call the editor */
+        int cmdBufSize = tmpFileNameSize + strlen("vi ");
+        char *cmdBuf = (char*)alloca(cmdBufSize);
+
+        memset(cmdBuf, 0, cmdBufSize);
+
+        strcpy(cmdBuf,"vi ");
+        strcat(cmdBuf, tmpFileName);
+        rc = system(cmdBuf);
+
         if(rc == -1) {
             sysErrorInt("error starting editor: %ld",(intptr_t)rc);
         }
 
         /* copy back to new string */
-        fp = fopen(nameBuffer, "r");
-        if (fp == NULL)
+        fp = fopen(tmpFileName, "r");
+        if (fp == NULL) {
             sysError("cannot open temp edit file");
+        }
+
         /* get length of file */
         fseek(fp, 0, 2);
         j = (int) ftell(fp);
+
         returnedValue = (struct object *)(stringReturn = (struct byteObject *)gcialloc(j));
         returnedValue->class = args->data[0]->class;
+
         /* reset to beginning, and read values */
         fseek(fp, 0, 0);
-        for (i = 0; i < j; i++)
+
+        for (i = 0; i < j; i++) {
             stringReturn->bytes[i] = fgetc(fp);
+        }
         /* now clean up files */
         fclose(fp);
-        unlink(nameBuffer);
-        break;
+        unlink(tmpFileName);
+    }
+
+    break;
 
     case 106:	/* Read into ByteArray */
         /* File descriptor */
@@ -260,11 +303,13 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
     case 150:	/* match substring in a string. Return index of substring or fail. */
         /* make sure we've got strings */
         if((args->data[0]->size & FLAG_BIN) == 0) {
+            printf("#position: failed, first arg is not a binary object.\n");
             *failed = 1;
             break;
         }
 
         if((args->data[1]->size & FLAG_BIN) == 0) {
+            printf("#position: failed, second arg is not a binary object.\n");
             *failed = 1;
             break;
         }
@@ -277,13 +322,13 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
         or the second string is longer than the first */
 
         if((i > 0) && (j > 0) && (i>=j)) {
-            /* using malloc is probably not a good idea here */
-            char *p = (char *)malloc(i+1);
-            char *q = (char *)malloc(j+1);
+            /* using alloca to make sure that the memory is freed automatically */
+            char *p = (char *)alloca(i+1);
+            char *q = (char *)alloca(j+1);
             char *r = (char *)0;
 
-            getUnixString(p,i,args->data[0]);
-            getUnixString(q,j,args->data[1]);
+            getUnixString(p,i+1,args->data[0]);
+            getUnixString(q,j+1,args->data[1]);
 
             /* find the pointer to the substring */
             r = strstr(p,q);
@@ -294,11 +339,18 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
             }
 
             /* no GC for primitives on this.  free memory for p and q*/
-            free((void *)p);
-            free((void *)q);
+            //free((void *)p);
+            //free((void *)q);
 
             /* success */
             break;
+        } else {
+            if((i>0) && (j>0)) {
+                returnedValue = newInteger(-1);
+                break;
+            } else {
+                printf("#position: failed due to unusable string sizes, string 1 size %d, string 2 size %d.\n", i, j);
+            }
         }
 
         /* if we get here, we've failed */
@@ -319,8 +371,8 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
     case 200: /* this is a set of primitives for socket handling */
         subPrim = integerValue(args->data[0]);
 
+        /* 200-250 socket handling */
         switch(subPrim) {
-            /* 100-150 socket handling */
         case 0: /* open a TCP socket */
             sock = socket(PF_INET,SOCK_STREAM,0);
 
@@ -328,8 +380,10 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
                 sysError("Cannot open TCP socket.");
             }
 
-            /* set the socket options */
-            setsockopt(sock,SOL_SOCKET,SO_REUSEADDR,(const void *)1,sizeof(int));
+            if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR,(char*)&sock_opt,sizeof(sock_opt))) {
+                close(sock);
+                sysError("Error setting socket reuse option!");
+            }
 
             /* return the value anyway */
             returnedValue = newInteger(sock);
@@ -339,13 +393,16 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
         case 1: /* accept on a socket */
             sock = integerValue(args->data[1]);
 
-            if(listen(sock,10) == -1)
+            if(listen(sock, 10) == -1) {
                 sysError("Error listening on TCP socket.");
+            }
 
+            /* set the maximum size */
+            myAddrSize = sizeof(myAddr);
 
-            /*			sock = accept(sock,(struct sockaddr *)&saddr,(size_t *)&sinAddrLen);*/
-            sock = accept(sock,&myAddr,&myAddrSize);
+            /* printf("accept(%d, %p, %d)\n", sock, &myAddr, myAddrSize); */
 
+            sock = accept(sock, &myAddr, &myAddrSize);
             if(sock == -1) {
                 printf("errno: %d\nsock: %d\n",errno,sock);
                 sysError("Error accepting on TCP socket.");
@@ -369,7 +426,7 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
             the address (as a dotted-notation string) and
             the port as an integer */
             sock = integerValue(args->data[1]);
-            getUnixString(netBuffer, 16, args->data[2]);
+            getUnixString(netBuffer, sizeof(netBuffer)-1, args->data[2]);
             port = integerValue(args->data[3]);
 
             printf("Socket: %d\n",sock);
@@ -456,12 +513,14 @@ void getUnixString(char * to, int size, struct object * from)
     int fsize = SIZE(from);
     struct byteObject * bobj = (struct byteObject *) from;
 
-    if (fsize > size) {
-        sysErrorInt("error converting text into unix string", fsize);
+    if (fsize >= size) {
+        sysErrorInt("getUnixString(): String too long for buffer!", fsize);
     }
+
     for (i = 0; i < fsize; i++) {
         to[i] = bobj->bytes[i];
     }
+
     to[i] = '\0';	/* put null terminator at end */
 }
 
@@ -659,6 +718,3 @@ struct object * urlToString(struct byteObject * from)
 
     return (struct object *)newStr;
 }
-
-
-
