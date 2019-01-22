@@ -38,13 +38,13 @@ static int readIdentifier();
 static int readInteger();
 
 static int symbolBareCmp(const char *left, uint32_t leftsize,
-			 const char *right, uint32_t rightsize);
+                         const char *right, uint32_t rightsize);
 static int symbolCmp(struct object *left, struct object *right);
 static struct object *newString(char *text);
 static struct object *newSymbol(char *text);
 static struct object *newClass(char *name);
 static struct object *newNode(struct object *v, struct object *l,
-			      struct object *r);
+                              struct object *r);
 static struct object *newTree(void);
 static struct object *newDictionary(void);
 static struct object *newArray(int size);
@@ -87,9 +87,9 @@ static int parseMethod(struct object *theMethod);
 
 static struct object *BeginCommand(void);
 static struct object *insert(struct object *array, int index,
-			     struct object *val);
+                             struct object *val);
 static void dictionaryInsert(struct object *dict, struct object *index,
-			     struct object *value);
+                             struct object *value);
 
 static void MethodCommand(void);
 static void RawClassCommand(void);
@@ -101,7 +101,7 @@ static void writeTag(FILE * fp, int type, int val);
 
 static void objectWrite(FILE * fp, struct object *obj);
 static struct object *symbolTreeInsert(struct object *base,
-				       struct object *symNode);
+                                       struct object *symNode);
 static struct object *fixSymbols(void);
 static void fixGlobals(void);
 static void checkGlobals(void);
@@ -147,7 +147,8 @@ static int imageTop = 0;
 
 /* ------------------------------------------------------------- */
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
     const char *image_source = "imageSource";
     const char *output_file = "lst.img";
     FILE *fd;
@@ -156,17 +157,17 @@ int main(int argc, char **argv) {
 
     printf("%d arguments\n", argc);
     for (i = 0; i < argc; i++) {
-	printf("argv[%d]=\"%s\"\n", i, argv[i]);
+        printf("argv[%d]=\"%s\"\n", i, argv[i]);
     }
 
     if (argc > 1) {
-	image_source = argv[1];
-	printf("Image source file: %s\n", image_source);
+        image_source = argv[1];
+        printf("Image source file: %s\n", image_source);
     }
 
     if (argc >= 2) {
-	output_file = argv[2];
-	printf("Image output file: %s\n", output_file);
+        output_file = argv[2];
+        printf("Image output file: %s\n", output_file);
     }
 
     /* big bang -- create the first classes */
@@ -174,29 +175,29 @@ int main(int argc, char **argv) {
     addArgument("self");
 
     if ((fin = fopen(image_source, "r")) == NULL)
-	sysErrorStr("file in error", image_source);
+        sysErrorStr("file in error", image_source);
 
     /* then read the image source file */
     while (fgets((char *) inputBuffer, 1000, fin)) {
-	p = inputBuffer;
-	skipSpaces();
-	readIdentifier();
+        p = inputBuffer;
+        skipSpaces();
+        readIdentifier();
 
-	if (strcmp(tokenBuffer, "BEGIN") == 0) {
-	    bootMethod = BeginCommand();
-	} else if (strcmp(tokenBuffer, "RAWCLASS") == 0) {
-	    RawClassCommand();
-	} else if (strcmp(tokenBuffer, "CLASS") == 0) {
-	    ClassCommand();
-	} else if (strcmp(tokenBuffer, "COMMENT") == 0) {
-	    /* nothing */ ;
-	} else if (strcmp(tokenBuffer, "METHOD") == 0) {
-	    MethodCommand();
-	} else if (strcmp(tokenBuffer, "END") == 0) {
-	    break;
-	} else {
-	    sysErrorStr("unknown command ", tokenBuffer);
-	}
+        if (strcmp(tokenBuffer, "BEGIN") == 0) {
+            bootMethod = BeginCommand();
+        } else if (strcmp(tokenBuffer, "RAWCLASS") == 0) {
+            RawClassCommand();
+        } else if (strcmp(tokenBuffer, "CLASS") == 0) {
+            ClassCommand();
+        } else if (strcmp(tokenBuffer, "COMMENT") == 0) {
+            /* nothing */ ;
+        } else if (strcmp(tokenBuffer, "METHOD") == 0) {
+            MethodCommand();
+        } else if (strcmp(tokenBuffer, "END") == 0) {
+            break;
+        } else {
+            sysErrorStr("unknown command ", tokenBuffer);
+        }
     }
 
     fclose(fin);
@@ -209,7 +210,7 @@ int main(int argc, char **argv) {
     checkGlobals();
 
     if ((fd = fopen(output_file, "w")) == NULL) {
-	sysErrorStr("file out error", output_file);
+        sysErrorStr("file out error", output_file);
     }
 
     printf("starting to file out\n");
@@ -242,7 +243,8 @@ int main(int argc, char **argv) {
 
 /* ------------------------------------------------------------- */
 
-void bigBang(void) {
+void bigBang(void)
+{
     struct object *ObjectClass;
     struct object *MetaObjectClass;
     struct object *ClassClass;
@@ -357,32 +359,36 @@ void bigBang(void) {
 /*	Errors                                                       */
 
 /* ------------------------------------------------------------- */
-int parseError(char *msg) {
+int parseError(char *msg)
+{
     char *q;
 
     for (q = inputBuffer; q != p;)
-	printf("%c", *q++);
+        printf("%c", *q++);
     printf("\n%s\n", msg);
     while (*q)
-	printf("%c", *q++);
+        printf("%c", *q++);
     printf("\n");
     exit(1);
     return 0;
 }
 
-void sysError(const char *a) {
+void sysError(const char *a)
+{
     fprintf(stderr, "unrecoverable system error: %s\n", a);
     exit(1);
 }
 
 
-void sysErrorInt(const char *a, intptr_t b) {
+void sysErrorInt(const char *a, intptr_t b)
+{
     fprintf(stderr, "unrecoverable system error: %s %ld\n", a, b);
     exit(1);
 }
 
 
-void sysErrorStr(const char *a, const char *b) {
+void sysErrorStr(const char *a, const char *b)
+{
     fprintf(stderr, "unrecoverable system error: %s %s\n", a, b);
     exit(1);
 }
@@ -398,24 +404,26 @@ void sysErrorStr(const char *a, const char *b) {
 #   undef gcalloc
 #endif
 
-struct object *gcalloc(int size) {
+struct object *gcalloc(int size)
+{
     struct object *result;
 
     result = malloc(sizeof(struct object) + size * sizeof(struct object *));
     if (!result) {
-	sysErrorStr("out of memory", "gcalloc");
+        sysErrorStr("out of memory", "gcalloc");
     }
 
     SETSIZE(result, size);
 
     while (size > 0) {
-	result->data[--size] = nilObject;
+        result->data[--size] = nilObject;
     }
 
     return result;
 }
 
-struct byteObject *binaryAlloc(int size) {
+struct byteObject *binaryAlloc(int size)
+{
     int osize;
     struct byteObject *result;
 
@@ -437,29 +445,31 @@ static int globalTop = 0;
 static char *globalNames[100];
 static struct object *globals[100];
 
-void addGlobalName(char *name, struct object *value) {
+void addGlobalName(char *name, struct object *value)
+{
     char *newName;
 
     newName = strdup(name);
     if (!newName) {
-	sysErrorStr("out of memory", "newname in add global");
+        sysErrorStr("out of memory", "newname in add global");
     }
     globalNames[globalTop] = newName;
     globals[globalTop] = value;
     globalTop++;
 }
 
-struct object *lookupGlobalName(char *name, int ok_missing) {
+struct object *lookupGlobalName(char *name, int ok_missing)
+{
     int i;
 
     for (i = 0; i < globalTop; i++) {
-	if (strcmp(name, globalNames[i]) == 0) {
-	    return globals[i];
-	}
+        if (strcmp(name, globalNames[i]) == 0) {
+            return globals[i];
+        }
     }
     /* not found, return 0 */
     if (!ok_missing) {
-	sysErrorStr("Missing global", name);
+        sysErrorStr("Missing global", name);
     }
     return 0;
 }
@@ -470,60 +480,65 @@ struct object *lookupGlobalName(char *name, int ok_missing) {
 
 /* ------------------------------------------------------------- */
 
-void inputMethodText() {
+void inputMethodText()
+{
     char c;
 
     p = inputBuffer;
     while (1) {
-	while ((c = fgetc(fin)) != '\n') {
-	    *p++ = c;
-	}
+        while ((c = fgetc(fin)) != '\n') {
+            *p++ = c;
+        }
 
-	*p++ = '\n';
+        *p++ = '\n';
 
-	if ((c = fgetc(fin)) == '!') {
-	    if ((c = fgetc(fin)) == '\n') {
-		*p = '\0';
-		return;
-	    }
+        if ((c = fgetc(fin)) == '!') {
+            if ((c = fgetc(fin)) == '\n') {
+                *p = '\0';
+                return;
+            }
 
-	    *p++ = '!';
-	    *p++ = c;
-	} else {
-	    *p++ = c;
-	}
+            *p++ = '!';
+            *p++ = c;
+        } else {
+            *p++ = c;
+        }
     }
 }
 
-void skipSpaces() {
+void skipSpaces()
+{
     while ((*p == ' ') || (*p == '\t') || (*p == '\n'))
-	p++;
+        p++;
     if (*p == '\"') {
-	p++;
-	while (*p && (*p != '\"'))
-	    p++;
-	if (*p != '\"')
-	    parseError("unterminated comment");
-	p++;
-	skipSpaces();
+        p++;
+        while (*p && (*p != '\"'))
+            p++;
+        if (*p != '\"')
+            parseError("unterminated comment");
+        p++;
+        skipSpaces();
     }
 }
 
-int isDigit(char p) {
+int isDigit(char p)
+{
     if ((p >= '0') && (p <= '9'))
-	return 1;
+        return 1;
     return 0;
 }
 
-int isIdentifierChar(char p) {
+int isIdentifierChar(char p)
+{
     if ((p >= 'a') && (p <= 'z'))
-	return 1;
+        return 1;
     if ((p >= 'A') && (p <= 'Z'))
-	return 1;
+        return 1;
     return 0;
 }
 
-int isBinary(char p) {
+int isBinary(char p)
+{
     switch (p) {
     case '+':
     case '*':
@@ -535,51 +550,54 @@ int isBinary(char p) {
     case '@':
     case '~':
     case ',':
-	return 1;
+        return 1;
     }
     return 0;
 }
 
-void readBinary() {
+void readBinary()
+{
     tokenBuffer[0] = *p++;
     if (isBinary(*p)) {
-	tokenBuffer[1] = *p++;
-	tokenBuffer[2] = '\0';
+        tokenBuffer[1] = *p++;
+        tokenBuffer[2] = '\0';
     } else {
-	tokenBuffer[1] = '\0';
+        tokenBuffer[1] = '\0';
     }
     skipSpaces();
 }
 
-int readIdentifier() {
+int readIdentifier()
+{
     int keyflag;
     char *q = tokenBuffer;
 
     while (isIdentifierChar(*p) || isDigit(*p))
-	*q++ = *p++;
+        *q++ = *p++;
     *q = '\0';
     if (*p == ':') {		/* It's a keyword identifier */
-	keyflag = 1;
-	*q++ = ':';
-	*q = '\0';
-	p++;
+        keyflag = 1;
+        *q++ = ':';
+        *q = '\0';
+        p++;
     } else {
-	keyflag = 0;
+        keyflag = 0;
     }
     skipSpaces();
     return keyflag;
 }
 
-int readInteger() {
+int readInteger()
+{
     int val, neg = 0;
 
     if (*p == '-') {
-	neg = 1;
-	++p;
+        neg = 1;
+        ++p;
     }
     val = *p++ - '0';
     while (isDigit(*p)) {
-	val = 10 * val + (*p++ - '0');
+        val = 10 * val + (*p++ - '0');
     }
     skipSpaces();
     return neg ? -val : val;
@@ -596,65 +614,70 @@ static int symbolTop = 0;
 static struct object *oldSymbols[5000];
 
 int symbolBareCmp(const char *left, uint32_t leftsize, const char *right,
-		  uint32_t rightsize) {
+                  uint32_t rightsize)
+{
     int minsize = leftsize;
     int i;
 
     if (rightsize < minsize)
-	minsize = rightsize;
+        minsize = rightsize;
     for (i = 0; i < minsize; i++) {
-	if (left[i] != right[i]) {
-	    if (left[i] < right[i]) {
-		return -1;
-	    } else {
-		return 1;
-	    }
-	}
+        if (left[i] != right[i]) {
+            if (left[i] < right[i]) {
+                return -1;
+            } else {
+                return 1;
+            }
+        }
     }
     return leftsize - rightsize;
 }
 
-int symbolCmp(struct object *left, struct object *right) {
+int symbolCmp(struct object *left, struct object *right)
+{
     return symbolBareCmp((char *) bytePtr(left), SIZE(left),
-			 (char *) bytePtr(right), SIZE(right));
+                         (char *) bytePtr(right), SIZE(right));
 }
 
-struct object *newString(char *text) {
+struct object *newString(char *text)
+{
     int size, i;
     struct byteObject *newObj;
 
     size = strlen(text);
     newObj = binaryAlloc(size);
     for (i = 0; i < size; i++)
-	newObj->bytes[i] = text[i];
+        newObj->bytes[i] = text[i];
     newObj->class = lookupGlobalName("String", 0);
     return (struct object *) newObj;
 }
 
-struct object *newSymbol(char *text) {
+struct object *newSymbol(char *text)
+{
     int i;
     struct byteObject *result;
 
     /* first see if it is already a symbol */
     for (i = 0; i < symbolTop; i++) {
-	if (symbolBareCmp
-	    (text, strlen(text), (char *) bytePtr(oldSymbols[i]),
-	     SIZE(oldSymbols[i])) == 0) {
-	    return oldSymbols[i];
-	}
+        if (symbolBareCmp
+            (text, strlen(text), (char *) bytePtr(oldSymbols[i]),
+             SIZE(oldSymbols[i])) == 0) {
+            return oldSymbols[i];
+        }
     }
 
     /* not there, make a new one */
     result = binaryAlloc(strlen(text));
     for (i = 0; i < strlen(text); i++) {
-	result->bytes[i] = text[i];
+        result->bytes[i] = text[i];
     }
     result->class = lookupGlobalName("Symbol", 0);
     oldSymbols[symbolTop++] = (struct object *) result;
     return (struct object *) result;
 }
 
-struct object *newClass(char *name) {
+struct object *newClass(char *name)
+{
     struct object *newC;
 
     newC = gcalloc(ClassSize);
@@ -662,7 +685,8 @@ struct object *newClass(char *name) {
     return newC;
 }
 
-struct object *newNode(struct object *v, struct object *l, struct object *r) {
+struct object *newNode(struct object *v, struct object *l, struct object *r)
+{
     struct object *result;
 
     result = gcalloc(3);
@@ -673,7 +697,8 @@ struct object *newNode(struct object *v, struct object *l, struct object *r) {
     return result;
 }
 
-struct object *newTree(void) {
+struct object *newTree(void)
+{
     struct object *result;
 
     result = gcalloc(1);
@@ -681,7 +706,8 @@ struct object *newTree(void) {
     return result;
 }
 
-struct object *newDictionary(void) {
+struct object *newDictionary(void)
+{
     struct object *result;
 
     result = gcalloc(2);
@@ -697,14 +723,15 @@ struct object *newDictionary(void) {
  *
  * All slots are initialized to nil
  */
-struct object *newArray(int size) {
+struct object *newArray(int size)
+{
     struct object *result;
     int i;
 
     result = gcalloc(size);
     result->class = lookupGlobalName("Array", 0);
     for (i = 0; i < size; ++i) {
-	result->data[i] = nilObject;
+        result->data[i] = nilObject;
     }
     return (result);
 }
@@ -713,7 +740,8 @@ struct object *newArray(int size) {
  * newOrderedArray()
  *	Return a new, empty ordered array
  */
-struct object *newOrderedArray(void) {
+struct object *newOrderedArray(void)
+{
     struct object *result;
 
     result = gcalloc(0);
@@ -732,46 +760,51 @@ struct object *newOrderedArray(void) {
 static unsigned char byteBuffer[ByteBufferTop];
 static unsigned byteTop;
 
-void genByte(int v) {
+void genByte(int v)
+{
     byteBuffer[byteTop++] = v;
     if (byteTop >= ByteBufferTop) {
-	sysError("too many bytecodes");
+        sysError("too many bytecodes");
     }
 }
 
-void genVal(int v) {
+void genVal(int v)
+{
     if ((v < 0) || (v > 0xFFFF)) {
-	sysError("illegal value");
+        sysError("illegal value");
     }
     genByte(v & 0xFF);
     genByte(v >> 8);
 }
 
-void genValPos(int pos, int v) {
+void genValPos(int pos, int v)
+{
     if ((v < 0) || (v > 0xFFFF)) {
-	sysError("illegal value");
+        sysError("illegal value");
     }
     byteBuffer[pos] = v & 0xFF;
     byteBuffer[pos + 1] = v >> 8;
 }
 
-void genInstruction(int a, int b) {
+void genInstruction(int a, int b)
+{
     /*printf("gen instruction %d %d\n", a, b); */
     if (b < 16) {
-	genByte(a * 16 + b);
+        genByte(a * 16 + b);
     } else {
-	genInstruction(0, a);
-	genByte(b);
+        genInstruction(0, a);
+        genByte(b);
     }
 }
 
-struct object *buildByteArray() {
+struct object *buildByteArray()
+{
     struct byteObject *newObj;
     int i;
 
     newObj = binaryAlloc(byteTop);
     for (i = 0; i < byteTop; i++)
-	newObj->bytes[i] = byteBuffer[i];
+        newObj->bytes[i] = byteBuffer[i];
     newObj->class = lookupGlobalName("ByteArray", 0);
     return (struct object *) newObj;
 }
@@ -780,24 +813,27 @@ struct object *buildByteArray() {
 static struct object *litBuffer[LiteralBufferTop];
 static unsigned litTop = 0;
 
-int addLiteral(struct object *a) {
+/* FIXME - remove duplicates. */
+int addLiteral(struct object *a)
+{
     litBuffer[litTop++] = a;
     if (litTop >= LiteralBufferTop) {
-	sysError("too many literals");
+        sysError("too many literals");
     }
     return litTop - 1;
 }
 
-struct object *buildLiteralArray(void) {
+struct object *buildLiteralArray(void)
+{
     int i;
     struct object *result;
 
     if (litTop == 0)
-	return nilObject;
+        return nilObject;
     result = gcalloc(litTop);
     result->class = lookupGlobalName("Array", 0);
     for (i = 0; i < litTop; i++)
-	result->data[i] = litBuffer[i];
+        result->data[i] = litBuffer[i];
     return result;
 }
 
@@ -805,12 +841,13 @@ struct object *buildLiteralArray(void) {
 static char *argumentNames[ArgumentBufferTop];
 static int argumentTop;
 
-void addArgument(char *name) {
+void addArgument(char *name)
+{
     char *p;
 
     p = strdup(name);
     if (!p) {
-	sysErrorStr("malloc failure", "addArgument");
+        sysErrorStr("malloc failure", "addArgument");
     }
     argumentNames[argumentTop++] = p;
 }
@@ -819,16 +856,17 @@ void addArgument(char *name) {
 static char *tempBuffer[TempBufferTop];
 static int tempTop, maxTemp;
 
-void addTemporary(char *name) {
+void addTemporary(char *name)
+{
     char *p;
 
     p = strdup(name);
     if (!p) {
-	sysErrorStr("malloc failure", "addTemporary");
+        sysErrorStr("malloc failure", "addTemporary");
     }
     tempBuffer[tempTop++] = p;
     if (tempTop > maxTemp) {
-	maxTemp = tempTop;
+        maxTemp = tempTop;
     }
 }
 
@@ -839,19 +877,21 @@ void addTemporary(char *name) {
 
 /* ------------------------------------------------------------- */
 
-int parseInteger(void) {
+int parseInteger(void)
+{
     int i;
 
     i = readInteger();
     if ((i >= 0) && (i < 10)) {
-	genInstruction(PushConstant, i);
+        genInstruction(PushConstant, i);
     } else {
-	genInstruction(PushLiteral, addLiteral(newInteger(i)));
+        genInstruction(PushLiteral, addLiteral(newInteger(i)));
     }
     return 1;
 }
 
-int parsePrimitive(void) {
+int parsePrimitive(void)
+{
     int primitiveNumber, argumentCount;
 
     /* skip over the left bracket */
@@ -860,23 +900,24 @@ int parsePrimitive(void) {
 
     /* then read the primitive number */
     if (isDigit(*p)) {
-	primitiveNumber = readInteger();
+        primitiveNumber = readInteger();
     } else {
-	return parseError("missing primitive number");
+        return parseError("missing primitive number");
     }
+
     /* then read the arguments */
     for (argumentCount = 0; *p && (*p != '>'); argumentCount++) {
-	if (!parseTerm()) {
-	    return 0;
-	}
+        if (!parseTerm()) {
+            return 0;
+        }
     }
 
     /* make sure we ended correctly */
     if (*p == '>') {
-	p++;
-	skipSpaces();
+        p++;
+        skipSpaces();
     } else {
-	return parseError("missing > at end of primitive");
+        return parseError("missing > at end of primitive");
     }
 
     /* generate instructions */
@@ -887,14 +928,15 @@ int parsePrimitive(void) {
     return (1);
 }
 
-int parseString(void) {
+int parseString(void)
+{
     char *q;
 
     p++;
     for (q = tokenBuffer; *p && *p != '\'';)
-	*q++ = *p++;
+        *q++ = *p++;
     if (*p != '\'')
-	return parseError("missing end of string");
+        return parseError("missing end of string");
     p++;
     skipSpaces();
     *q = '\0';
@@ -902,35 +944,36 @@ int parseString(void) {
     return 1;
 }
 
-int lookupInstance(struct object *class, char *text, int *low) {
+int lookupInstance(struct object *class, char *text, int *low)
+{
     struct object *var;
     int size, i;
 
     /* first check superclasses */
     var = class->data[parentClassInClass];
     if (var && var != nilObject) {
-	size = lookupInstance(var, text, low);
-	if (size >= 0)
-	    return size;
+        size = lookupInstance(var, text, low);
+        if (size >= 0)
+            return size;
     } else {			/* no superclass */
-	*low = 0;
+        *low = 0;
     }
 
     /* Check our own list of variables */
     var = class->data[variablesInClass];
     if (var && var != nilObject) {
-	size = SIZE(var);
+        size = SIZE(var);
     } else {
-	size = 0;
+        size = 0;
     }
 
     for (i = 0; i < size; i++) {
-	if (symbolBareCmp
-	    (text, strlen(text), (char *) bytePtr(var->data[i]),
-	     (SIZE(var->data[i]))) == 0) {
-	    return (*low);
-	}
-	*low += 1;
+        if (symbolBareCmp
+            (text, strlen(text), (char *) bytePtr(var->data[i]),
+             (SIZE(var->data[i]))) == 0) {
+            return (*low);
+        }
+        *low += 1;
     }
     return (-1);
 }
@@ -938,61 +981,62 @@ int lookupInstance(struct object *class, char *text, int *low) {
 static int superMessage = 0;
 
 
-int nameTerm(char *name) {
+int nameTerm(char *name)
+{
     static char *lowConstants[4] = { "nil", "true", "false", 0 };
     int i;
 
     /* see if temporary */
     for (i = 0; i < tempTop; i++) {
-	if (strcmp(name, tempBuffer[i]) == 0) {
-	    genInstruction(PushTemporary, i);
-	    return 1;
-	}
+        if (strcmp(name, tempBuffer[i]) == 0) {
+            genInstruction(PushTemporary, i);
+            return 1;
+        }
     }
 
     /* see if argument */
     for (i = 0; i < argumentTop; i++) {
-	if (strcmp(name, argumentNames[i]) == 0) {
-	    genInstruction(PushArgument, i);
-	    return 1;
-	}
+        if (strcmp(name, argumentNames[i]) == 0) {
+            genInstruction(PushArgument, i);
+            return 1;
+        }
     }
 
     /* see if super */
     if (strcmp(name, "super") == 0) {
-	genInstruction(PushArgument, 0);
-	printf("setting super message\n");
-	superMessage = 1;
-	return 1;
+        genInstruction(PushArgument, 0);
+        printf("setting super message\n");
+        superMessage = 1;
+        return 1;
     }
 
     /* see if low constant */
     for (i = 0; lowConstants[i]; i++) {
-	if (strcmp(lowConstants[i], name) == 0) {
-	    genInstruction(PushConstant, 10 + i);
-	    return 1;
-	}
+        if (strcmp(lowConstants[i], name) == 0) {
+            genInstruction(PushConstant, 10 + i);
+            return 1;
+        }
     }
 
     /* see if instance variable */
     if (currentClass) {
-	int low;
+        int low;
 
-	i = lookupInstance(currentClass, name, &low);
-	if (i >= 0) {
-	    genInstruction(PushInstance, i);
-	    return 1;
-	}
+        i = lookupInstance(currentClass, name, &low);
+        if (i >= 0) {
+            genInstruction(PushInstance, i);
+            return 1;
+        }
     }
 
     /* see if global */
     {
-	struct object *glob = lookupGlobalName(name, 1);
+        struct object *glob = lookupGlobalName(name, 1);
 
-	if (glob) {
-	    genInstruction(PushLiteral, addLiteral(glob));
-	    return 1;
-	}
+        if (glob) {
+            genInstruction(PushLiteral, addLiteral(glob));
+            return 1;
+        }
     }
 
     return (parseError("unknown identifier"));
@@ -1001,7 +1045,8 @@ int nameTerm(char *name) {
 static int returnOp;
 static char *blockbackup;
 
-int parseBlock(void) {
+int parseBlock(void)
+{
     int savedLocation, saveTop, argCount;
     char *savestart;
 
@@ -1015,44 +1060,44 @@ int parseBlock(void) {
     saveTop = tempTop;
     argCount = 0;
     if (*p == ':') {
-	while (1) {
-	    p++;
-	    skipSpaces();
-	    if (!isIdentifierChar(*p))
-		return parseError("missing identifier");
-	    if (readIdentifier())
-		return parseError("keyword illegal");
-	    addTemporary(tokenBuffer);
-	    argCount++;
-	    if (*p == '|')
-		break;
-	    if (*p != ':')
-		return parseError("missing colon:");
-	}
-	p++;
-	skipSpaces();
+        while (1) {
+            p++;
+            skipSpaces();
+            if (!isIdentifierChar(*p))
+                return parseError("missing identifier");
+            if (readIdentifier())
+                return parseError("keyword illegal");
+            addTemporary(tokenBuffer);
+            argCount++;
+            if (*p == '|')
+                break;
+            if (*p != ':')
+                return parseError("missing colon:");
+        }
+        p++;
+        skipSpaces();
     }
     if (*p == ']') {
-	genInstruction(PushConstant, nilConst);
+        genInstruction(PushConstant, nilConst);
     } else {
-	int saveReturnOp = returnOp;
+        int saveReturnOp = returnOp;
 
-	returnOp = BlockReturn;
-	while (1) {
-	    if (!parseStatement()) {
-		parseError("Statement syntax inside block");
-	    }
-	    if (*p == '.') {
-		p++;
-		skipSpaces();
-	    }
-	    if (*p == ']') {
-		break;
-	    } else {
-		genInstruction(DoSpecial, PopTop);
-	    }
-	}
-	returnOp = saveReturnOp;
+        returnOp = BlockReturn;
+        while (1) {
+            if (!parseStatement()) {
+                parseError("Statement syntax inside block");
+            }
+            if (*p == '.') {
+                p++;
+                skipSpaces();
+            }
+            if (*p == ']') {
+                break;
+            } else {
+                genInstruction(DoSpecial, PopTop);
+            }
+        }
+        returnOp = saveReturnOp;
     }
     p++;
     skipSpaces();		/* skip over ] */
@@ -1070,19 +1115,21 @@ static int parseChar(void);
 static int parseTerm(void);
 
 
-int parseSymbol(void) {
+int parseSymbol(void)
+{
     char *q;
 
     p++;
     for (q = tokenBuffer; isIdentifierChar(*p) || (*p == ':');)
-	*q++ = *p++;
+        *q++ = *p++;
     *q = '\0';
     skipSpaces();
     genInstruction(PushLiteral, addLiteral(newSymbol(tokenBuffer)));
     return 1;
 }
 
-int parseChar(void) {
+int parseChar(void)
+{
     struct object *newObj;
 
     p++;
@@ -1095,149 +1142,154 @@ int parseChar(void) {
     return 1;
 }
 
-int parseTerm(void) {
+int parseTerm(void)
+{
     /* make it so anything other than a block zeros out backup var */
     blockbackup = 0;
     superMessage = 0;
 
     if (*p == '(') {
-	p++;
-	skipSpaces();
-	if (!parseExpression())
-	    return 0;
-	if (*p != ')')
-	    return parseError("unbalanced parenthesis");
-	p++;
-	skipSpaces();
-	return 1;
+        p++;
+        skipSpaces();
+        if (!parseExpression())
+            return 0;
+        if (*p != ')')
+            return parseError("unbalanced parenthesis");
+        p++;
+        skipSpaces();
+        return 1;
     }
     if (*p == '<')
-	return parsePrimitive();
+        return parsePrimitive();
     if (*p == '$')
-	return parseChar();
+        return parseChar();
     if (isDigit(*p) || (*p == '-'))
-	return parseInteger();
+        return parseInteger();
     if (*p == '\'')
-	return parseString();
+        return parseString();
     if (isIdentifierChar(*p)) {
-	readIdentifier();
-	return nameTerm(tokenBuffer);
+        readIdentifier();
+        return nameTerm(tokenBuffer);
     }
     if (*p == '[')
-	return parseBlock();
+        return parseBlock();
     if (*p == '#')
-	return parseSymbol();
+        return parseSymbol();
     return parseError("illegal start of expression");
 }
 
 
 
-int parseUnaryContinuation(void) {
+int parseUnaryContinuation(void)
+{
     static char *unaryBuiltIns[] = { "isNil", "notNil", 0 };
     int litNumber, done;
     char *q;
 
     while (isIdentifierChar(*p)) {
-	q = p;
-	if (readIdentifier()) {
-	    p = q;		/* oops, was a keyword */
-	    break;
-	}
-	done = 0;
-	if (!superMessage) {
-	    int i;
+        q = p;
+        if (readIdentifier()) {
+            p = q;		/* oops, was a keyword */
+            break;
+        }
+        done = 0;
+        if (!superMessage) {
+            int i;
 
-	    for (i = 0; unaryBuiltIns[i]; i++)
-		if (strcmp(tokenBuffer, unaryBuiltIns[i]) == 0) {
-		    genInstruction(SendUnary, i);
-		    done = 1;
-		}
-	}
-	if (!done) {
-	    genInstruction(MarkArguments, 1);
-	    litNumber = addLiteral(newSymbol(tokenBuffer));
-	    /*printf("unary %s\n", tokenBuffer); */
-	    if (superMessage) {
-		genInstruction(DoSpecial, SendToSuper);
-		genByte(litNumber);
-	    } else
-		genInstruction(SendMessage, litNumber);
-	    superMessage = 0;
-	}
+            for (i = 0; unaryBuiltIns[i]; i++)
+                if (strcmp(tokenBuffer, unaryBuiltIns[i]) == 0) {
+                    genInstruction(SendUnary, i);
+                    done = 1;
+                }
+        }
+        if (!done) {
+            genInstruction(MarkArguments, 1);
+            litNumber = addLiteral(newSymbol(tokenBuffer));
+            /*printf("unary %s\n", tokenBuffer); */
+            if (superMessage) {
+                genInstruction(DoSpecial, SendToSuper);
+                genByte(litNumber);
+            } else
+                genInstruction(SendMessage, litNumber);
+            superMessage = 0;
+        }
     }
     return 1;
 }
 
 static char *binaryBuiltIns[] = { "<", "<=", "+", 0 };
 
-int parseBinaryContinuation(void) {
+int parseBinaryContinuation(void)
+{
     int messLiteral, i, done;
     char messbuffer[80];
 
     if (!parseUnaryContinuation())
-	return 0;
+        return 0;
     while (isBinary(*p)) {
-	readBinary();
-	/*printf("binary symbol %s\n", tokenBuffer); */
-	strcpy(messbuffer, tokenBuffer);
-	if (!parseTerm())
-	    return 0;
-	if (!parseUnaryContinuation())
-	    return 0;
+        readBinary();
+        /*printf("binary symbol %s\n", tokenBuffer); */
+        strcpy(messbuffer, tokenBuffer);
+        if (!parseTerm())
+            return 0;
+        if (!parseUnaryContinuation())
+            return 0;
 
-	done = 0;
-	if (!superMessage)
-	    for (i = 0; binaryBuiltIns[i]; i++)
-		if (strcmp(messbuffer, binaryBuiltIns[i]) == 0) {
-		    genInstruction(SendBinary, i);
-		    done = 1;
-		}
+        done = 0;
+        if (!superMessage)
+            for (i = 0; binaryBuiltIns[i]; i++)
+                if (strcmp(messbuffer, binaryBuiltIns[i]) == 0) {
+                    genInstruction(SendBinary, i);
+                    done = 1;
+                }
 
-	if (!done) {
-	    messLiteral = addLiteral(newSymbol(messbuffer));
-	    genInstruction(MarkArguments, 2);
-	    if (superMessage) {
-		genInstruction(DoSpecial, SendToSuper);
-		genByte(messLiteral);
-		superMessage = 0;
-	    } else
-		genInstruction(SendMessage, messLiteral);
-	}
+        if (!done) {
+            messLiteral = addLiteral(newSymbol(messbuffer));
+            genInstruction(MarkArguments, 2);
+            if (superMessage) {
+                genInstruction(DoSpecial, SendToSuper);
+                genByte(messLiteral);
+                superMessage = 0;
+            } else
+                genInstruction(SendMessage, messLiteral);
+        }
     }
     return 1;
 }
 
-int optimizeBlock(void) {
+int optimizeBlock(void)
+{
     if (*p != '[') {
-	if (!parseTerm())
-	    return 0;
-	parseError("missing block as optimized block argument");
+        if (!parseTerm())
+            return 0;
+        parseError("missing block as optimized block argument");
     } else {
-	p++;
-	skipSpaces();
-	if (*p == ']') {
-	    genInstruction(PushConstant, 0);
-	    p++;
-	    skipSpaces();
-	    return 1;
-	}
-	while (1) {
-	    if (!parseStatement())
-		return 0;
-	    if (*p == '.')
-		p++, skipSpaces();
-	    if (*p == ']')
-		break;
-	    genInstruction(DoSpecial, PopTop);
-	}
-	p++;
-	skipSpaces();
-	/* just leave last expression on stack */
+        p++;
+        skipSpaces();
+        if (*p == ']') {
+            genInstruction(PushConstant, 0);
+            p++;
+            skipSpaces();
+            return 1;
+        }
+        while (1) {
+            if (!parseStatement())
+                return 0;
+            if (*p == '.')
+                p++, skipSpaces();
+            if (*p == ']')
+                break;
+            genInstruction(DoSpecial, PopTop);
+        }
+        p++;
+        skipSpaces();
+        /* just leave last expression on stack */
     }
     return 1;
 }
 
-int controlFlow(int opt1, char *rest, int opt2) {
+int controlFlow(int opt1, char *rest, int opt2)
+{
     int save1, save2;
     char *q;
 
@@ -1245,7 +1297,7 @@ int controlFlow(int opt1, char *rest, int opt2) {
     save1 = byteTop;
     genVal(0);
     if (!optimizeBlock()) {
-	parseError("syntax error in control flow");
+        parseError("syntax error in control flow");
     }
     genInstruction(DoSpecial, Branch);
     save2 = byteTop;
@@ -1253,19 +1305,20 @@ int controlFlow(int opt1, char *rest, int opt2) {
     genValPos(save1, byteTop);
     q = p;
     if (isIdentifierChar(*p) && readIdentifier()
-	&& (strcmp(tokenBuffer, rest) == 0)) {
-	if (!optimizeBlock()) {
-	    parseError("syntax error in control cascade");
-	}
+        && (strcmp(tokenBuffer, rest) == 0)) {
+        if (!optimizeBlock()) {
+            parseError("syntax error in control cascade");
+        }
     } else {
-	p = q;
-	genInstruction(PushConstant, opt2);
+        p = q;
+        genInstruction(PushConstant, opt2);
     }
     genValPos(save2, byteTop);
     return 1;
 }
 
-int optimizeLoop(int branchInstruction) {
+int optimizeLoop(int branchInstruction)
+{
     int L1, L2;
 
     /* back up to start of block and try again */
@@ -1276,7 +1329,7 @@ int optimizeLoop(int branchInstruction) {
     L2 = byteTop;
     genVal(0);
     if (!(isIdentifierChar(*p) && readIdentifier()))
-	return parseError("can't get message again in optimized block");
+        return parseError("can't get message again in optimized block");
     /* now read the body */
     optimizeBlock();
     genInstruction(DoSpecial, PopTop);
@@ -1288,217 +1341,225 @@ int optimizeLoop(int branchInstruction) {
 }
 
 
-int parseKeywordContinuation(void) {
+int parseKeywordContinuation(void)
+{
     int argCount, i, done, saveSuper;
     char messageBuffer[100];
 
     saveSuper = superMessage;
     if (!parseBinaryContinuation())
-	return 0;
+        return 0;
     strcpy(messageBuffer, "");
     argCount = 0;
     if (isIdentifierChar(*p) && readIdentifier()) {
-	if (strcmp(tokenBuffer, "ifTrue:") == 0)
-	    return controlFlow(BranchIfFalse, "ifFalse:", nilConst);
-	else if (strcmp(tokenBuffer, "ifFalse:") == 0)
-	    return controlFlow(BranchIfTrue, "ifTrue:", nilConst);
-	else if (strcmp(tokenBuffer, "and:") == 0)
-	    return controlFlow(BranchIfFalse, "", falseConst);
-	else if (strcmp(tokenBuffer, "or:") == 0)
-	    return controlFlow(BranchIfTrue, "", trueConst);
-	else if ((strcmp(tokenBuffer, "whileTrue:") == 0) && blockbackup)
-	    return optimizeLoop(BranchIfFalse);
-	else if ((strcmp(tokenBuffer, "whileFalse:") == 0) && blockbackup)
-	    return optimizeLoop(BranchIfTrue);
-	else
-	    do {
-		strcat(messageBuffer, tokenBuffer);
-		argCount++;
-		if (!parseTerm())
-		    return 0;
-		if (!parseBinaryContinuation())
-		    return 0;
-	    } while (isIdentifierChar(*p) && readIdentifier());
+        if (strcmp(tokenBuffer, "ifTrue:") == 0)
+            return controlFlow(BranchIfFalse, "ifFalse:", nilConst);
+        else if (strcmp(tokenBuffer, "ifFalse:") == 0)
+            return controlFlow(BranchIfTrue, "ifTrue:", nilConst);
+        else if (strcmp(tokenBuffer, "and:") == 0)
+            return controlFlow(BranchIfFalse, "", falseConst);
+        else if (strcmp(tokenBuffer, "or:") == 0)
+            return controlFlow(BranchIfTrue, "", trueConst);
+        else if ((strcmp(tokenBuffer, "whileTrue:") == 0) && blockbackup)
+            return optimizeLoop(BranchIfFalse);
+        else if ((strcmp(tokenBuffer, "whileFalse:") == 0) && blockbackup)
+            return optimizeLoop(BranchIfTrue);
+        else
+            do {
+                strcat(messageBuffer, tokenBuffer);
+                argCount++;
+                if (!parseTerm())
+                    return 0;
+                if (!parseBinaryContinuation())
+                    return 0;
+            } while (isIdentifierChar(*p) && readIdentifier());
     }
     if (argCount > 0) {
-	/*printf("keywork message %s\n", messageBuffer); */
-	done = 0;
-	if (!saveSuper)
-	    for (i = 0; binaryBuiltIns[i]; i++)
-		if (strcmp(messageBuffer, binaryBuiltIns[i]) == 0) {
-		    genInstruction(SendBinary, i);
-		    done = 1;
-		}
-	if (!done) {
-	    genInstruction(MarkArguments, argCount + 1);
-	    if (saveSuper) {
-		genInstruction(DoSpecial, SendToSuper);
-		genByte(addLiteral(newSymbol(messageBuffer)));
-		superMessage = 0;
-	    } else
-		genInstruction(SendMessage,
-			       addLiteral(newSymbol(messageBuffer)));
-	}
+        /*printf("keywork message %s\n", messageBuffer); */
+        done = 0;
+        if (!saveSuper)
+            for (i = 0; binaryBuiltIns[i]; i++)
+                if (strcmp(messageBuffer, binaryBuiltIns[i]) == 0) {
+                    genInstruction(SendBinary, i);
+                    done = 1;
+                }
+        if (!done) {
+            genInstruction(MarkArguments, argCount + 1);
+            if (saveSuper) {
+                genInstruction(DoSpecial, SendToSuper);
+                genByte(addLiteral(newSymbol(messageBuffer)));
+                superMessage = 0;
+            } else
+                genInstruction(SendMessage,
+                               addLiteral(newSymbol(messageBuffer)));
+        }
     }
     return 1;
 }
 
-int doAssignment(char *name) {
+int doAssignment(char *name)
+{
     int i;
 
     for (i = 0; i < tempTop; i++)
-	if (strcmp(name, tempBuffer[i]) == 0) {
-	    genInstruction(AssignTemporary, i);
-	    return 1;
-	}
+        if (strcmp(name, tempBuffer[i]) == 0) {
+            genInstruction(AssignTemporary, i);
+            return 1;
+        }
 
     if (currentClass) {
-	int low;
+        int low;
 
-	i = lookupInstance(currentClass, name, &low);
-	if (i >= 0) {
-	    genInstruction(AssignInstance, i);
-	    return 1;
-	}
+        i = lookupInstance(currentClass, name, &low);
+        if (i >= 0) {
+            genInstruction(AssignInstance, i);
+            return 1;
+        }
     }
 
     return parseError("unknown target of assignment");
 }
 
-int parseExpression(void) {
+int parseExpression(void)
+{
     char nameBuffer[60];
 
     if (isIdentifierChar(*p)) {
-	readIdentifier();
-	if ((*p == '<') && (*(p + 1) == '-')) {
-	    p++;
-	    p++;
-	    skipSpaces();
-	    strcpy(nameBuffer, tokenBuffer);
-	    if (!parseExpression())
-		return 0;
-	    return doAssignment(nameBuffer);
-	}
-	if (!nameTerm(tokenBuffer))
-	    return 0;
+        readIdentifier();
+        if ((*p == '<') && (*(p + 1) == '-')) {
+            p++;
+            p++;
+            skipSpaces();
+            strcpy(nameBuffer, tokenBuffer);
+            if (!parseExpression())
+                return 0;
+            return doAssignment(nameBuffer);
+        }
+        if (!nameTerm(tokenBuffer))
+            return 0;
     } else {
-	if (!parseTerm()) {
-	    return 0;
-	}
+        if (!parseTerm()) {
+            return 0;
+        }
     }
     if (!parseKeywordContinuation()) {
-	return 0;
+        return 0;
     }
     while (*p == ';') {
-	p++;
-	skipSpaces();
-	genInstruction(DoSpecial, Duplicate);
-	if (!parseKeywordContinuation())
-	    return 0;
+        p++;
+        skipSpaces();
+        genInstruction(DoSpecial, Duplicate);
+        if (!parseKeywordContinuation())
+            return 0;
     }
     return 1;
 }
 
-int parseStatement(void) {
+int parseStatement(void)
+{
     if (*p == '^') {		/* return statement */
-	p++;
-	skipSpaces();
-	if (!parseExpression())
-	    return 0;
-	genInstruction(DoSpecial, returnOp);
-	return 1;
+        p++;
+        skipSpaces();
+        if (!parseExpression())
+            return 0;
+        genInstruction(DoSpecial, returnOp);
+        return 1;
     }
     /* otherwise just an expression */
     if (!parseExpression())
-	return 0;
+        return 0;
     return 1;
 }
 
-int parseBody(void) {
+int parseBody(void)
+{
     returnOp = StackReturn;
     while (*p) {
-	if (!parseStatement())
-	    return 0;
-	genInstruction(DoSpecial, PopTop);
-	if (*p == '.') {
-	    p++;
-	    skipSpaces();
-	}
+        if (!parseStatement())
+            return 0;
+        genInstruction(DoSpecial, PopTop);
+        if (*p == '.') {
+            p++;
+            skipSpaces();
+        }
     }
     genInstruction(DoSpecial, SelfReturn);
     return 1;
 }
 
-int parseMethodHeader(struct object *theMethod) {
+int parseMethodHeader(struct object *theMethod)
+{
     char messageBuffer[100], *q;
     int keyflag;
 
     if (isIdentifierChar(*p)) {
-	if (readIdentifier()) {	/* keyword message */
-	    strcpy(messageBuffer, "");
-	    keyflag = 1;
-	    while (keyflag) {
-		strcat(messageBuffer, tokenBuffer);
-		if (isIdentifierChar(*p) && !readIdentifier())
-		    addArgument(tokenBuffer);
-		else
-		    return parseError("missing argument after keyword");
-		q = p;
-		if (isIdentifierChar(*p) && readIdentifier())
-		    keyflag = 1;
-		else {
-		    p = q;
-		    keyflag = 0;
-		}
-	    }
-	} else
-	    strcpy(messageBuffer, tokenBuffer);	/* unary message */
+        if (readIdentifier()) {	/* keyword message */
+            strcpy(messageBuffer, "");
+            keyflag = 1;
+            while (keyflag) {
+                strcat(messageBuffer, tokenBuffer);
+                if (isIdentifierChar(*p) && !readIdentifier())
+                    addArgument(tokenBuffer);
+                else
+                    return parseError("missing argument after keyword");
+                q = p;
+                if (isIdentifierChar(*p) && readIdentifier())
+                    keyflag = 1;
+                else {
+                    p = q;
+                    keyflag = 0;
+                }
+            }
+        } else
+            strcpy(messageBuffer, tokenBuffer);	/* unary message */
     } else if (isBinary(*p)) {	/* binary message */
-	readBinary();
-	strcpy(messageBuffer, tokenBuffer);
-	if (!isIdentifierChar(*p))
-	    return parseError("missing argument");
-	readIdentifier();
-	addArgument(tokenBuffer);
+        readBinary();
+        strcpy(messageBuffer, tokenBuffer);
+        if (!isIdentifierChar(*p))
+            return parseError("missing argument");
+        readIdentifier();
+        addArgument(tokenBuffer);
     } else
-	return parseError("ill formed method header");
+        return parseError("ill formed method header");
     theMethod->data[nameInMethod] = newSymbol(messageBuffer);
     printf("Method %s\n", messageBuffer);
     return 1;
 }
 
-int parseTemporaries(void) {
+int parseTemporaries(void)
+{
     tempTop = 0;
     maxTemp = 0;
     if (*p != '|')
-	return 1;
+        return 1;
     p++;
     skipSpaces();
     while (*p != '|') {
-	if (!isIdentifierChar(*p))
-	    return parseError("need identifier");
-	if (readIdentifier())
-	    return parseError("keyword illegal");
-	addTemporary(tokenBuffer);
+        if (!isIdentifierChar(*p))
+            return parseError("need identifier");
+        if (readIdentifier())
+            return parseError("keyword illegal");
+        addTemporary(tokenBuffer);
     }
     p++;
     skipSpaces();
     return 1;
 }
 
-int parseMethod(struct object *theMethod) {
+int parseMethod(struct object *theMethod)
+{
     if (!parseMethodHeader(theMethod))
-	return 0;
+        return 0;
     if (!parseTemporaries())
-	return 0;
+        return 0;
     if (parseBody()) {
-	theMethod->data[literalsInMethod] = buildLiteralArray();
-	theMethod->data[byteCodesInMethod] = buildByteArray();
-	theMethod->data[stackSizeInMethod] = newInteger(19);
-	theMethod->data[temporarySizeInMethod] = newInteger(maxTemp);
-	theMethod->data[classInMethod] = currentClass;
-	theMethod->data[textInMethod] = newString(inputBuffer);
-	return 1;
+        theMethod->data[literalsInMethod] = buildLiteralArray();
+        theMethod->data[byteCodesInMethod] = buildByteArray();
+        theMethod->data[stackSizeInMethod] = newInteger(19);
+        theMethod->data[temporarySizeInMethod] = newInteger(maxTemp);
+        theMethod->data[classInMethod] = currentClass;
+        theMethod->data[textInMethod] = newString(inputBuffer);
+        return 1;
     }
     return 0;
 }
@@ -1513,7 +1574,8 @@ int parseMethod(struct object *theMethod) {
 
 
 /*	read the expression beyond the begin statement */
-struct object *BeginCommand(void) {
+struct object *BeginCommand(void)
+{
     struct object *bootMethod;
 
     byteTop = 0;
@@ -1524,15 +1586,15 @@ struct object *BeginCommand(void) {
     maxTemp = 0;
 
     if (parseBody()) {
-	printf("parsed begin command ok\n");
-	bootMethod = gcalloc(methodSize);
-	bootMethod->class = lookupGlobalName("Method", 0);
-	bootMethod->data[nameInMethod] = newSymbol("boot");
-	bootMethod->data[literalsInMethod] = buildLiteralArray();
-	bootMethod->data[byteCodesInMethod] = buildByteArray();
-	bootMethod->data[stackSizeInMethod] = newInteger(12);
+        printf("parsed begin command ok\n");
+        bootMethod = gcalloc(methodSize);
+        bootMethod->class = lookupGlobalName("Method", 0);
+        bootMethod->data[nameInMethod] = newSymbol("boot");
+        bootMethod->data[literalsInMethod] = buildLiteralArray();
+        bootMethod->data[byteCodesInMethod] = buildByteArray();
+        bootMethod->data[stackSizeInMethod] = newInteger(12);
     } else {
-	parseError("building begin method");
+        parseError("building begin method");
     }
 
     return bootMethod;
@@ -1545,7 +1607,8 @@ struct object *BeginCommand(void) {
  * Creates a new Array-ish object of the same class as "array",
  * and returns it filled in as requested.
  */
-struct object *insert(struct object *array, int index, struct object *val) {
+struct object *insert(struct object *array, int index, struct object *val)
+{
     int i, j;
     struct object *o;
 
@@ -1560,7 +1623,7 @@ struct object *insert(struct object *array, int index, struct object *val) {
      * Copy up to the index
      */
     for (i = 0; i < index; ++i) {
-	o->data[i] = array->data[i];
+        o->data[i] = array->data[i];
     }
 
     /*
@@ -1573,7 +1636,7 @@ struct object *insert(struct object *array, int index, struct object *val) {
      * Now copy the rest
      */
     for (; j < SIZE(array); ++j) {
-	o->data[i++] = array->data[j];
+        o->data[i++] = array->data[j];
     }
     return (o);
 }
@@ -1583,7 +1646,8 @@ struct object *insert(struct object *array, int index, struct object *val) {
  *	Insert a key/value pair into the Dictionary
  */
 void dictionaryInsert(struct object *dict, struct object *index,
-		      struct object *value) {
+                      struct object *value)
+{
     struct object *keys = dict->data[0], *vals = dict->data[1];
     int i, lim, res;
 
@@ -1591,20 +1655,20 @@ void dictionaryInsert(struct object *dict, struct object *index,
      * Scan the OrderedArray "keys" to find where we fit in
      */
     for (i = 0, lim = SIZE(keys); i < lim; ++i) {
-	res = symbolCmp(index, keys->data[i]);
+        res = symbolCmp(index, keys->data[i]);
 
-	/*
-	 * We should go in before this node
-	 */
-	if (res < 0) {
-	    dict->data[0] = insert(keys, i, index);
-	    dict->data[1] = insert(vals, i, value);
-	    return;
-	} else if (res > 0) {
-	    continue;
-	} else {
-	    sysErrorStr("dictionary insert:", "duplicate key");
-	}
+        /*
+         * We should go in before this node
+         */
+        if (res < 0) {
+            dict->data[0] = insert(keys, i, index);
+            dict->data[1] = insert(vals, i, value);
+            return;
+        } else if (res > 0) {
+            continue;
+        } else {
+            sysErrorStr("dictionary insert:", "duplicate key");
+        }
     }
 
     /*
@@ -1621,14 +1685,15 @@ static int getIntSize(int val);
 static void writeTag(FILE * fp, int type, int val);
 
 
-void MethodCommand(void) {
+void MethodCommand(void)
+{
     struct object *theMethod;
 
     /* read class name */
     readIdentifier();
     currentClass = lookupGlobalName(tokenBuffer, 1);
     if (!currentClass) {
-	sysErrorStr("unknown class in Method", tokenBuffer);
+        sysErrorStr("unknown class in Method", tokenBuffer);
     }
 
     inputMethodText();
@@ -1648,12 +1713,13 @@ void MethodCommand(void) {
      * If successful compile, insert into the method dictionary
      */
     if (parseMethod(theMethod)) {
-	dictionaryInsert(currentClass->data[methodsInClass],
-			 theMethod->data[nameInMethod], theMethod);
+        dictionaryInsert(currentClass->data[methodsInClass],
+                         theMethod->data[nameInMethod], theMethod);
     }
 }
 
-void RawClassCommand(void) {
+void RawClassCommand(void)
+{
     struct object *nClass, *supClass, *instClass;
     int instsize;
 
@@ -1662,16 +1728,16 @@ void RawClassCommand(void) {
     nClass = lookupGlobalName(tokenBuffer, 1);
     printf("Class %s\n", tokenBuffer);
     if (!nClass) {
-	nClass = newClass(tokenBuffer);
-	nClass->data[nameInClass] = newSymbol(tokenBuffer);
-	addGlobalName(tokenBuffer, nClass);
+        nClass = newClass(tokenBuffer);
+        nClass->data[nameInClass] = newSymbol(tokenBuffer);
+        addGlobalName(tokenBuffer, nClass);
     }
 
     /* now read the instance class */
     readIdentifier();
     instClass = lookupGlobalName(tokenBuffer, 1);
     if (!instClass) {
-	sysErrorStr("can't find instance class", tokenBuffer);
+        sysErrorStr("can't find instance class", tokenBuffer);
     }
     nClass->class = instClass;
 
@@ -1679,7 +1745,7 @@ void RawClassCommand(void) {
     readIdentifier();
     supClass = lookupGlobalName(tokenBuffer, 1);
     if (!supClass) {
-	sysErrorStr("can't find super class", tokenBuffer);
+        sysErrorStr("can't find super class", tokenBuffer);
     }
     nClass->data[parentClassInClass] = supClass;
 
@@ -1688,11 +1754,11 @@ void RawClassCommand(void) {
 
     /* Now parse the new instance variables */
     while (*p) {
-	if (!isIdentifierChar(*p)) {
-	    sysErrorStr("looking for var", p);
-	}
-	readIdentifier();
-	addLiteral(newSymbol(tokenBuffer));
+        if (!isIdentifierChar(*p)) {
+            sysErrorStr("looking for var", p);
+        }
+        readIdentifier();
+        addLiteral(newSymbol(tokenBuffer));
     }
 
     /* That's the total of our instance variables */
@@ -1700,7 +1766,7 @@ void RawClassCommand(void) {
 
     /* Add on size of superclass space */
     if (supClass != nilObject) {
-	instsize += integerValue(supClass->data[instanceSizeInClass]);
+        instsize += integerValue(supClass->data[instanceSizeInClass]);
     }
 
     nClass->data[instanceSizeInClass] = newInteger(instsize);
@@ -1716,7 +1782,8 @@ void RawClassCommand(void) {
  * Doesn't support class variables, but handles most of imageSource
  * cases.
  */
-void ClassCommand(void) {
+void ClassCommand(void)
+{
     char *class, *super, *ivars;
 
     /* Read the class and superclass */
@@ -1736,7 +1803,7 @@ void ClassCommand(void) {
 
     /* Now the instance class */
     sprintf(inputBuffer, "RAWCLASS %s Meta%s %s %s", class, class,
-	    super, ivars);
+            super, ivars);
     p = inputBuffer + 9;
     RawClassCommand();
     free(class);
@@ -1757,21 +1824,22 @@ This will return zero if the passed value is less than LST_SMALL_TAG_LIMIT.
 In this case, the value can be packed into the tag it self when read or
 written. */
 
-int getIntSize(int val) {
+int getIntSize(int val)
+{
     int i;
 
     /* negatives need sign extension.  this is a to do. */
     if (val < 0)
-	return BytesPerWord;
+        return BytesPerWord;
 
     if (val < LST_SMALL_TAG_LIMIT)
-	return 0;
+        return 0;
 
     /* how many bytes? */
 
     for (i = 1; i < BytesPerWord; i++)
-	if (val < (1 << (8 * i)))
-	    return i;
+        if (val < (1 << (8 * i)))
+            return i;
 
     return BytesPerWord;
 }
@@ -1786,7 +1854,8 @@ int getIntSize(int val) {
 * for a type field and five bits for either a value or a size.
 */
 
-void writeTag(FILE * fp, int type, int val) {
+void writeTag(FILE * fp, int type, int val)
+{
     int tempSize;
     int i;
 
@@ -1794,13 +1863,13 @@ void writeTag(FILE * fp, int type, int val) {
     tempSize = getIntSize(val);
 
     if (tempSize) {
-	/*write the tag byte */
-	fputc((type | tempSize | LST_LARGE_TAG_FLAG), fp);
+        /*write the tag byte */
+        fputc((type | tempSize | LST_LARGE_TAG_FLAG), fp);
 
-	for (i = 0; i < tempSize; i++)
-	    fputc((val >> (8 * i)), fp);
+        for (i = 0; i < tempSize; i++)
+            fputc((val >> (8 * i)), fp);
     } else {
-	fputc((type | val), fp);
+        fputc((type | val), fp);
     }
 }
 
@@ -1812,64 +1881,65 @@ void writeTag(FILE * fp, int type, int val) {
 * This routine writes an object to the output image file.
 */
 
-void objectWrite(FILE * fp, struct object *obj) {
+void objectWrite(FILE * fp, struct object *obj)
+{
     int i;
     int size;
     int intVal;
 
     if (imageTop > imageMaxNumberOfObjects) {
-	fprintf(stderr, "too many indirect objects\n");
-	exit(1);
+        fprintf(stderr, "too many indirect objects\n");
+        exit(1);
     }
 
     /* check for illegal object */
     if (obj == 0) {
-	sysErrorInt("writing out a null object", (intptr_t) obj);
+        sysErrorInt("writing out a null object", (intptr_t) obj);
     }
 
     /* small integer?, if so, treat this specially as this is not a pointer */
 
     if (IS_SMALLINT(obj)) {	/* SmallInt */
-	intVal = integerValue(obj);
+        intVal = integerValue(obj);
 
-	/* if it is negative, we use the positive value and use a special tag. */
-	if (intVal < 0)
-	    writeTag(fp, LST_NINT_TYPE, -intVal);
-	else
-	    writeTag(fp, LST_PINT_TYPE, intVal);
-	return;
+        /* if it is negative, we use the positive value and use a special tag. */
+        if (intVal < 0)
+            writeTag(fp, LST_NINT_TYPE, -intVal);
+        else
+            writeTag(fp, LST_PINT_TYPE, intVal);
+        return;
     }
 
     /* see if already written */
     for (i = 0; i < imageTop; i++)
-	if (obj == writtenObjects[i]) {
-	    if (i == 0)
-		writeTag(fp, LST_NIL_TYPE, 0);
-	    else {
-		writeTag(fp, LST_POBJ_TYPE, i);
-	    }
-	    return;
-	}
+        if (obj == writtenObjects[i]) {
+            if (i == 0)
+                writeTag(fp, LST_NIL_TYPE, 0);
+            else {
+                writeTag(fp, LST_POBJ_TYPE, i);
+            }
+            return;
+        }
 
     /* not written, do it now */
     writtenObjects[imageTop++] = obj;
 
     /* byte objects */
     if (obj->size & FLAG_BIN) {
-	struct byteObject *bobj = (struct byteObject *) obj;
+        struct byteObject *bobj = (struct byteObject *) obj;
 
-	size = SIZE(obj);
+        size = SIZE(obj);
 
-	/* write the header tag */
-	writeTag(fp, LST_BARRAY_TYPE, size);
+        /* write the header tag */
+        writeTag(fp, LST_BARRAY_TYPE, size);
 
-	/*write out bytes */
-	for (i = 0; i < size; i++)
-	    fputc(bobj->bytes[i], fp);
+        /*write out bytes */
+        for (i = 0; i < size; i++)
+            fputc(bobj->bytes[i], fp);
 
-	objectWrite(fp, obj->class);
+        objectWrite(fp, obj->class);
 
-	return;
+        return;
     }
 
     /* ordinary objects */
@@ -1882,7 +1952,7 @@ void objectWrite(FILE * fp, struct object *obj) {
 
     /* write the instance variables of the object */
     for (i = 0; i < size; i++)
-	objectWrite(fp, obj->data[i]);
+        objectWrite(fp, obj->data[i]);
 }
 
 
@@ -1894,31 +1964,34 @@ void objectWrite(FILE * fp, struct object *obj) {
 
 /* ------------------------------------------------------------- */
 
-struct object *symbolTreeInsert(struct object *base, struct object *symNode) {
+struct object *symbolTreeInsert(struct object *base, struct object *symNode)
+{
     if (base == nilObject)
-	return symNode;
+        return symNode;
     if (symbolCmp(symNode->data[valueInNode], base->data[valueInNode]) < 0)
-	base->data[leftInNode] =
-	    symbolTreeInsert(base->data[leftInNode], symNode);
+        base->data[leftInNode] =
+            symbolTreeInsert(base->data[leftInNode], symNode);
     else
-	base->data[rightInNode] =
-	    symbolTreeInsert(base->data[rightInNode], symNode);
+        base->data[rightInNode] =
+            symbolTreeInsert(base->data[rightInNode], symNode);
     return base;
 }
 
-static struct object *fixSymbols(void) {
+static struct object *fixSymbols(void)
+{
     struct object *t;
     int i;
 
     t = newTree();
     for (i = 0; i < symbolTop; i++)
-	t->data[0] = symbolTreeInsert(t->data[0],
-				      newNode(oldSymbols[i], nilObject,
-					      nilObject));
+        t->data[0] = symbolTreeInsert(t->data[0],
+                                      newNode(oldSymbols[i], nilObject,
+                                              nilObject));
     return t;
 }
 
-static void fixGlobals(void) {
+static void fixGlobals(void)
+{
     struct object *t;
     int i;
 
@@ -1932,10 +2005,10 @@ static void fixGlobals(void) {
      * object itself.
      */
     for (i = 0; i < globalTop; i++) {
-	if (strncmp(globalNames[i], "Meta", 4) == 0) {
-	    continue;
-	}
-	dictionaryInsert(t, newSymbol(globalNames[i]), globals[i]);
+        if (strncmp(globalNames[i], "Meta", 4) == 0) {
+            continue;
+        }
+        dictionaryInsert(t, newSymbol(globalNames[i]), globals[i]);
     }
 
     /*
@@ -1949,14 +2022,15 @@ static void fixGlobals(void) {
 /*	checkGlobals   */
 
 /* ------------------------------------------------------------- */
-static void checkGlobals(void) {
+static void checkGlobals(void)
+{
     int i;
     struct object *o;
 
     for (i = 0; i < globalTop; i++) {
-	o = globals[i];
-	if (!o->class) {
-	    sysErrorStr("Never defined", globalNames[i]);
-	}
+        o = globals[i];
+        if (!o->class) {
+            sysErrorStr("Never defined", globalNames[i]);
+        }
     }
 }
