@@ -43,8 +43,7 @@ struct object *nilObject, *trueObject, *falseObject,
  * Debugging
  */
 #if defined(DEBUG) && defined(TRACE)
-static void
-indent(struct object *ctx)
+static void indent(struct object *ctx)
 {
     static int oldlev = 0;
     int lev = 0, x;
@@ -107,8 +106,7 @@ static int symbolcomp(struct object *left, struct object *right)
     return leftsize - rightsize;
 }
 
-static struct object *
-lookupMethod(struct object *selector, struct object *class)
+static struct object *lookupMethod(struct object *selector, struct object *class)
 {
     struct object *dict, *keys, *vals, *val;
     uint low, high, mid;
@@ -328,7 +326,7 @@ static int bulkReplace(struct object *dest, struct object *start,
      * values onto 0-based C array type values.
      */
     if (!IS_SMALLINT(repStart) || !IS_SMALLINT(start) ||
-            !IS_SMALLINT(stop)) {
+        !IS_SMALLINT(stop)) {
         return(1);
     }
     irepStart = integerValue(repStart)-1;
@@ -340,7 +338,7 @@ static int bulkReplace(struct object *dest, struct object *start,
      * Defend against goofy negative indices.
      */
     if ((irepStart < 0) || (istart < 0) || (istop < 0) ||
-            (count < 1)) {
+        (count < 1)) {
         return(1);
     }
 
@@ -348,7 +346,7 @@ static int bulkReplace(struct object *dest, struct object *start,
      * Range check
      */
     if ((SIZE(dest) < istop) ||
-            (SIZE(src) < (irepStart + count))) {
+        (SIZE(src) < (irepStart + count))) {
         return(1);
     }
 
@@ -391,8 +389,7 @@ static int bulkReplace(struct object *dest, struct object *start,
 #define VAL (bp[bytePointer] | (bp[bytePointer+1] << 8))
 #define VALSIZE 2
 
-int
-execute(struct object *aProcess, int ticks)
+int execute(struct object *aProcess, int ticks)
 {
     int low, high, x, stackTop, bytePointer;
     struct object *context, *method, *arguments, *temporaries,
@@ -520,8 +517,7 @@ execute(struct object *aProcess, int ticks)
             high = VAL;
             bytePointer += VALSIZE;
             rootStack[rootTop++] = context;
-            op = rootStack[rootTop++] =
-                     gcalloc(x = integerValue(method->data[stackSizeInMethod]));
+            op = rootStack[rootTop++] = gcalloc(x = integerValue(method->data[stackSizeInMethod]));
             op->class = ArrayClass;
             bzero(bytePtr(op), x * BytesPerWord);
             returnedValue = gcalloc(blockSize);
@@ -570,7 +566,7 @@ execute(struct object *aProcess, int ticks)
              * If changing a static area, need to add to roots
              */
             if (!isDynamicMemory(instanceVariables)
-                    && isDynamicMemory(stack->data[stackTop-1])) {
+                && isDynamicMemory(stack->data[stackTop-1])) {
                 addStaticRoot(&instanceVariables->data[low]);
             }
             break;
@@ -620,7 +616,7 @@ checkCache:
             low = (int)((((intptr_t) messageSelector) +
                          ((intptr_t) receiverClass)) % cacheSize);
             if ((cache[low].name == messageSelector) &&
-                    (cache[low].class == receiverClass)) {
+                (cache[low].class == receiverClass)) {
                 method = cache[low].method;
                 cache_hit++;
             } else {
@@ -736,7 +732,7 @@ checkCache:
         case SendBinary:    /* optimize certain binary messages */
             DBG1("SendBinary", low);
             if (IS_SMALLINT(stack->data[stackTop-1])
-                    && IS_SMALLINT(stack->data[stackTop-2])) {
+                && IS_SMALLINT(stack->data[stackTop-2])) {
                 int i, j;
                 j = integerValue(stack->data[--stackTop]);
                 i = integerValue(stack->data[--stackTop]);
@@ -849,7 +845,7 @@ checkCache:
                 returnedValue = stack->data[--stackTop];
                 /* Bounds check */
                 if ((low < 0) ||
-                        (low >= SIZE(returnedValue))) {
+                    (low >= SIZE(returnedValue))) {
                     stackTop -= 1;
                     goto failPrimitive;
                 }
@@ -861,8 +857,8 @@ checkCache:
                  * register it for GC.
                  */
                 if (!isDynamicMemory(returnedValue)
-                        && isDynamicMemory(
-                            stack->data[stackTop])) {
+                    && isDynamicMemory(
+                        stack->data[stackTop])) {
                     addStaticRoot(
                         &returnedValue->data[low]);
                 }
@@ -933,7 +929,7 @@ checkCache:
                 GET_HIGH_LOW();
                 x = high + low;
                 if (((high > 0) && (low > 0) && (x < high)) ||
-                        ((high < 0) && (low < 0) && (x > high))) {
+                    ((high < 0) && (low < 0) && (x > high))) {
                     /* overflow... do it with 64 bits */
                     returnedValue = newLInteger(
                                         (int64_t)high + (int64_t)low);
@@ -1036,7 +1032,7 @@ checkCache:
                 low = integerValue(stack->data[--stackTop])-1;
                 returnedValue = stack->data[--stackTop];
                 if ((low < 0) ||
-                        (low >= SIZE(returnedValue))) {
+                    (low >= SIZE(returnedValue))) {
                     goto failPrimitive;
                 }
                 low = bytePtr(returnedValue)[low];
@@ -1047,7 +1043,7 @@ checkCache:
                 low = integerValue(stack->data[--stackTop])-1;
                 returnedValue = stack->data[--stackTop];
                 if ((low < 0) ||
-                        (low >= SIZE(returnedValue))) {
+                    (low >= SIZE(returnedValue))) {
                     stackTop -= 1;
                     goto failPrimitive;
                 }
@@ -1072,7 +1068,7 @@ checkCache:
                 low = integerValue(stack->data[--stackTop])-1;
                 returnedValue = stack->data[--stackTop];
                 if ((low < 0) ||
-                        (low >= SIZE(returnedValue))) {
+                    (low >= SIZE(returnedValue))) {
                     goto failPrimitive;
                 }
                 returnedValue = returnedValue->data[low];
@@ -1273,8 +1269,7 @@ failPrimitive:
                 method = context->data[methodInContext];
                 stack = context->data[stackInContext];
                 bp = bytePtr(method->data[byteCodesInMethod]);
-                arguments = temporaries = literals =
-                                              instanceVariables = 0;
+                arguments = temporaries = literals = instanceVariables = 0;
             }
             stack->data[stackTop++] = nilObject;
 
@@ -1306,16 +1301,15 @@ doReturn2:
                     aProcess->data[resultInProcess] = returnedValue;
                     return(ReturnReturned);
                 }
-                arguments = instanceVariables = literals
-                                                = temporaries = 0;
+
+                arguments = instanceVariables = literals = temporaries = 0;
+
                 stack = context->data[stackInContext];
-                stackTop =
-                    integerValue(context->data[stackTopInContext]);
+                stackTop = integerValue(context->data[stackTopInContext]);
                 stack->data[stackTop++] = returnedValue;
                 method = context->data[methodInContext];
                 bp = bytePtr(method->data[byteCodesInMethod]);
-                bytePointer =
-                    integerValue(context->data[bytePointerInContext]);
+                bytePointer = integerValue(context->data[bytePointerInContext]);
                 break;
 
             case BlockReturn:
