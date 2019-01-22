@@ -455,7 +455,7 @@ stop
     runFlag <- false.
 !
 "*********************************"
-"     HTTPClassBrowser class     "
+"     HTTPClassBrowser class      "
 "*********************************"
 +Object subclass: #HTTPClassBrowser variables: #()
 !HTTPClassBrowser
