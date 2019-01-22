@@ -58,7 +58,7 @@ static int staticRootTop = 0;
 
 
 /* local routines */
-static int64_t time_usec();
+//static int64_t time_usec();
 
 
 /*

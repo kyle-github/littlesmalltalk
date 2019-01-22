@@ -15,4 +15,7 @@ extern void sysErrorStr(char *, char *);
 extern void flushCache(void);
 extern struct object *primitive(int, struct object *, int *);
 
+extern int64_t time_usec();
+
+
 #endif /* GLOBS_H */
