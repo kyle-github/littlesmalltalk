@@ -16,6 +16,7 @@
 #include "err.h"
 #include "interp.h"
 #include "memory.h"
+#include "globs.h"
 
 
 /* temporary directory is shared. */
@@ -151,16 +152,22 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
         char *tmpFileName = NULL;
         int tmpFileNameSize = 0;
 
-        /* first get the name of a temp file */
-        tmpFileNameSize = sprintf(tmpFileName, "%s/lsteditXXXXXX", tmpdir) + 1;
+        /* first get the size needed for the temporary path */
+        tmpFileNameSize = snprintf(tmpFileName, 0, "%s/lsteditXXXXXX", tmpdir) + 1;
 
-        tmpFileName = (char *)alloca(tmpFileNameSize);
-        snprintf(tmpFileName, tmpFileNameSize, "%s/lsteditXXXXXX", tmpdir) + 1;
+        printf("temporary file name size is %d\n", tmpFileNameSize);
+
+        /* allocate it on the stack and write the string into it. */
+        tmpFileName = (char *)alloca(tmpFileNameSize + 1);
+        memset(tmpFileName, 0, tmpFileNameSize + 1);
+        snprintf(tmpFileName, tmpFileNameSize + 1, "%s/lsteditXXXXXX", tmpdir);
+
+        printf("DEBUG: temp file name pattern: %s\n",tmpFileName);
 
         rc = mkstemp(tmpFileName);
         /* copy string to file */
         if(rc == -1) {
-            sysErrorInt("error making temporary file: %ld",(intptr_t)rc);
+            sysErrorInt("error making temporary file name: errno=", errno);
         }
 
         fp = fopen(tmpFileName, "w");
@@ -180,9 +187,8 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
 
         /* call the editor */
         int cmdBufSize = tmpFileNameSize + strlen("vi ");
-        char *cmdBuf = (char*)alloca(cmdBufSize);
-
-        memset(cmdBuf, 0, cmdBufSize);
+        char *cmdBuf = (char*)alloca(cmdBufSize + 1);
+        memset(cmdBuf, 0, cmdBufSize + 1);
 
         strcpy(cmdBuf,"vi ");
         strcat(cmdBuf, tmpFileName);
@@ -365,6 +371,28 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
 
     case 152: /* convert a string from URL encoding, returns nil or string */
         returnedValue = urlToString((struct byteObject *)args->data[0]);
+
+        break;
+
+    case 160: /* print out a microsecond timestamp and message string. */
+    {
+        struct byteObject *msg = (struct byteObject *)(args->data[0]);
+        char *tmpMsg = NULL;
+        int tmpMsgSize = SIZE(msg)+1;
+        int64_t ticks = time_usec();
+
+        tmpMsg = (char *)alloca(tmpMsgSize);
+
+        memset(tmpMsg, 0, tmpMsgSize);
+
+        memcpy(tmpMsg, msg->bytes, tmpMsgSize-1);
+
+        printf("%ld: (%d) %s\n", ticks, tmpMsgSize, tmpMsg);
+
+        *failed = 0;
+
+        returnedValue = nilObject;
+    }
 
         break;
 
