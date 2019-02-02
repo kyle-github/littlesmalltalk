@@ -23,8 +23,8 @@
 
 */
 # define DefaultImageFile "lst.img"
-# define DefaultStaticSize 100000
-# define DefaultDynamicSize 200000
+# define DefaultStaticSize 300000
+# define DefaultDynamicSize 300000
 # define DefaultTmpdir "/tmp"
 
 /*
@@ -86,7 +86,7 @@ int main(int argc, char **argv)
     gcinit(staticSize, dynamicSize);
 
     /* read in the method from the image file */
-    fp = fopen(imageFileName, "r");
+    fp = fopen(imageFileName, "rb");
     if (! fp) {
         fprintf(stderr,"cannot open image file: %s\n", imageFileName);
         exit(1);
