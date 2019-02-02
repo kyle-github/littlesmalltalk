@@ -844,23 +844,19 @@ checkCache:
                 low = integerValue(op)-1;
                 returnedValue = stack->data[--stackTop];
                 /* Bounds check */
-                if ((low < 0) ||
-                    (low >= SIZE(returnedValue))) {
+                if ((low < 0) || (low >= SIZE(returnedValue))) {
                     stackTop -= 1;
                     goto failPrimitive;
                 }
-                returnedValue->data[low]
-                    = stack->data[--stackTop];
+
+                returnedValue->data[low]= stack->data[--stackTop];
                 /*
                  * If putting a non-static pointer
                  * into an array in static memory,
                  * register it for GC.
                  */
-                if (!isDynamicMemory(returnedValue)
-                    && isDynamicMemory(
-                        stack->data[stackTop])) {
-                    addStaticRoot(
-                        &returnedValue->data[low]);
+                if (!isDynamicMemory(returnedValue) && isDynamicMemory(stack->data[stackTop])) {
+                    addStaticRoot(&returnedValue->data[low]);
                 }
                 break;
 
