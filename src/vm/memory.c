@@ -82,9 +82,9 @@ int isDynamicMemory(struct object *x)
 void gcinit(int staticsz, int dynamicsz)
 {
     /* allocate the memory areas */
-    staticBase = (struct object *)malloc(staticsz * sizeof(struct object));
-    spaceOne = (struct object *)malloc(dynamicsz * sizeof(struct object));
-    spaceTwo = (struct object *)malloc(dynamicsz * sizeof(struct object));
+    staticBase = (struct object *)calloc(staticsz, sizeof(struct object));
+    spaceOne = (struct object *)calloc(dynamicsz, sizeof(struct object));
+    spaceTwo = (struct object *)calloc(dynamicsz, sizeof(struct object));
 
     if ((staticBase == NULL) || (spaceOne == NULL) || (spaceTwo == NULL)) {
         sysError("not enough memory for space allocations\n");
