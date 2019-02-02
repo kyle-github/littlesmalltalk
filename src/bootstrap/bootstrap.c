@@ -154,6 +154,7 @@ int main(int argc, char **argv)
     FILE *fd;
     struct object *bootMethod = 0;
     int i;
+    struct image_header header = {0,};
 
     printf("%d arguments\n", argc);
     for (i = 0; i < argc; i++) {
@@ -214,15 +215,24 @@ int main(int argc, char **argv)
     }
 
     printf("starting to file out\n");
-    objectWrite(fd, nilObject);
-    objectWrite(fd, trueObject);
-    objectWrite(fd, falseObject);
+
+    header.magic[0] = 'l';
+    header.magic[1] = 's';
+    header.magic[2] = 't';
+    header.magic[3] = '!';
+    header.version = IMAGE_VERSION_1;
+
+    fwrite(&header, sizeof header, 1, fd);
+
+//    objectWrite(fd, nilObject);
+//    objectWrite(fd, trueObject);
+//    objectWrite(fd, falseObject);
     objectWrite(fd, globalValues);
-    objectWrite(fd, SmallIntClass);
-    objectWrite(fd, IntegerClass);
-    objectWrite(fd, ArrayClass);
-    objectWrite(fd, BlockClass);
-    objectWrite(fd, lookupGlobalName("Context", 0));
+//    objectWrite(fd, SmallIntClass);
+//    objectWrite(fd, IntegerClass);
+//    objectWrite(fd, ArrayClass);
+//    objectWrite(fd, BlockClass);
+//    objectWrite(fd, lookupGlobalName("Context", 0));
     objectWrite(fd, bootMethod);
     objectWrite(fd, newSymbol("<"));
     objectWrite(fd, newSymbol("<="));

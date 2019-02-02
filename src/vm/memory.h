@@ -157,6 +157,15 @@ The bytes per word or size is usually stored in the lower bits */
 # define LST_TAG_TYPE_MASK  0xE0
 
 
+/* image information */
+struct image_header {
+    char magic[4];
+    uint32_t version;
+} __attribute__((packed));
+
+#define IMAGE_VERSION_0 (0)
+#define IMAGE_VERSION_1 (1)
+
 extern int64_t gc_count;
 extern int64_t gc_total_time;
 extern int64_t gc_max_time;

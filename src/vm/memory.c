@@ -565,12 +565,30 @@ struct object *objectRead(FILE *fp)
 
 
 
+static uint32_t get_image_version(FILE *fp)
+{
+    struct image_header header;
+    int rc;
+
+    rc = fread(&header, sizeof(header), 1, fp);
+
+    if(rc != 1) {
+        sysError("Unable to read version header data!");
+    }
+
+    if(header.magic[0] == 'l' && header.magic[1] == 's' && header.magic[2] == 't' && header.magic[3] == '!') {
+        return (int)header.version;
+    } else {
+        /* not a newer version, seek back to the start. */
+        fseek(fp, 0, SEEK_SET);
+        return 0;
+    }
+}
 
 
 
 
-
-int fileIn(FILE *fp)
+int fileIn_version_0(FILE *fp)
 {
     int i;
     struct object *dummy;
@@ -655,6 +673,106 @@ int fileIn(FILE *fp)
 
     return indirtop;
 }
+
+
+
+
+int fileIn_version_1(FILE *fp)
+{
+    int i;
+    struct object *dummy;
+
+    /* use the currently unused space for the indir pointers */
+    if (inSpaceOne) {
+        indirArray = (struct object * *) spaceTwo;
+    } else {
+        indirArray = (struct object * *) spaceOne;
+    }
+    indirtop = 0;
+
+
+    fprintf(stderr, "reading globals object.\n");
+    globalsObject = objectRead(fp);
+
+    fprintf(stderr, "reading initial method.\n");
+    initialMethod = objectRead(fp);
+    staticRoots[staticRootTop++] = &initialMethod;
+
+    fprintf(stderr, "reading binary message objects.\n");
+    for (i = 0; i < 3; i++) {
+        binaryMessages[i] = objectRead(fp);
+        staticRoots[staticRootTop++] = &binaryMessages[i];
+    }
+
+    fprintf(stderr, "reading bad method symbol.\n");
+    badMethodSym = objectRead(fp);
+    staticRoots[staticRootTop++] = &badMethodSym;
+
+    /* fix up everything from globals. */
+    nilObject = lookupGlobal("nil");
+    staticRoots[staticRootTop++] = &nilObject;
+
+    trueObject = lookupGlobal("true");
+    staticRoots[staticRootTop++] = &trueObject;
+
+    falseObject = lookupGlobal("false");
+    staticRoots[staticRootTop++] = &falseObject;
+
+    SmallIntClass = lookupGlobal("SmallInt");
+    staticRoots[staticRootTop++] = &SmallIntClass;
+
+    IntegerClass = lookupGlobal("Integer");
+    staticRoots[staticRootTop++] = &IntegerClass;
+
+    ArrayClass = lookupGlobal("Array");
+    staticRoots[staticRootTop++] = &ArrayClass;
+
+    BlockClass = lookupGlobal("Block");
+    staticRoots[staticRootTop++] = &BlockClass;
+
+    ContextClass = lookupGlobal("Context");
+    staticRoots[staticRootTop++] = &ContextClass;
+
+    /* clean up after ourselves. */
+    memset((void *) indirArray,(int)0,(size_t)(spaceSize * sizeof(struct object)));
+
+    return indirtop;
+}
+
+
+
+
+
+
+
+
+
+
+
+int fileIn(FILE *fp)
+{
+    int version = get_image_version(fp);
+
+    switch(version) {
+        case IMAGE_VERSION_0:
+            fprintf(stderr, "Reading in version 0 image.\n");
+            return fileIn_version_0(fp);
+            break;
+
+        case IMAGE_VERSION_1:
+            fprintf(stderr, "Reading in version 1 image.\n");
+            return fileIn_version_1(fp);
+            break;
+
+        default:
+            sysErrorInt("Unsupported image file version: ", version);
+            break;
+    }
+
+    return 0;
+}
+
+
 
 
 /**
