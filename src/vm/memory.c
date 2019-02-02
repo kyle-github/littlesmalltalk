@@ -15,6 +15,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <sys/time.h>
+#include <unistd.h>
 #include "memory.h"
 #include "globs.h"
 
@@ -63,7 +64,9 @@ static int staticRootTop = 0;
 
 /*
     test routine to see if a pointer is in dynamic memory
-    area or not
+    area or not.
+
+    FIXME - this is not portable.
 */
 
 int isDynamicMemory(struct object *x)
@@ -78,13 +81,11 @@ int isDynamicMemory(struct object *x)
 void gcinit(int staticsz, int dynamicsz)
 {
     /* allocate the memory areas */
-    staticBase = (struct object *)
-                 malloc(staticsz * sizeof(struct object));
-    spaceOne = (struct object *)
-               malloc(dynamicsz * sizeof(struct object));
-    spaceTwo = (struct object *)
-               malloc(dynamicsz * sizeof(struct object));
-    if ((staticBase == 0) || (spaceOne == 0) || (spaceTwo == 0)) {
+    staticBase = (struct object *)malloc(staticsz * sizeof(struct object));
+    spaceOne = (struct object *)malloc(dynamicsz * sizeof(struct object));
+    spaceTwo = (struct object *)malloc(dynamicsz * sizeof(struct object));
+
+    if ((staticBase == NULL) || (spaceOne == NULL) || (spaceTwo == NULL)) {
         sysError("not enough memory for space allocations\n");
     }
 
@@ -94,6 +95,7 @@ void gcinit(int staticsz, int dynamicsz)
     spaceSize = dynamicsz;
     memoryBase = spaceOne;
     memoryPointer = memoryBase + spaceSize;
+
     if (debugging) {
         printf("space one 0x%lx, top 0x%lx,"
                " space two 0x%lx , top 0x%lx\n",
@@ -102,6 +104,7 @@ void gcinit(int staticsz, int dynamicsz)
     }
     inSpaceOne = 1;
 }
+
 
 /*
     gc_move is the heart of the garbage collection algorithm.
@@ -415,6 +418,22 @@ static int getIntSize(int val)
 
 
 
+
+
+static int get_byte(FILE *fp)
+{
+    static int offset = 0;
+    int inByte;
+
+    inByte = fgetc(fp);
+    offset++;
+
+    //fprintf(stderr, "%06d: %u (%x)\n", offset, inByte, inByte);
+
+    return inByte;
+}
+
+
 /* image file reading routines */
 
 
@@ -424,8 +443,7 @@ static void readTag(FILE *fp, int *type, int *val)
     int tempSize;
     int inByte;
 
-    inByte = fgetc(fp);
-
+    inByte = get_byte(fp);
     if (inByte == EOF) {
         sysError("Unexpected EOF reading image file: reading tag byte.");
     }
@@ -443,14 +461,14 @@ static void readTag(FILE *fp, int *type, int *val)
         tempSize = tempSize & LST_SMALL_TAG_LIMIT;
 
         if(tempSize>BytesPerWord) {
-            sysError("Error reading image file: tag value field exceeds machine word size.  Image created on another machine?");
+            sysErrorInt("Error reading image file: tag value field exceeds machine word size.  Image created on another machine? Value=", tempSize);
         }
 
         for(i=0; i<tempSize; i++) {
-            inByte = fgetc(fp);
+            inByte = get_byte(fp);
 
             if(inByte == EOF) {
-                sysError("Unexpected EOF reading image file: reading extended value.");
+                sysErrorInt("Unexpected EOF reading image file: reading extended value and expecting byte count=", tempSize);
             }
 
             *val = *val  | (((unsigned int)inByte & 0xFF) << (8*i));
@@ -466,7 +484,7 @@ static void readTag(FILE *fp, int *type, int *val)
 *
 * Read in an object from the input image file.  Several kinds of object are
 * handled as special cases.  The routine readTag above does most of the work
-* of figuring out what type of object it is an how big it is.
+* of figuring out what type of object it is and how big it is.
 */
 
 struct object *objectRead(FILE *fp)
@@ -477,6 +495,8 @@ struct object *objectRead(FILE *fp)
     int i;
     struct object *newObj=(struct object *)0;
     struct byteObject *bnewObj;
+
+    char padding[32];
 
     /* get the tag header for the object, this has a type and value */
     readTag(fp,&type,&val);
@@ -492,11 +512,13 @@ struct object *objectRead(FILE *fp)
         newObj = staticAllocate(size);
         indirArray[indirtop++] = newObj;
         newObj->class = objectRead(fp);
+
+        /* get object field values. */
         for (i = 0; i < size; i++) {
             newObj->data[i] = objectRead(fp);
         }
-        break;
 
+        break;
 
     case LST_PINT_TYPE: /* positive integer */
         newObj = newInteger(val);
@@ -513,7 +535,7 @@ struct object *objectRead(FILE *fp)
         bnewObj = (struct byteObject *) newObj;
         for (i = 0; i < size; i++) {
             /* TODO check for EOF! */
-            bnewObj->bytes[i] = getc(fp);
+            bnewObj->bytes[i] = get_byte(fp);
         }
 
         bnewObj->class = objectRead(fp);
@@ -525,6 +547,7 @@ struct object *objectRead(FILE *fp)
         }
 
         newObj = indirArray[val];
+
         break;
 
     case LST_NIL_TYPE:  /* object 0 (nil object) */
@@ -559,19 +582,43 @@ int fileIn(FILE *fp)
     indirtop = 0;
 
     /* read in the method from the image file */
+
+    fprintf(stderr, "reading nil object.\n");
     nilObject = objectRead(fp);
+
+    fprintf(stderr, "reading true object.\n");
     trueObject = objectRead(fp);
+
+    fprintf(stderr, "reading false object.\n");
     falseObject = objectRead(fp);
+
+    fprintf(stderr, "reading globals object.\n");
     globalsObject = objectRead(fp);
+
+    fprintf(stderr, "reading SmallInt class.\n");
     SmallIntClass = objectRead(fp);
+
+    fprintf(stderr, "reading Integer class.\n");
     IntegerClass = objectRead(fp);
+
+    fprintf(stderr, "reading Array class.\n");
     ArrayClass = objectRead(fp);
+
+    fprintf(stderr, "reading Block class.\n");
     BlockClass = objectRead(fp);
+
+    fprintf(stderr, "reading Context class.\n");
     ContextClass = objectRead(fp);
+
+    fprintf(stderr, "reading initial method.\n");
     initialMethod = objectRead(fp);
+
+    fprintf(stderr, "reading binary message objects.\n");
     for (i = 0; i < 3; i++) {
         binaryMessages[i] = objectRead(fp);
     }
+
+    fprintf(stderr, "reading bad method symbol.\n");
     badMethodSym = objectRead(fp);
 
     /* clean up after ourselves.  KRH -- replace bzero(), it is deprecated. */

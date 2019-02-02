@@ -90,7 +90,7 @@ extern struct object *memoryPointer, *memoryBase;
     staticRoots are values in static memory that point to
     dynamic values
 */
-# define ROOTSTACKLIMIT 500
+# define ROOTSTACKLIMIT 2000
 extern struct object *rootStack[];
 extern int rootTop;
 extern void addStaticRoot(struct object **);
