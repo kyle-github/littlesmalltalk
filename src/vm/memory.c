@@ -18,6 +18,7 @@
 #include <unistd.h>
 #include "memory.h"
 #include "globs.h"
+#include "interp.h"
 
 extern int debugging;   /* true if we are debugging */
 
@@ -572,6 +573,7 @@ struct object *objectRead(FILE *fp)
 int fileIn(FILE *fp)
 {
     int i;
+    struct object *dummy;
 
     /* use the currently unused space for the indir pointers */
     if (inSpaceOne) {
@@ -581,8 +583,7 @@ int fileIn(FILE *fp)
     }
     indirtop = 0;
 
-    /* read in the method from the image file */
-
+    /* read in the image file */
     fprintf(stderr, "reading nil object.\n");
     nilObject = objectRead(fp);
 
@@ -612,14 +613,42 @@ int fileIn(FILE *fp)
 
     fprintf(stderr, "reading initial method.\n");
     initialMethod = objectRead(fp);
+    staticRoots[staticRootTop++] = &initialMethod;
 
     fprintf(stderr, "reading binary message objects.\n");
     for (i = 0; i < 3; i++) {
         binaryMessages[i] = objectRead(fp);
+        staticRoots[staticRootTop++] = &binaryMessages[i];
     }
 
     fprintf(stderr, "reading bad method symbol.\n");
     badMethodSym = objectRead(fp);
+    staticRoots[staticRootTop++] = &badMethodSym;
+
+    /* fix up everything from globals.   This is a temporary workaround. */
+    nilObject = lookupGlobal("nil");
+    staticRoots[staticRootTop++] = &nilObject;
+
+    trueObject = lookupGlobal("true");
+    staticRoots[staticRootTop++] = &trueObject;
+
+    falseObject = lookupGlobal("false");
+    staticRoots[staticRootTop++] = &falseObject;
+
+    SmallIntClass = lookupGlobal("SmallInt");
+    staticRoots[staticRootTop++] = &SmallIntClass;
+
+    IntegerClass = lookupGlobal("Integer");
+    staticRoots[staticRootTop++] = &IntegerClass;
+
+    ArrayClass = lookupGlobal("Array");
+    staticRoots[staticRootTop++] = &ArrayClass;
+
+    BlockClass = lookupGlobal("Block");
+    staticRoots[staticRootTop++] = &BlockClass;
+
+    ContextClass = lookupGlobal("Context");
+    staticRoots[staticRootTop++] = &ContextClass;
 
     /* clean up after ourselves.  KRH -- replace bzero(), it is deprecated. */
     memset((void *) indirArray,(int)0,(size_t)(spaceSize * sizeof(struct object)));
