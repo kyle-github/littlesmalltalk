@@ -328,27 +328,27 @@ struct object *gcollect(int sz)
     that will not be subject to garbage collection
 */
 
-struct object *staticAllocate(int sz)
-{
-    staticPointer = WORDSDOWN(staticPointer, sz + 2);
-    if (staticPointer < staticBase) {
-        sysError("insufficient static memory");
-    }
-    SETSIZE(staticPointer, sz);
-    return(staticPointer);
-}
+//struct object *staticAllocate(int sz)
+//{
+//    staticPointer = WORDSDOWN(staticPointer, sz + 2);
+//    if (staticPointer < staticBase) {
+//        sysError("insufficient static memory");
+//    }
+//    SETSIZE(staticPointer, sz);
+//    return(staticPointer);
+//}
 
-struct object *staticIAllocate(int sz)
-{
-    int trueSize;
-    struct object *result;
-
-    trueSize = (sz + BytesPerWord - 1) / BytesPerWord;
-    result = staticAllocate(trueSize);
-    SETSIZE(result, sz);
-    result->size |= FLAG_BIN;
-    return result;
-}
+//struct object *staticIAllocate(int sz)
+//{
+//    int trueSize;
+//    struct object *result;
+//
+//    trueSize = (sz + BytesPerWord - 1) / BytesPerWord;
+//    result = staticAllocate(trueSize);
+//    SETSIZE(result, sz);
+//    result->size |= FLAG_BIN;
+//    return result;
+//}
 
 /*
     if definition is not in-lined, here  is what it should be
@@ -510,7 +510,8 @@ struct object *objectRead(FILE *fp)
 
     case LST_OBJ_TYPE:  /* ordinary object */
         size = val;
-        newObj = staticAllocate(size);
+//        newObj = staticAllocate(size);
+        newObj = gcalloc(size);
         indirArray[indirtop++] = newObj;
         newObj->class = objectRead(fp);
 
@@ -531,11 +532,12 @@ struct object *objectRead(FILE *fp)
 
     case LST_BARRAY_TYPE:   /* byte arrays */
         size = val;
-        newObj = staticIAllocate(size);
+//        newObj = staticIAllocate(size);
+        newObj = gcialloc(size);
         indirArray[indirtop++] = newObj;
         bnewObj = (struct byteObject *) newObj;
         for (i = 0; i < size; i++) {
-            /* TODO check for EOF! */
+            /* FIXME check for EOF! */
             bnewObj->bytes[i] = get_byte(fp);
         }
 

@@ -97,18 +97,25 @@ int main(int argc, char **argv)
 
     /* build a context around it */
 
-    aProcess = staticAllocate(3);
+//    aProcess = staticAllocate(3);
+
+    /* build the root process with a context, make sure it is GC-proof */
+    aProcess = gcalloc(3);
+    addStaticRoot(&aProcess);
+
     /* context should be dynamic */
     aContext = gcalloc(contextSize);
     aContext->class = ContextClass;
-
+    addStaticRoot(&aContext);
 
     aProcess->data[contextInProcess] = aContext;
     size = integerValue(initialMethod->data[stackSizeInMethod]);
-    aContext->data[stackInContext] = staticAllocate(size);
+//    aContext->data[stackInContext] = staticAllocate(size);
+    aContext->data[stackInContext] = gcalloc(size);
     aContext->data[argumentsInContext] = nilObject;
 
-    aContext->data[temporariesInContext] = staticAllocate(19);
+//    aContext->data[temporariesInContext] = staticAllocate(19);
+    aContext->data[temporariesInContext] = gcalloc(19);
     aContext->data[bytePointerInContext] = newInteger(0);
     aContext->data[stackTopInContext] = newInteger(0);
     aContext->data[previousContextInContext] = nilObject;
