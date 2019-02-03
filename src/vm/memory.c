@@ -497,8 +497,6 @@ struct object *objectRead(FILE *fp)
     struct object *newObj=(struct object *)0;
     struct byteObject *bnewObj;
 
-    char padding[32];
-
     /* get the tag header for the object, this has a type and value */
     readTag(fp,&type,&val);
 
@@ -731,9 +729,37 @@ int fileIn_version_1(FILE *fp)
 
 
 
+int fileIn_version_2(FILE *fp)
+{
+    int i;
+    struct object *imageBase;
+    struct object *imagePointer;
+    struct object *imageTop;
+    ptrdiff_t newOffset;
+    int totalCells = 0;
+
+    /* read in the bottom, pointer and top of the image */
+    fread(&imageBase, sizeof imageBase, 1, fp);
+    fread(&imagePointer, sizeof imagePointer, 1, fp);
+    fread(&imageTop, sizeof imageTop, 1, fp);
+
+    /* how many cells? */
+    totalCells = (int)((imageTop - imagePointer) + 1);
+
+    /* what is the offset between the saved pointer and our current pointer? */
+    newOffset = memoryBase - imageBase;
+
+    /* read in the raw image data. */
+    memoryPointer = memoryTop - (imageTop - imagePointer);
+    fread(memoryPointer, sizeof (*memoryPointer), totalCells, fp);
+
+    /* fix up each object. */
 
 
 
+
+    return totalCells;
+}
 
 
 
@@ -752,6 +778,11 @@ int fileIn(FILE *fp)
         return fileIn_version_1(fp);
         break;
 
+    case IMAGE_VERSION_2:
+        fprintf(stderr, "Reading in version 2 image.\n");
+        return fileIn_version_2(fp);
+        break;
+
     default:
         sysErrorInt("Unsupported image file version: ", version);
         break;
@@ -763,151 +794,42 @@ int fileIn(FILE *fp)
 
 
 
-/**
-* writeTag
-*
-* This write a special tag to the output file.  This tag has three bits
-* for a type field and five bits for either a value or a size.
-*/
-
-static void writeTag(FILE *fp, int type, int val)
-{
-    int tempSize;
-    int i;
-
-    /* get the number of bytes required to store the value */
-    tempSize = getIntSize(val);
-
-    if(tempSize) {
-        /*write the tag byte*/
-        fputc((type|tempSize|LST_LARGE_TAG_FLAG),fp);
-
-        for(i=0; i<tempSize; i++) {
-            fputc((val>>(8*i)),fp);
-        }
-    } else {
-        fputc((type|val),fp);
-    }
-}
-
-
-/**
-* objectWrite
-*
-* This routine writes an object to the output image file.
-*/
-
-static void objectWrite(FILE *fp, struct object *obj)
-{
-    int i;
-    int size;
-    int intVal;
-
-    /* check for illegal object */
-    if (obj == 0) {
-        sysErrorInt("writing out a null object", (intptr_t)obj);
-    }
-
-    /* small integer?, if so, treat this specially as this is not a pointer */
-
-    if (IS_SMALLINT(obj)) { /* SmallInt */
-        intVal = integerValue(obj);
-
-        /* if it is negative, we use the positive value and use a special tag. */
-        if(intVal<0) {
-            writeTag(fp,LST_NINT_TYPE,-intVal);
-        } else {
-            writeTag(fp,LST_PINT_TYPE,intVal);
-        }
-        return;
-    }
-
-    /* see if already written */
-    for (i = 0; i < indirtop; i++)
-        if (obj == indirArray[i]) {
-            if (i == 0) {
-                writeTag(fp,LST_NIL_TYPE,0);
-            } else {
-                writeTag(fp,LST_POBJ_TYPE,i);
-            }
-            return;
-        }
-
-    /* not written, do it now */
-    indirArray[indirtop++] = obj;
-
-    /* byte objects */
-    if (obj->size & FLAG_BIN) {
-        struct byteObject *bobj = (struct byteObject *) obj;
-        size = SIZE(obj);
-
-        /* write the header tag */
-        writeTag(fp,LST_BARRAY_TYPE,size);
-
-        /*write out bytes*/
-        for(i=0; i<size; i++) {
-            fputc(bobj->bytes[i],fp);
-        }
-
-        objectWrite(fp, obj->class);
-
-        return;
-    }
-
-    /* ordinary objects */
-    size = SIZE(obj);
-
-    writeTag(fp,LST_OBJ_TYPE,size);
-
-    /* write the class first */
-    objectWrite(fp, obj->class);
-
-    /* write the instance variables of the object */
-    for (i = 0; i < size; i++) {
-        objectWrite(fp, obj->data[i]);
-    }
-}
-
-
-
 
 
 int fileOut(FILE *fp)
 {
-    int i;
     struct image_header header = {0,};
-
-    /* use the currently unused space for the indir pointers */
-    if (inSpaceOne) {
-        indirArray = (struct object * *) spaceTwo;
-    } else {
-        indirArray = (struct object * *) spaceOne;
-    }
-    indirtop = 0;
-
-    /* write out the roots of the image file */
+    int totalCells = 0;
 
     printf("starting to file out\n");
 
+    /* output header. */
     header.magic[0] = 'l';
     header.magic[1] = 's';
     header.magic[2] = 't';
     header.magic[3] = '!';
-    header.version = IMAGE_VERSION_1;
+    header.version = IMAGE_VERSION_2;
 
     fwrite(&header, sizeof header, 1, fp);
 
-    objectWrite(fp, globalsObject);
-    objectWrite(fp, initialMethod);
-    for (i = 0; i < 3; i++) {
-        objectWrite(fp, binaryMessages[i]);
-    }
-    objectWrite(fp, badMethodSym);
-    printf("%d objects written in image\n", indirtop);
+    /* how much to write? */
+    totalCells = (int)((memoryTop - memoryPointer) + 1);
 
-    /* clean up after ourselves */
-    memset((void *) indirArray, (int)0, (size_t)(spaceSize * sizeof(struct object)));
-    return indirtop;
+    /* write out image bounds */
+    fprintf(stderr, "writing out memoryBase=%p\n", memoryBase);
+    fwrite(&memoryBase, sizeof memoryBase, 1, fp);
+
+    fprintf(stderr, "writing out memoryPointer=%p\n", memoryPointer);
+    fwrite(&memoryPointer, sizeof memoryPointer, 1, fp);
+
+    fprintf(stderr, "writing out memoryTop=%p\n", memoryTop);
+    fwrite(&memoryTop, sizeof memoryTop, 1, fp);
+
+    /* write out raw image data. */
+    fprintf(stderr, "writing out %d cells of image data.\n", totalCells);
+    fwrite(memoryPointer, sizeof (*memoryPointer), totalCells, fp);
+
+    return totalCells;
 }
 
 /*

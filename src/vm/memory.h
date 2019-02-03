@@ -165,6 +165,7 @@ struct image_header {
 
 #define IMAGE_VERSION_0 (0)
 #define IMAGE_VERSION_1 (1)
+#define IMAGE_VERSION_2 (2)
 
 extern int64_t gc_count;
 extern int64_t gc_total_time;
