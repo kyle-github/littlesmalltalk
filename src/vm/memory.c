@@ -676,6 +676,7 @@ int fileIn_version_1(FILE *fp)
     }
     indirtop = 0;
 
+    /* read the base objects from the image file. */
 
     fprintf(stderr, "reading globals object.\n");
     globalsObject = objectRead(fp);
