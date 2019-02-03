@@ -224,15 +224,7 @@ int main(int argc, char **argv)
 
     fwrite(&header, sizeof header, 1, fd);
 
-//    objectWrite(fd, nilObject);
-//    objectWrite(fd, trueObject);
-//    objectWrite(fd, falseObject);
     objectWrite(fd, globalValues);
-//    objectWrite(fd, SmallIntClass);
-//    objectWrite(fd, IntegerClass);
-//    objectWrite(fd, ArrayClass);
-//    objectWrite(fd, BlockClass);
-//    objectWrite(fd, lookupGlobalName("Context", 0));
     objectWrite(fd, bootMethod);
     objectWrite(fd, newSymbol("<"));
     objectWrite(fd, newSymbol("<="));

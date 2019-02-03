@@ -224,7 +224,7 @@ static struct object *gc_move(struct mobject *ptr)
 
             /* case 1, binary or last value */
             if ((old_address->size & FLAG_BIN) ||
-                    (SIZE(old_address) == 0)) {
+                (SIZE(old_address) == 0)) {
 
                 /* fix up class pointer */
                 new_address = old_address->data[0];
@@ -606,30 +606,39 @@ int fileIn_version_0(FILE *fp)
     /* read in the image file */
     fprintf(stderr, "reading nil object.\n");
     nilObject = objectRead(fp);
+    staticRoots[staticRootTop++] = &nilObject;
 
     fprintf(stderr, "reading true object.\n");
     trueObject = objectRead(fp);
+    staticRoots[staticRootTop++] = &trueObject;
 
     fprintf(stderr, "reading false object.\n");
     falseObject = objectRead(fp);
+    staticRoots[staticRootTop++] = &falseObject;
 
     fprintf(stderr, "reading globals object.\n");
     globalsObject = objectRead(fp);
+    staticRoots[staticRootTop++] = &globalsObject;
 
     fprintf(stderr, "reading SmallInt class.\n");
     SmallIntClass = objectRead(fp);
+    staticRoots[staticRootTop++] = &SmallIntClass;
 
     fprintf(stderr, "reading Integer class.\n");
     IntegerClass = objectRead(fp);
+    staticRoots[staticRootTop++] = &IntegerClass;
 
     fprintf(stderr, "reading Array class.\n");
     ArrayClass = objectRead(fp);
+    staticRoots[staticRootTop++] = &ArrayClass;
 
     fprintf(stderr, "reading Block class.\n");
     BlockClass = objectRead(fp);
+    staticRoots[staticRootTop++] = &BlockClass;
 
     fprintf(stderr, "reading Context class.\n");
     ContextClass = objectRead(fp);
+    staticRoots[staticRootTop++] = &ContextClass;
 
     fprintf(stderr, "reading initial method.\n");
     initialMethod = objectRead(fp);
@@ -645,32 +654,7 @@ int fileIn_version_0(FILE *fp)
     badMethodSym = objectRead(fp);
     staticRoots[staticRootTop++] = &badMethodSym;
 
-    /* fix up everything from globals.   This is a temporary workaround. */
-    nilObject = lookupGlobal("nil");
-    staticRoots[staticRootTop++] = &nilObject;
-
-    trueObject = lookupGlobal("true");
-    staticRoots[staticRootTop++] = &trueObject;
-
-    falseObject = lookupGlobal("false");
-    staticRoots[staticRootTop++] = &falseObject;
-
-    SmallIntClass = lookupGlobal("SmallInt");
-    staticRoots[staticRootTop++] = &SmallIntClass;
-
-    IntegerClass = lookupGlobal("Integer");
-    staticRoots[staticRootTop++] = &IntegerClass;
-
-    ArrayClass = lookupGlobal("Array");
-    staticRoots[staticRootTop++] = &ArrayClass;
-
-    BlockClass = lookupGlobal("Block");
-    staticRoots[staticRootTop++] = &BlockClass;
-
-    ContextClass = lookupGlobal("Context");
-    staticRoots[staticRootTop++] = &ContextClass;
-
-    /* clean up after ourselves.  KRH -- replace bzero(), it is deprecated. */
+    /* clean up after ourselves. */
     memset((void *) indirArray,(int)0,(size_t)(spaceSize * sizeof(struct object)));
 
     return indirtop;
@@ -695,6 +679,7 @@ int fileIn_version_1(FILE *fp)
 
     fprintf(stderr, "reading globals object.\n");
     globalsObject = objectRead(fp);
+    staticRoots[staticRootTop++] = &globalsObject;
 
     fprintf(stderr, "reading initial method.\n");
     initialMethod = objectRead(fp);
@@ -756,19 +741,19 @@ int fileIn(FILE *fp)
     int version = get_image_version(fp);
 
     switch(version) {
-        case IMAGE_VERSION_0:
-            fprintf(stderr, "Reading in version 0 image.\n");
-            return fileIn_version_0(fp);
-            break;
+    case IMAGE_VERSION_0:
+        fprintf(stderr, "Reading in version 0 image.\n");
+        return fileIn_version_0(fp);
+        break;
 
-        case IMAGE_VERSION_1:
-            fprintf(stderr, "Reading in version 1 image.\n");
-            return fileIn_version_1(fp);
-            break;
+    case IMAGE_VERSION_1:
+        fprintf(stderr, "Reading in version 1 image.\n");
+        return fileIn_version_1(fp);
+        break;
 
-        default:
-            sysErrorInt("Unsupported image file version: ", version);
-            break;
+    default:
+        sysErrorInt("Unsupported image file version: ", version);
+        break;
     }
 
     return 0;
@@ -889,6 +874,7 @@ static void objectWrite(FILE *fp, struct object *obj)
 int fileOut(FILE *fp)
 {
     int i;
+    struct image_header header = {0,};
 
     /* use the currently unused space for the indir pointers */
     if (inSpaceOne) {
@@ -899,15 +885,18 @@ int fileOut(FILE *fp)
     indirtop = 0;
 
     /* write out the roots of the image file */
-    objectWrite(fp, nilObject);
-    objectWrite(fp, trueObject);
-    objectWrite(fp, falseObject);
+
+    printf("starting to file out\n");
+
+    header.magic[0] = 'l';
+    header.magic[1] = 's';
+    header.magic[2] = 't';
+    header.magic[3] = '!';
+    header.version = IMAGE_VERSION_1;
+
+    fwrite(&header, sizeof header, 1, fp);
+
     objectWrite(fp, globalsObject);
-    objectWrite(fp, SmallIntClass);
-    objectWrite(fp, IntegerClass);
-    objectWrite(fp, ArrayClass);
-    objectWrite(fp, BlockClass);
-    objectWrite(fp, ContextClass);
     objectWrite(fp, initialMethod);
     for (i = 0; i < 3; i++) {
         objectWrite(fp, binaryMessages[i]);

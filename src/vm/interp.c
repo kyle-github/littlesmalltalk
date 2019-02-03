@@ -176,8 +176,7 @@ struct object *lookupGlobal(char *name)
     high = SIZE(keys);
 
     /*
-    * Do a binary search through its keys, which are
-    * Symbol's.
+    * Do a binary search through its keys, which are Symbols.
     */
     while (low < high) {
         mid = (low + high) / 2;
