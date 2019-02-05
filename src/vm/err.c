@@ -38,7 +38,7 @@ void backTrace(struct object * aContext)
         arguments = aContext->data[argumentsInContext];
         if (arguments && (arguments != nilObject)) {
             printf("(");
-            for (i = 0; i < SIZE(arguments); i++)
+            for (i = 0; i < (int)SIZE(arguments); i++)
                 printf("%s%s",
                        ((i == 0) ? "" : ", "),
                        bytePtr(arguments->data[i]->class->

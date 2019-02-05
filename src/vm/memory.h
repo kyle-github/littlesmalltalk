@@ -31,7 +31,7 @@
 struct object {
     uint32_t size;
     struct object *class;
-    struct object *data[0];
+    struct object *data[];
 };
 
 /*
@@ -42,10 +42,10 @@ struct object {
 struct byteObject {
     uint32_t size;
     struct object *class;
-    uint8_t bytes[0];
+    uint8_t bytes[];
 };
 
-#define BytesPerWord (sizeof (intptr_t))
+#define BytesPerWord ((int)(sizeof (intptr_t)))
 #define bytePtr(x) (((struct byteObject *) x)->bytes)
 #define WORDSUP(ptr, amt) ((struct object *)(((char *)(ptr)) + ((amt) * BytesPerWord)))
 #define WORDSDOWN(ptr, amt) WORDSUP(ptr, 0 - (amt))
@@ -62,16 +62,17 @@ struct byteObject {
 #define FITS_SMALLINT(x) ((((intptr_t)(x)) >= INT_MIN/2) && \
                           (((intptr_t)(x)) <= INT_MAX/2))
 #define CLASS(x) (IS_SMALLINT(x) ? SmallIntClass : ((x)->class))
-#define integerValue(x) (((intptr_t)(x)) >> 1)
+#define integerValue(x) ((int)(((intptr_t)(x)) >> 1))
 #define newInteger(x) ((struct object *)((((intptr_t)(x)) << 1) | 0x01))
 
 /*
  * The "size" field is the top 30 bits; the bottom two are flags
  */
-#define SIZE(op) ((op)->size >> 2)
-#define SETSIZE(op, val) ((op)->size = ((val) << 2))
+#define SIZE(op) (((op)->size) >> 2)
+#define SETSIZE(op, val) ((op)->size = ((uint32_t)(val) << 2))
 #define FLAG_GCDONE (0x01)
 #define FLAG_BIN (0x02)
+#define IS_BINOBJ(x) (((struct object *)(x))->size & FLAG_BIN)
 
 /*
     memoryBase holds the pointer to the current space,

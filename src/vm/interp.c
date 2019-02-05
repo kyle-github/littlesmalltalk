@@ -90,10 +90,10 @@ static void indent(struct object *ctx)
 
 static int symbolcomp(struct object *left, struct object *right)
 {
-    int leftsize = SIZE(left);
-    int rightsize = SIZE(right);
-    int minsize = leftsize;
-    register int i;
+    uint leftsize = SIZE(left);
+    uint rightsize = SIZE(right);
+    uint minsize = leftsize;
+    uint i;
 
     if (rightsize < minsize) {
         minsize = rightsize;
@@ -103,7 +103,7 @@ static int symbolcomp(struct object *left, struct object *right)
             return bytePtr(left)[i]-bytePtr(right)[i];
         }
     }
-    return leftsize - rightsize;
+    return (int)leftsize - (int)rightsize;
 }
 
 static struct object *lookupMethod(struct object *selector, struct object *class)
@@ -173,7 +173,7 @@ struct object *lookupGlobal(char *name)
     dict = globalsObject;
     keys = dict->data[0];
     low = 0;
-    high = SIZE(keys);
+    high = (int)SIZE(keys);
 
     /*
     * Do a binary search through its keys, which are Symbols.
@@ -336,16 +336,14 @@ static int bulkReplace(struct object *dest, struct object *start,
     /*
      * Defend against goofy negative indices.
      */
-    if ((irepStart < 0) || (istart < 0) || (istop < 0) ||
-        (count < 1)) {
+    if ((irepStart < 0) || (istart < 0) || (istop < 0) || (count < 1)) {
         return(1);
     }
 
     /*
      * Range check
      */
-    if ((SIZE(dest) < istop) ||
-        (SIZE(src) < (irepStart + count))) {
+    if (((int)SIZE(dest) < istop) || ((int)SIZE(src) < (irepStart + count))) {
         return(1);
     }
 
@@ -356,8 +354,7 @@ static int bulkReplace(struct object *dest, struct object *start,
         /*
          * Do it.
          */
-        bcopy(bytePtr(src) + irepStart, bytePtr(dest) + istart,
-              count);
+        bcopy(bytePtr(src) + irepStart, bytePtr(dest) + istart, (size_t)count);
         return(0);
     }
 
@@ -379,8 +376,7 @@ static int bulkReplace(struct object *dest, struct object *start,
     /*
      * Copy object pointer fields
      */
-    bcopy(&src->data[irepStart], &dest->data[istart],
-          BytesPerWord * count);
+    bcopy(&src->data[irepStart], &dest->data[istart], (size_t)(BytesPerWord * count));
     return(0);
 }
 
@@ -518,7 +514,7 @@ int execute(struct object *aProcess, int ticks)
             rootStack[rootTop++] = context;
             op = rootStack[rootTop++] = gcalloc(x = integerValue(method->data[stackSizeInMethod]));
             op->class = ArrayClass;
-            bzero(bytePtr(op), x * BytesPerWord);
+            bzero(bytePtr(op), (size_t)(x * BytesPerWord));
             returnedValue = gcalloc(blockSize);
             returnedValue->class = BlockClass;
             returnedValue->data[bytePointerInContext] =
@@ -657,7 +653,7 @@ checkCache:
             op = rootStack[rootTop++] =
                      gcalloc(x = integerValue(method->data[stackSizeInMethod]));
             op->class = ArrayClass;
-            bzero(bytePtr(op), x * BytesPerWord);
+            bzero(bytePtr(op), (size_t)(x * BytesPerWord));
             if (low > 0) {
                 int i;
 
@@ -829,7 +825,7 @@ checkCache:
                 if (IS_SMALLINT(returnedValue)) {
                     high  = 0;
                 } else {
-                    high = SIZE(returnedValue);
+                    high = (int)SIZE(returnedValue);
                 }
                 returnedValue = newInteger(high);
                 break;
@@ -843,7 +839,7 @@ checkCache:
                 low = integerValue(op)-1;
                 returnedValue = stack->data[--stackTop];
                 /* Bounds check */
-                if ((low < 0) || (low >= SIZE(returnedValue))) {
+                if ((low < 0) || (low >= (int)SIZE(returnedValue))) {
                     stackTop -= 1;
                     goto failPrimitive;
                 }
@@ -882,12 +878,10 @@ checkCache:
                 /* low holds number of arguments */
                 returnedValue = stack->data[--stackTop];
                 /* put arguments in place */
-                high = integerValue(returnedValue->data[
-                                        argumentLocationInBlock]);
+                high = integerValue(returnedValue->data[argumentLocationInBlock]);
                 temporaries = returnedValue->data[temporariesInBlock];
                 low -= 2;
-                x = (temporaries ?
-                     (SIZE(temporaries) - high) : 0);
+                x = (temporaries ? ((int)SIZE(temporaries) - high) : 0);
                 if (low >= x) {
                     stackTop -= (low+1);
                     goto failPrimitive;
@@ -1020,14 +1014,14 @@ checkCache:
                 rootStack[rootTop++] = stack->data[--stackTop];
                 returnedValue = gcialloc(low);
                 returnedValue->class = rootStack[--rootTop];
-                bzero(bytePtr(returnedValue), low);
+                bzero(bytePtr(returnedValue), (size_t)low);
                 break;
 
             case 21:    /* string at */
                 low = integerValue(stack->data[--stackTop])-1;
                 returnedValue = stack->data[--stackTop];
                 if ((low < 0) ||
-                    (low >= SIZE(returnedValue))) {
+                    (low >= (int)SIZE(returnedValue))) {
                     goto failPrimitive;
                 }
                 low = bytePtr(returnedValue)[low];
@@ -1038,19 +1032,18 @@ checkCache:
                 low = integerValue(stack->data[--stackTop])-1;
                 returnedValue = stack->data[--stackTop];
                 if ((low < 0) ||
-                    (low >= SIZE(returnedValue))) {
+                    (low >= (int)SIZE(returnedValue))) {
                     stackTop -= 1;
                     goto failPrimitive;
                 }
-                bytePtr(returnedValue)[low] =
-                    integerValue(stack->data[--stackTop]);
+                bytePtr(returnedValue)[low] = (uint8_t)(uint32_t)integerValue(stack->data[--stackTop]);
                 break;
 
             case 23:    /* string clone */
                 rootStack[rootTop++] = stack->data[--stackTop];
                 rootStack[rootTop++] = returnedValue
                                        = stack->data[--stackTop];
-                low = SIZE(returnedValue);
+                low = (int)SIZE(returnedValue);
                 returnedValue = gcialloc(low);
                 messageSelector = rootStack[--rootTop];
                 while (low-- > 0)
@@ -1062,8 +1055,7 @@ checkCache:
             case 24:    /* array at */
                 low = integerValue(stack->data[--stackTop])-1;
                 returnedValue = stack->data[--stackTop];
-                if ((low < 0) ||
-                    (low >= SIZE(returnedValue))) {
+                if ((low < 0) || (low >= (int)SIZE(returnedValue))) {
                     goto failPrimitive;
                 }
                 returnedValue = returnedValue->data[low];
@@ -1105,7 +1097,7 @@ checkCache:
                 op = stack->data[--stackTop];
                 i64p = (int64_t *)bytePtr(op);
                 l = *i64p;
-                x = l;
+                x = (int)l;
                 if (!FITS_SMALLINT(x)) {
                     goto failPrimitive;
                 }
@@ -1217,7 +1209,7 @@ checkCache:
                 op = stack->data[--stackTop];
                 i64p = (int64_t *)bytePtr(op);
                 l = *i64p;
-                x = l;
+                x = (int)l;
                 returnedValue = newInteger(x);
                 break;
 

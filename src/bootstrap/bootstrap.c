@@ -410,7 +410,7 @@ struct object *gcalloc(int size)
 {
     struct object *result;
 
-    result = malloc(sizeof(struct object) + size * sizeof(struct object *));
+    result = malloc(sizeof(struct object) + (sizeof(struct object *) * (uint)size));
     if (!result) {
         sysErrorStr("out of memory", "gcalloc");
     }
@@ -484,12 +484,12 @@ struct object *lookupGlobalName(char *name, int ok_missing)
 
 void inputMethodText()
 {
-    char c;
+    int c;
 
     p = inputBuffer;
     while (1) {
         while ((c = fgetc(fin)) != '\n') {
-            *p++ = c;
+            *p++ = (char)c;
         }
 
         *p++ = '\n';
@@ -501,9 +501,9 @@ void inputMethodText()
             }
 
             *p++ = '!';
-            *p++ = c;
+            *p++ = (char)c;
         } else {
-            *p++ = c;
+            *p++ = (char)c;
         }
     }
 }
@@ -618,8 +618,8 @@ static struct object *oldSymbols[5000];
 int symbolBareCmp(const char *left, uint32_t leftsize, const char *right,
                   uint32_t rightsize)
 {
-    int minsize = leftsize;
-    int i;
+    uint32_t minsize = leftsize;
+    uint32_t i;
 
     if (rightsize < minsize)
         minsize = rightsize;
@@ -632,7 +632,7 @@ int symbolBareCmp(const char *left, uint32_t leftsize, const char *right,
             }
         }
     }
-    return leftsize - rightsize;
+    return (int)leftsize - (int)rightsize;
 }
 
 int symbolCmp(struct object *left, struct object *right)
@@ -643,13 +643,14 @@ int symbolCmp(struct object *left, struct object *right)
 
 struct object *newString(char *text)
 {
-    int size, i;
+    size_t size, i;
     struct byteObject *newObj;
 
     size = strlen(text);
-    newObj = binaryAlloc(size);
-    for (i = 0; i < size; i++)
-        newObj->bytes[i] = text[i];
+    newObj = binaryAlloc((int)size);
+    for (i = 0; i < size; i++) {
+        newObj->bytes[i] = (uint8_t)text[i];
+    }
     newObj->class = lookupGlobalName("String", 0);
     return (struct object *) newObj;
 }
@@ -661,17 +662,15 @@ struct object *newSymbol(char *text)
 
     /* first see if it is already a symbol */
     for (i = 0; i < symbolTop; i++) {
-        if (symbolBareCmp
-            (text, strlen(text), (char *) bytePtr(oldSymbols[i]),
-             SIZE(oldSymbols[i])) == 0) {
+        if (symbolBareCmp(text, (uint32_t)strlen(text), (char *) bytePtr(oldSymbols[i]), SIZE(oldSymbols[i])) == 0) {
             return oldSymbols[i];
         }
     }
 
     /* not there, make a new one */
-    result = binaryAlloc(strlen(text));
-    for (i = 0; i < strlen(text); i++) {
-        result->bytes[i] = text[i];
+    result = binaryAlloc((int)strlen(text));
+    for (i = 0; i < (int)strlen(text); i++) {
+        result->bytes[i] = (uint8_t)text[i];
     }
     result->class = lookupGlobalName("Symbol", 0);
     oldSymbols[symbolTop++] = (struct object *) result;
@@ -760,11 +759,11 @@ struct object *newOrderedArray(void)
 
 #define ByteBufferTop 512
 static unsigned char byteBuffer[ByteBufferTop];
-static unsigned byteTop;
+static int byteTop;
 
 void genByte(int v)
 {
-    byteBuffer[byteTop++] = v;
+    byteBuffer[byteTop++] = (uint8_t)v;
     if (byteTop >= ByteBufferTop) {
         sysError("too many bytecodes");
     }
@@ -784,8 +783,8 @@ void genValPos(int pos, int v)
     if ((v < 0) || (v > 0xFFFF)) {
         sysError("illegal value");
     }
-    byteBuffer[pos] = v & 0xFF;
-    byteBuffer[pos + 1] = v >> 8;
+    byteBuffer[pos] = (uint8_t)(v & 0xFF);
+    byteBuffer[pos + 1] = (uint8_t)(v >> 8);
 }
 
 void genInstruction(int a, int b)
@@ -804,16 +803,17 @@ struct object *buildByteArray()
     struct byteObject *newObj;
     int i;
 
-    newObj = binaryAlloc(byteTop);
-    for (i = 0; i < byteTop; i++)
+    newObj = binaryAlloc((int)byteTop);
+    for (i = 0; i < (int)byteTop; i++) {
         newObj->bytes[i] = byteBuffer[i];
+    }
     newObj->class = lookupGlobalName("ByteArray", 0);
     return (struct object *) newObj;
 }
 
 #define LiteralBufferTop 60
 static struct object *litBuffer[LiteralBufferTop];
-static unsigned litTop = 0;
+static int litTop = 0;
 
 /* FIXME - remove duplicates. */
 int addLiteral(struct object *a)
@@ -822,7 +822,7 @@ int addLiteral(struct object *a)
     if (litTop >= LiteralBufferTop) {
         sysError("too many literals");
     }
-    return litTop - 1;
+    return (int)(litTop - 1);
 }
 
 struct object *buildLiteralArray(void)
@@ -832,9 +832,9 @@ struct object *buildLiteralArray(void)
 
     if (litTop == 0)
         return nilObject;
-    result = gcalloc(litTop);
+    result = gcalloc((int)litTop);
     result->class = lookupGlobalName("Array", 0);
-    for (i = 0; i < litTop; i++)
+    for (i = 0; i < (int)litTop; i++)
         result->data[i] = litBuffer[i];
     return result;
 }
@@ -964,15 +964,13 @@ int lookupInstance(struct object *class, char *text, int *low)
     /* Check our own list of variables */
     var = class->data[variablesInClass];
     if (var && var != nilObject) {
-        size = SIZE(var);
+        size = (int)SIZE(var);
     } else {
         size = 0;
     }
 
     for (i = 0; i < size; i++) {
-        if (symbolBareCmp
-            (text, strlen(text), (char *) bytePtr(var->data[i]),
-             (SIZE(var->data[i]))) == 0) {
+        if (symbolBareCmp (text, (uint32_t)strlen(text), (char *) bytePtr(var->data[i]), (SIZE(var->data[i]))) == 0) {
             return (*low);
         }
         *low += 1;
@@ -1296,15 +1294,15 @@ int controlFlow(int opt1, char *rest, int opt2)
     char *q;
 
     genInstruction(DoSpecial, opt1);
-    save1 = byteTop;
+    save1 = (int)byteTop;
     genVal(0);
     if (!optimizeBlock()) {
         parseError("syntax error in control flow");
     }
     genInstruction(DoSpecial, Branch);
-    save2 = byteTop;
+    save2 = (int)byteTop;
     genVal(0);
-    genValPos(save1, byteTop);
+    genValPos(save1, (int)byteTop);
     q = p;
     if (isIdentifierChar(*p) && readIdentifier()
         && (strcmp(tokenBuffer, rest) == 0)) {
@@ -1315,7 +1313,7 @@ int controlFlow(int opt1, char *rest, int opt2)
         p = q;
         genInstruction(PushConstant, opt2);
     }
-    genValPos(save2, byteTop);
+    genValPos(save2, (int)byteTop);
     return 1;
 }
 
@@ -1325,10 +1323,10 @@ int optimizeLoop(int branchInstruction)
 
     /* back up to start of block and try again */
     p = blockbackup;
-    L1 = byteTop;
+    L1 = (int)byteTop;
     optimizeBlock();
     genInstruction(DoSpecial, branchInstruction);
-    L2 = byteTop;
+    L2 = (int)byteTop;
     genVal(0);
     if (!(isIdentifierChar(*p) && readIdentifier()))
         return parseError("can't get message again in optimized block");
@@ -1337,7 +1335,7 @@ int optimizeLoop(int branchInstruction)
     genInstruction(DoSpecial, PopTop);
     genInstruction(DoSpecial, Branch);
     genVal(L1);
-    genValPos(L2, byteTop);
+    genValPos(L2, (int)byteTop);
     genInstruction(PushConstant, 0);
     return 1;
 }
@@ -1618,7 +1616,7 @@ struct object *insert(struct object *array, int index, struct object *val)
      * Clone the current object, including class.  Make one
      * extra slot in the Array storage.
      */
-    o = gcalloc(SIZE(array) + 1);
+    o = gcalloc((int)SIZE(array) + 1);
     o->class = array->class;
 
     /*
@@ -1637,7 +1635,7 @@ struct object *insert(struct object *array, int index, struct object *val)
     /*
      * Now copy the rest
      */
-    for (; j < SIZE(array); ++j) {
+    for (; j < (int)SIZE(array); ++j) {
         o->data[i++] = array->data[j];
     }
     return (o);
@@ -1656,7 +1654,7 @@ void dictionaryInsert(struct object *dict, struct object *index,
     /*
      * Scan the OrderedArray "keys" to find where we fit in
      */
-    for (i = 0, lim = SIZE(keys); i < lim; ++i) {
+    for (i = 0, lim = (int)SIZE(keys); i < lim; ++i) {
         res = symbolCmp(index, keys->data[i]);
 
         /*
@@ -1930,7 +1928,7 @@ void objectWrite(FILE * fp, struct object *obj)
     if (obj->size & FLAG_BIN) {
         struct byteObject *bobj = (struct byteObject *) obj;
 
-        size = SIZE(obj);
+        size = (int)SIZE(obj);
 
         /* write the header tag */
         writeTag(fp, LST_BARRAY_TYPE, size);
@@ -1945,7 +1943,7 @@ void objectWrite(FILE * fp, struct object *obj)
     }
 
     /* ordinary objects */
-    size = SIZE(obj);
+    size = (int)SIZE(obj);
 
     writeTag(fp, LST_OBJ_TYPE, size);
 

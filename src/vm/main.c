@@ -92,7 +92,7 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    printf("%d objects in image\n", fileIn(fp));
+    printf("%d objs/cells in image\n", fileIn(fp));
     fclose(fp);
 
     /* build a context around it */
@@ -100,22 +100,42 @@ int main(int argc, char **argv)
 //    aProcess = staticAllocate(3);
 
     /* build the root process with a context, make sure it is GC-proof */
-    aProcess = gcalloc(3);
+    aProcess = gcalloc(processSize);
+    aProcess->class = lookupGlobal("Process");
+    for(int i=0; i< processSize; i++) {
+        aProcess->data[i] = nilObject;
+    }
     addStaticRoot(&aProcess);
 
     /* context should be dynamic */
     aContext = gcalloc(contextSize);
     aContext->class = ContextClass;
-    addStaticRoot(&aContext);
+    for(int i=0; i< contextSize; i++) {
+        aContext->data[i] = nilObject;
+    }
+//    addStaticRoot(&aContext);
 
+    /* add the context to the process. */
     aProcess->data[contextInProcess] = aContext;
+
+    /* set up context stack */
     size = integerValue(initialMethod->data[stackSizeInMethod]);
-//    aContext->data[stackInContext] = staticAllocate(size);
     aContext->data[stackInContext] = gcalloc(size);
+    aContext->data[stackInContext]->class = ArrayClass;
+    for(int i=0; i < size; i++) {
+        aContext->data[stackInContext]->data[i] = nilObject;
+    }
+
+    /* set up arguments, none. */
     aContext->data[argumentsInContext] = nilObject;
 
-//    aContext->data[temporariesInContext] = staticAllocate(19);
+    /* set up temporary array. */
     aContext->data[temporariesInContext] = gcalloc(19);
+    aContext->data[temporariesInContext]->class = ArrayClass;
+    for(int i=0; i < size; i++) {
+        aContext->data[temporariesInContext]->data[i] = nilObject;
+    }
+
     aContext->data[bytePointerInContext] = newInteger(0);
     aContext->data[stackTopInContext] = newInteger(0);
     aContext->data[previousContextInContext] = nilObject;

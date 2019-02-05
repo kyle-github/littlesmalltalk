@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <stddef.h>
 #include "memory.h"
 #include "globs.h"
 #include "interp.h"
@@ -82,9 +83,9 @@ int isDynamicMemory(struct object *x)
 void gcinit(int staticsz, int dynamicsz)
 {
     /* allocate the memory areas */
-    staticBase = (struct object *)calloc(staticsz, sizeof(struct object));
-    spaceOne = (struct object *)calloc(dynamicsz, sizeof(struct object));
-    spaceTwo = (struct object *)calloc(dynamicsz, sizeof(struct object));
+    staticBase = (struct object *)calloc((size_t)staticsz, sizeof(struct object));
+    spaceOne = (struct object *)calloc((size_t)dynamicsz, sizeof(struct object));
+    spaceTwo = (struct object *)calloc((size_t)dynamicsz, sizeof(struct object));
 
     if ((staticBase == NULL) || (spaceOne == NULL) || (spaceTwo == NULL)) {
         sysError("not enough memory for space allocations\n");
@@ -96,6 +97,7 @@ void gcinit(int staticsz, int dynamicsz)
     spaceSize = dynamicsz;
     memoryBase = spaceOne;
     memoryPointer = memoryBase + spaceSize;
+    memoryTop = memoryPointer;
 
     if (debugging) {
         printf("space one 0x%lx, top 0x%lx,"
@@ -115,7 +117,7 @@ void gcinit(int staticsz, int dynamicsz)
 */
 struct mobject {
     uint size;
-    struct mobject *data[0];
+    struct mobject *data[];
 };
 
 static struct object *gc_move(struct mobject *ptr)
@@ -655,6 +657,8 @@ int fileIn_version_0(FILE *fp)
     /* clean up after ourselves. */
     memset((void *) indirArray,(int)0,(size_t)(spaceSize * sizeof(struct object)));
 
+    fprintf(stderr, "Read in %d objects.\n", indirtop);
+
     return indirtop;
 }
 
@@ -722,8 +726,102 @@ int fileIn_version_1(FILE *fp)
     /* clean up after ourselves. */
     memset((void *) indirArray,(int)0,(size_t)(spaceSize * sizeof(struct object)));
 
+    fprintf(stderr, "Read in %d objects.\n", indirtop);
+
     return indirtop;
 }
+
+
+/* FIXME global to fake the define below */
+
+struct object *imageBase;
+struct object *imagePointer;
+struct object *imageTop;
+
+//#define FIX_OFFSET(ptr, amt) ((struct object *)(((char *)(ptr)) + ((amt) * BytesPerWord)))
+
+#define PTR_BETWEEN(p, low, high) (((intptr_t)p >= (intptr_t)low) && ((intptr_t)p < (intptr_t)high))
+
+static struct object *FIX_OFFSET(struct object *old, int64_t offset)
+{
+    struct object *tmp;
+
+    /* sanity checking, is the old pointer in the old image range? */
+    if(!PTR_BETWEEN(old, imagePointer, imageTop)) {
+        fprintf(stderr, "!!! old pointer=%p, low bound=%p, high bound=%p\n", old, imagePointer, imageTop);
+        sysErrorInt("pointer from image is not within image address range! oop=", (intptr_t)old);
+    }
+
+    tmp = (struct object *)((intptr_t)old + (offset * (intptr_t)BytesPerWord));
+
+    /* sanity checking, is the new pointer in the new memory range? */
+    if(!PTR_BETWEEN(tmp, memoryPointer, memoryTop)) {
+        fprintf(stderr, "!!! old pointer=%p, offset=%ld, low bound=%p, high bound=%p, new pointer=%p\n", old, offset, memoryPointer, memoryTop, tmp);
+        sysErrorInt("!!! swizzled pointer from image does not point into new address range! oop=", (intptr_t)tmp);
+    }
+
+    return tmp;
+}
+
+
+
+static struct object *object_fix_up(struct object *obj, int64_t offset)
+{
+    int i;
+    int size;
+
+    /* check for illegal object */
+    if (obj == NULL) {
+        sysErrorInt("Fixing up a null object! obj=", (intptr_t)obj);
+    }
+
+    /* get the size, we'll use it regardless of the object type. */
+    size = SIZE(obj);
+
+    /* byte objects, just fix up the class. */
+    if (IS_BINOBJ(obj)) {
+        fprintf(stderr, "Object %p is a binary object of %d bytes.\n", obj, size);
+        struct byteObject *bobj = (struct byteObject *) obj;
+
+        /* fix up class offset */
+        bobj->class = FIX_OFFSET(bobj->class, offset);
+        fprintf(stderr, "  class is object %p.\n", bobj->class);
+
+        /* fix up size, size of binary objects is in bytes! */
+        size = (int)((size + BytesPerWord - 1)/BytesPerWord);
+    } else {
+        /* ordinary objects */
+        fprintf(stderr, "Object %p is an ordinary object with %d fields.\n", obj, size);
+
+        /* fix the class first */
+        fprintf(stderr, "  class is object %p.\n", obj->class);
+
+        obj->class = FIX_OFFSET(obj->class, offset);
+
+        /* write the instance variables of the object */
+        for (i = 0; i < size; i++) {
+            /* we only need to stitch this up if it is not a SmallInt. */
+            if(obj->data[i] != NULL) {
+                if(!IS_SMALLINT(obj->data[i])) {
+                    obj->data[i] = FIX_OFFSET(obj->data[i], offset);
+                    fprintf(stderr, "  field %d is object %p.\n", i, obj->data[i]);
+                } else {
+                    fprintf(stderr, "  field %d is SmallInt %d.\n", i, integerValue(obj->data[i]));
+                }
+            } else {
+                fprintf(stderr, "  field %d is NULL, fixing up to nil object.\n", i);
+                obj->data[i] = nilObject;
+            }
+        }
+    }
+
+    /* size is number of fields plus header plus class */
+    return WORDSUP(obj, size + 2);
+}
+
+
+
+
 
 
 
@@ -732,31 +830,106 @@ int fileIn_version_1(FILE *fp)
 int fileIn_version_2(FILE *fp)
 {
     int i;
-    struct object *imageBase;
-    struct object *imagePointer;
-    struct object *imageTop;
-    ptrdiff_t newOffset;
-    int totalCells = 0;
+    struct object *fixer;
+    int64_t newOffset;
+    int64_t totalCells = 0;
+    int obj_count = 0;
 
     /* read in the bottom, pointer and top of the image */
     fread(&imageBase, sizeof imageBase, 1, fp);
+    fprintf(stderr, "Read in image imageBase=%p\n", imageBase);
+
     fread(&imagePointer, sizeof imagePointer, 1, fp);
+    fprintf(stderr, "Read in image imagePointer=%p\n", imagePointer);
+
     fread(&imageTop, sizeof imageTop, 1, fp);
+    fprintf(stderr, "Read in image imageTop=%p\n", imageTop);
 
     /* how many cells? */
-    totalCells = (int)((imageTop - imagePointer) + 1);
+    totalCells = ((int)(((intptr_t)imageTop - (intptr_t)imagePointer)))/(int)BytesPerWord;
+    fprintf(stderr, "Image has %ld cells.\n", totalCells);
 
-    /* what is the offset between the saved pointer and our current pointer? */
-    newOffset = memoryBase - imageBase;
+    fprintf(stderr, "memoryBase is %p\n", memoryBase);
+    fprintf(stderr, "memoryPointer is %p\n", memoryPointer);
+    fprintf(stderr, "memoryTop is %p\n", memoryTop);
+
+    /* what is the offset between the saved pointer and our current pointer? In cells! */
+    newOffset = (int64_t)((intptr_t)memoryBase - (intptr_t)imageBase);
+    fprintf(stderr, "Address offset between image and current memory pointer is %ld bytes.\n", newOffset);
+
+    newOffset = (int64_t)newOffset/(int64_t)BytesPerWord;
+    fprintf(stderr, "Address offset between image and current memory pointer is %ld cells.\n", newOffset);
+
+    /* set up lower pointer */
+    memoryPointer = WORDSDOWN(memoryTop, totalCells);
+
+
+    /* read in core object pointers. */
+
+    /* everything starts with globals */
+    fread(&globalsObject, sizeof globalsObject, 1, fp);
+    globalsObject = FIX_OFFSET(globalsObject, newOffset);
+    staticRoots[staticRootTop++] = &globalsObject;
+    fprintf(stderr, "Read in globals object=%p\n", globalsObject);
+
+    fread(&initialMethod, sizeof initialMethod, 1, fp);
+    initialMethod = FIX_OFFSET(initialMethod, newOffset);
+    staticRoots[staticRootTop++] = &initialMethod;
+    fprintf(stderr, "Read in initial method=%p\n", initialMethod);
+
+    fprintf(stderr, "Reading binary message objects.\n");
+    for (i = 0; i < 3; i++) {
+        fread(&(binaryMessages[i]), sizeof binaryMessages[i], 1, fp);
+        binaryMessages[i] = FIX_OFFSET(binaryMessages[i], newOffset);
+        staticRoots[staticRootTop++] = &(binaryMessages[i]);
+        fprintf(stderr, "  Read in binary message %d=%p\n", i, binaryMessages[i]);
+    }
+
+    fread(&badMethodSym, sizeof badMethodSym, 1, fp);
+    badMethodSym = FIX_OFFSET(badMethodSym, newOffset);
+    staticRoots[staticRootTop++] = &badMethodSym;
+    fprintf(stderr, "Read in doesNotUnderstand: symbol=%p\n", badMethodSym);
 
     /* read in the raw image data. */
-    memoryPointer = memoryTop - (imageTop - imagePointer);
-    fread(memoryPointer, sizeof (*memoryPointer), totalCells, fp);
+    fread(memoryPointer, BytesPerWord, totalCells, fp);
 
-    /* fix up each object. */
+    /* fix up the rest of the objects. */
+
+    fixer = memoryPointer;
+    obj_count = 1;
+    while(fixer < memoryTop) {
+        //fprintf(stderr, "Fixing up object %d: ", obj_count++);
+        fixer = object_fix_up(fixer, newOffset);
+    }
+
+    /* fix up everything from globals. */
+    nilObject = lookupGlobal("nil");
+    staticRoots[staticRootTop++] = &nilObject;
+
+    trueObject = lookupGlobal("true");
+    staticRoots[staticRootTop++] = &trueObject;
+
+    falseObject = lookupGlobal("false");
+    staticRoots[staticRootTop++] = &falseObject;
+
+    SmallIntClass = lookupGlobal("SmallInt");
+    staticRoots[staticRootTop++] = &SmallIntClass;
+
+    IntegerClass = lookupGlobal("Integer");
+    staticRoots[staticRootTop++] = &IntegerClass;
+
+    ArrayClass = lookupGlobal("Array");
+    staticRoots[staticRootTop++] = &ArrayClass;
+
+    BlockClass = lookupGlobal("Block");
+    staticRoots[staticRootTop++] = &BlockClass;
+
+    ContextClass = lookupGlobal("Context");
+    staticRoots[staticRootTop++] = &ContextClass;
 
 
 
+    fprintf(stderr, "Read in %ld cells.\n", totalCells);
 
     return totalCells;
 }
@@ -795,11 +968,11 @@ int fileIn(FILE *fp)
 
 
 
-
 int fileOut(FILE *fp)
 {
+    int i;
     struct image_header header = {0,};
-    int totalCells = 0;
+    int64_t totalCells = 0;
 
     printf("starting to file out\n");
 
@@ -813,7 +986,7 @@ int fileOut(FILE *fp)
     fwrite(&header, sizeof header, 1, fp);
 
     /* how much to write? */
-    totalCells = (int)((memoryTop - memoryPointer) + 1);
+    totalCells = ((intptr_t)memoryTop - (intptr_t)memoryPointer)/(int)BytesPerWord;
 
     /* write out image bounds */
     fprintf(stderr, "writing out memoryBase=%p\n", memoryBase);
@@ -825,12 +998,32 @@ int fileOut(FILE *fp)
     fprintf(stderr, "writing out memoryTop=%p\n", memoryTop);
     fwrite(&memoryTop, sizeof memoryTop, 1, fp);
 
+
+    /* write out core objects. */
+    fprintf(stderr, "writing out globals object=%p\n", globalsObject);
+    fwrite(&globalsObject, sizeof globalsObject, 1, fp);
+
+    fprintf(stderr, "writing out initial method=%p\n", initialMethod);
+    fwrite(&initialMethod, sizeof initialMethod, 1, fp);
+
+    fprintf(stderr, "writing binary message objects.\n");
+    for (i = 0; i < 3; i++) {
+        fprintf(stderr, "    writing out binary object[%d]=%p\n", i, binaryMessages[i]);
+        fwrite(&(binaryMessages[i]), sizeof (binaryMessages[i]), 1, fp);
+    }
+
+    fprintf(stderr, "writing out doesNotUnderstand: symbol=%p\n", badMethodSym);
+    fwrite(&badMethodSym, sizeof badMethodSym, 1, fp);
+
+
     /* write out raw image data. */
-    fprintf(stderr, "writing out %d cells of image data.\n", totalCells);
-    fwrite(memoryPointer, sizeof (*memoryPointer), totalCells, fp);
+    fprintf(stderr, "writing out %ld cells of image data.\n", totalCells);
+    fwrite(memoryPointer, BytesPerWord, totalCells, fp);
 
     return totalCells;
 }
+
+
 
 /*
  * addStaticRoot()

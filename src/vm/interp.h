@@ -71,7 +71,7 @@ extern struct object *lookupGlobal(char *name);
         * a current context
         * status of process (running, waiting, etc)
 */
-
+# define processSize 3
 # define contextInProcess 0
 # define statusInProcess 1
 # define resultInProcess 2

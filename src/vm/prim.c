@@ -77,7 +77,7 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
     case 100:
     {
         /* open a file */
-        int pathSize = SIZE(args->data[0]) + 1;
+        int pathSize = (int)SIZE(args->data[0]) + 1;
         char *pathBuffer = (char *)alloca(pathSize);
         int modeSize = SIZE(args->data[1]) + 1;
         char *modeBuffer = (char *)alloca(modeSize);
