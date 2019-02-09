@@ -37,8 +37,8 @@ static void readBinary();
 static int readIdentifier();
 static int readInteger();
 
-static int symbolBareCmp(const char *left, uint32_t leftsize,
-                         const char *right, uint32_t rightsize);
+static int symbolBareCmp(const uint8_t *left, int leftsize,
+                         const uint8_t *right, int rightsize);
 static int symbolCmp(struct object *left, struct object *right);
 static struct object *newString(char *text);
 static struct object *newSymbol(char *text);
@@ -615,11 +615,10 @@ int readInteger()
 static int symbolTop = 0;
 static struct object *oldSymbols[5000];
 
-int symbolBareCmp(const char *left, uint32_t leftsize, const char *right,
-                  uint32_t rightsize)
+int symbolBareCmp(const uint8_t *left, int leftsize, const uint8_t *right, int rightsize)
 {
-    uint32_t minsize = leftsize;
-    uint32_t i;
+    int32_t minsize = leftsize;
+    int32_t i;
 
     if (rightsize < minsize)
         minsize = rightsize;
@@ -637,8 +636,7 @@ int symbolBareCmp(const char *left, uint32_t leftsize, const char *right,
 
 int symbolCmp(struct object *left, struct object *right)
 {
-    return symbolBareCmp((char *) bytePtr(left), SIZE(left),
-                         (char *) bytePtr(right), SIZE(right));
+    return symbolBareCmp(bytePtr(left), SIZE(left), bytePtr(right), SIZE(right));
 }
 
 struct object *newString(char *text)
@@ -662,7 +660,7 @@ struct object *newSymbol(char *text)
 
     /* first see if it is already a symbol */
     for (i = 0; i < symbolTop; i++) {
-        if (symbolBareCmp(text, (uint32_t)strlen(text), (char *) bytePtr(oldSymbols[i]), SIZE(oldSymbols[i])) == 0) {
+        if (symbolBareCmp((uint8_t *)text, (int)strlen(text), bytePtr(oldSymbols[i]), SIZE(oldSymbols[i])) == 0) {
             return oldSymbols[i];
         }
     }
@@ -970,7 +968,7 @@ int lookupInstance(struct object *class, char *text, int *low)
     }
 
     for (i = 0; i < size; i++) {
-        if (symbolBareCmp (text, (uint32_t)strlen(text), (char *) bytePtr(var->data[i]), (SIZE(var->data[i]))) == 0) {
+        if (symbolBareCmp((uint8_t *)text, (int)strlen(text), bytePtr(var->data[i]), SIZE(var->data[i])) == 0) {
             return (*low);
         }
         *low += 1;
@@ -1616,7 +1614,7 @@ struct object *insert(struct object *array, int index, struct object *val)
      * Clone the current object, including class.  Make one
      * extra slot in the Array storage.
      */
-    o = gcalloc((int)SIZE(array) + 1);
+    o = gcalloc(SIZE(array) + 1);
     o->class = array->class;
 
     /*
@@ -1635,7 +1633,7 @@ struct object *insert(struct object *array, int index, struct object *val)
     /*
      * Now copy the rest
      */
-    for (; j < (int)SIZE(array); ++j) {
+    for (; j < SIZE(array); ++j) {
         o->data[i++] = array->data[j];
     }
     return (o);
@@ -1654,7 +1652,7 @@ void dictionaryInsert(struct object *dict, struct object *index,
     /*
      * Scan the OrderedArray "keys" to find where we fit in
      */
-    for (i = 0, lim = (int)SIZE(keys); i < lim; ++i) {
+    for (i = 0, lim = SIZE(keys); i < lim; ++i) {
         res = symbolCmp(index, keys->data[i]);
 
         /*
@@ -1943,7 +1941,7 @@ void objectWrite(FILE * fp, struct object *obj)
     }
 
     /* ordinary objects */
-    size = (int)SIZE(obj);
+    size = SIZE(obj);
 
     writeTag(fp, LST_OBJ_TYPE, size);
 

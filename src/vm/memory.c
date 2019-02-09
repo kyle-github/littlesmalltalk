@@ -225,7 +225,7 @@ static struct object *gc_move(struct mobject *ptr)
             }
 
             /* case 1, binary or last value */
-            if ((old_address->size & FLAG_BIN) ||
+            if (IS_BINOBJ(old_address) ||
                 (SIZE(old_address) == 0)) {
 
                 /* fix up class pointer */
@@ -397,27 +397,27 @@ This will return zero if the passed value is less than LST_SMALL_TAG_LIMIT.
 In this case, the value can be packed into the tag it self when read or
 written. */
 
-static int getIntSize(int val)
-{
-    int i;
-    /* negatives need sign extension.  this is a to do. */
-    if(val<0) {
-        return BytesPerWord;
-    }
-
-    if(val<LST_SMALL_TAG_LIMIT) {
-        return 0;
-    }
-
-    /* how many bytes? */
-
-    for(i=1; i<BytesPerWord; i++)
-        if(val < (1<<(8*i))) {
-            return i;
-        }
-
-    return BytesPerWord;
-}
+//static int getIntSize(int val)
+//{
+//    int i;
+//    /* negatives need sign extension.  this is a to do. */
+//    if(val<0) {
+//        return BytesPerWord;
+//    }
+//
+//    if(val<LST_SMALL_TAG_LIMIT) {
+//        return 0;
+//    }
+//
+//    /* how many bytes? */
+//
+//    for(i=1; i<BytesPerWord; i++)
+//        if(val < (1<<(8*i))) {
+//            return i;
+//        }
+//
+//    return BytesPerWord;
+//}
 
 
 
@@ -455,6 +455,8 @@ static void readTag(FILE *fp, int *type, int *val)
     *type = (int)(inByte & LST_TAG_TYPE_MASK);
 
     if(tempSize & LST_LARGE_TAG_FLAG) {
+        uint tmp = 0;
+
         /* large size, actual value is in succeeding
         bytes (tempSize bytes). The value is not sign
         extended. */
@@ -474,8 +476,10 @@ static void readTag(FILE *fp, int *type, int *val)
                 sysErrorInt("Unexpected EOF reading image file: reading extended value and expecting byte count=", tempSize);
             }
 
-            *val = *val  | (((unsigned int)inByte & 0xFF) << (8*i));
+            tmp = tmp  | (((uint)inByte & (uint)0xFF) << ((uint)8*(uint)i));
         }
+
+        *val = (int)tmp;
     } else {
         *val = tempSize;
     }
@@ -538,7 +542,7 @@ struct object *objectRead(FILE *fp)
         bnewObj = (struct byteObject *) newObj;
         for (i = 0; i < size; i++) {
             /* FIXME check for EOF! */
-            bnewObj->bytes[i] = get_byte(fp);
+            bnewObj->bytes[i] = (uint8_t)get_byte(fp);
         }
 
         bnewObj->class = objectRead(fp);
@@ -572,14 +576,14 @@ static uint32_t get_image_version(FILE *fp)
     struct image_header header;
     int rc;
 
-    rc = fread(&header, sizeof(header), 1, fp);
+    rc = (int)fread(&header, sizeof(header), 1, fp);
 
     if(rc != 1) {
         sysError("Unable to read version header data!");
     }
 
     if(header.magic[0] == 'l' && header.magic[1] == 's' && header.magic[2] == 't' && header.magic[3] == '!') {
-        return (int)header.version;
+        return header.version;
     } else {
         /* not a newer version, seek back to the start. */
         fseek(fp, 0, SEEK_SET);
@@ -593,7 +597,6 @@ static uint32_t get_image_version(FILE *fp)
 int fileIn_version_0(FILE *fp)
 {
     int i;
-    struct object *dummy;
 
     /* use the currently unused space for the indir pointers */
     if (inSpaceOne) {
@@ -655,7 +658,7 @@ int fileIn_version_0(FILE *fp)
     staticRoots[staticRootTop++] = &badMethodSym;
 
     /* clean up after ourselves. */
-    memset((void *) indirArray,(int)0,(size_t)(spaceSize * sizeof(struct object)));
+    memset((void *) indirArray,(int)0,(size_t)((size_t)spaceSize * sizeof(struct object)));
 
     fprintf(stderr, "Read in %d objects.\n", indirtop);
 
@@ -668,7 +671,6 @@ int fileIn_version_0(FILE *fp)
 int fileIn_version_1(FILE *fp)
 {
     int i;
-    struct object *dummy;
 
     /* use the currently unused space for the indir pointers */
     if (inSpaceOne) {
@@ -724,7 +726,7 @@ int fileIn_version_1(FILE *fp)
     staticRoots[staticRootTop++] = &ContextClass;
 
     /* clean up after ourselves. */
-    memset((void *) indirArray,(int)0,(size_t)(spaceSize * sizeof(struct object)));
+    memset((void *) indirArray,(int)0,(size_t)((size_t)spaceSize * sizeof(struct object)));
 
     fprintf(stderr, "Read in %d objects.\n", indirtop);
 
@@ -748,7 +750,7 @@ static struct object *FIX_OFFSET(struct object *old, int64_t offset)
 
     /* sanity checking, is the old pointer in the old image range? */
     if(!PTR_BETWEEN(old, imagePointer, imageTop)) {
-        fprintf(stderr, "!!! old pointer=%p, low bound=%p, high bound=%p\n", old, imagePointer, imageTop);
+        fprintf(stderr, "!!! old pointer=%p, low bound=%p, high bound=%p\n", (void *)old, (void *)imagePointer, (void *)imageTop);
         sysErrorInt("pointer from image is not within image address range! oop=", (intptr_t)old);
     }
 
@@ -756,7 +758,7 @@ static struct object *FIX_OFFSET(struct object *old, int64_t offset)
 
     /* sanity checking, is the new pointer in the new memory range? */
     if(!PTR_BETWEEN(tmp, memoryPointer, memoryTop)) {
-        fprintf(stderr, "!!! old pointer=%p, offset=%ld, low bound=%p, high bound=%p, new pointer=%p\n", old, offset, memoryPointer, memoryTop, tmp);
+        fprintf(stderr, "!!! old pointer=%p, offset=%ld, low bound=%p, high bound=%p, new pointer=%p\n", (void *)old, offset, (void *)memoryPointer, (void *)memoryTop, (void *)tmp);
         sysErrorInt("!!! swizzled pointer from image does not point into new address range! oop=", (intptr_t)tmp);
     }
 
@@ -780,21 +782,21 @@ static struct object *object_fix_up(struct object *obj, int64_t offset)
 
     /* byte objects, just fix up the class. */
     if (IS_BINOBJ(obj)) {
-        fprintf(stderr, "Object %p is a binary object of %d bytes.\n", obj, size);
+        //fprintf(stderr, "Object %p is a binary object of %d bytes.\n", (void *)obj, size);
         struct byteObject *bobj = (struct byteObject *) obj;
 
         /* fix up class offset */
         bobj->class = FIX_OFFSET(bobj->class, offset);
-        fprintf(stderr, "  class is object %p.\n", bobj->class);
+        //fprintf(stderr, "  class is object %p.\n", bobj->class);
 
         /* fix up size, size of binary objects is in bytes! */
         size = (int)((size + BytesPerWord - 1)/BytesPerWord);
     } else {
         /* ordinary objects */
-        fprintf(stderr, "Object %p is an ordinary object with %d fields.\n", obj, size);
+        //fprintf(stderr, "Object %p is an ordinary object with %d fields.\n", obj, size);
 
         /* fix the class first */
-        fprintf(stderr, "  class is object %p.\n", obj->class);
+        //fprintf(stderr, "  class is object %p.\n", obj->class);
 
         obj->class = FIX_OFFSET(obj->class, offset);
 
@@ -804,12 +806,12 @@ static struct object *object_fix_up(struct object *obj, int64_t offset)
             if(obj->data[i] != NULL) {
                 if(!IS_SMALLINT(obj->data[i])) {
                     obj->data[i] = FIX_OFFSET(obj->data[i], offset);
-                    fprintf(stderr, "  field %d is object %p.\n", i, obj->data[i]);
+                    //fprintf(stderr, "  field %d is object %p.\n", i, obj->data[i]);
                 } else {
-                    fprintf(stderr, "  field %d is SmallInt %d.\n", i, integerValue(obj->data[i]));
+                    //fprintf(stderr, "  field %d is SmallInt %d.\n", i, integerValue(obj->data[i]));
                 }
             } else {
-                fprintf(stderr, "  field %d is NULL, fixing up to nil object.\n", i);
+                //fprintf(stderr, "  field %d is NULL, fixing up to nil object.\n", i);
                 obj->data[i] = nilObject;
             }
         }
@@ -833,25 +835,24 @@ int fileIn_version_2(FILE *fp)
     struct object *fixer;
     int64_t newOffset;
     int64_t totalCells = 0;
-    int obj_count = 0;
 
     /* read in the bottom, pointer and top of the image */
     fread(&imageBase, sizeof imageBase, 1, fp);
-    fprintf(stderr, "Read in image imageBase=%p\n", imageBase);
+    fprintf(stderr, "Read in image imageBase=%p\n", (void *)imageBase);
 
     fread(&imagePointer, sizeof imagePointer, 1, fp);
-    fprintf(stderr, "Read in image imagePointer=%p\n", imagePointer);
+    fprintf(stderr, "Read in image imagePointer=%p\n", (void *)imagePointer);
 
     fread(&imageTop, sizeof imageTop, 1, fp);
-    fprintf(stderr, "Read in image imageTop=%p\n", imageTop);
+    fprintf(stderr, "Read in image imageTop=%p\n", (void *)imageTop);
 
     /* how many cells? */
     totalCells = ((int)(((intptr_t)imageTop - (intptr_t)imagePointer)))/(int)BytesPerWord;
     fprintf(stderr, "Image has %ld cells.\n", totalCells);
 
-    fprintf(stderr, "memoryBase is %p\n", memoryBase);
-    fprintf(stderr, "memoryPointer is %p\n", memoryPointer);
-    fprintf(stderr, "memoryTop is %p\n", memoryTop);
+    fprintf(stderr, "memoryBase is %p\n", (void *)memoryBase);
+    fprintf(stderr, "memoryPointer is %p\n", (void *)memoryPointer);
+    fprintf(stderr, "memoryTop is %p\n", (void *)memoryTop);
 
     /* what is the offset between the saved pointer and our current pointer? In cells! */
     newOffset = (int64_t)((intptr_t)memoryBase - (intptr_t)imageBase);
@@ -870,33 +871,32 @@ int fileIn_version_2(FILE *fp)
     fread(&globalsObject, sizeof globalsObject, 1, fp);
     globalsObject = FIX_OFFSET(globalsObject, newOffset);
     staticRoots[staticRootTop++] = &globalsObject;
-    fprintf(stderr, "Read in globals object=%p\n", globalsObject);
+    fprintf(stderr, "Read in globals object=%p\n", (void *)globalsObject);
 
     fread(&initialMethod, sizeof initialMethod, 1, fp);
     initialMethod = FIX_OFFSET(initialMethod, newOffset);
     staticRoots[staticRootTop++] = &initialMethod;
-    fprintf(stderr, "Read in initial method=%p\n", initialMethod);
+    fprintf(stderr, "Read in initial method=%p\n", (void *)initialMethod);
 
     fprintf(stderr, "Reading binary message objects.\n");
     for (i = 0; i < 3; i++) {
         fread(&(binaryMessages[i]), sizeof binaryMessages[i], 1, fp);
         binaryMessages[i] = FIX_OFFSET(binaryMessages[i], newOffset);
         staticRoots[staticRootTop++] = &(binaryMessages[i]);
-        fprintf(stderr, "  Read in binary message %d=%p\n", i, binaryMessages[i]);
+        fprintf(stderr, "  Read in binary message %d=%p\n", i, (void *)binaryMessages[i]);
     }
 
     fread(&badMethodSym, sizeof badMethodSym, 1, fp);
     badMethodSym = FIX_OFFSET(badMethodSym, newOffset);
     staticRoots[staticRootTop++] = &badMethodSym;
-    fprintf(stderr, "Read in doesNotUnderstand: symbol=%p\n", badMethodSym);
+    fprintf(stderr, "Read in doesNotUnderstand: symbol=%p\n", (void *)badMethodSym);
 
     /* read in the raw image data. */
-    fread(memoryPointer, BytesPerWord, totalCells, fp);
+    fread(memoryPointer, BytesPerWord, (size_t)totalCells, fp);
 
     /* fix up the rest of the objects. */
 
     fixer = memoryPointer;
-    obj_count = 1;
     while(fixer < memoryTop) {
         //fprintf(stderr, "Fixing up object %d: ", obj_count++);
         fixer = object_fix_up(fixer, newOffset);
@@ -931,14 +931,14 @@ int fileIn_version_2(FILE *fp)
 
     fprintf(stderr, "Read in %ld cells.\n", totalCells);
 
-    return totalCells;
+    return (int)totalCells;
 }
 
 
 
 int fileIn(FILE *fp)
 {
-    int version = get_image_version(fp);
+    uint32_t version = get_image_version(fp);
 
     switch(version) {
     case IMAGE_VERSION_0:
@@ -989,38 +989,38 @@ int fileOut(FILE *fp)
     totalCells = ((intptr_t)memoryTop - (intptr_t)memoryPointer)/(int)BytesPerWord;
 
     /* write out image bounds */
-    fprintf(stderr, "writing out memoryBase=%p\n", memoryBase);
+    fprintf(stderr, "writing out memoryBase=%p\n", (void *)memoryBase);
     fwrite(&memoryBase, sizeof memoryBase, 1, fp);
 
-    fprintf(stderr, "writing out memoryPointer=%p\n", memoryPointer);
+    fprintf(stderr, "writing out memoryPointer=%p\n", (void *)memoryPointer);
     fwrite(&memoryPointer, sizeof memoryPointer, 1, fp);
 
-    fprintf(stderr, "writing out memoryTop=%p\n", memoryTop);
+    fprintf(stderr, "writing out memoryTop=%p\n", (void *)memoryTop);
     fwrite(&memoryTop, sizeof memoryTop, 1, fp);
 
 
     /* write out core objects. */
-    fprintf(stderr, "writing out globals object=%p\n", globalsObject);
+    fprintf(stderr, "writing out globals object=%p\n", (void *)globalsObject);
     fwrite(&globalsObject, sizeof globalsObject, 1, fp);
 
-    fprintf(stderr, "writing out initial method=%p\n", initialMethod);
+    fprintf(stderr, "writing out initial method=%p\n", (void *)initialMethod);
     fwrite(&initialMethod, sizeof initialMethod, 1, fp);
 
     fprintf(stderr, "writing binary message objects.\n");
     for (i = 0; i < 3; i++) {
-        fprintf(stderr, "    writing out binary object[%d]=%p\n", i, binaryMessages[i]);
+        fprintf(stderr, "    writing out binary object[%d]=%p\n", i, (void *)binaryMessages[i]);
         fwrite(&(binaryMessages[i]), sizeof (binaryMessages[i]), 1, fp);
     }
 
-    fprintf(stderr, "writing out doesNotUnderstand: symbol=%p\n", badMethodSym);
+    fprintf(stderr, "writing out doesNotUnderstand: symbol=%p\n", (void *)badMethodSym);
     fwrite(&badMethodSym, sizeof badMethodSym, 1, fp);
 
 
     /* write out raw image data. */
     fprintf(stderr, "writing out %ld cells of image data.\n", totalCells);
-    fwrite(memoryPointer, BytesPerWord, totalCells, fp);
+    fwrite(memoryPointer, BytesPerWord, (size_t)totalCells, fp);
 
-    return totalCells;
+    return (int)totalCells;
 }
 
 
@@ -1076,10 +1076,10 @@ static void map(struct object **oop, struct object *a1, struct object *a2, int s
  *  Traverse an object space
  */
 static void walk(struct object *base, struct object *top,
-                 struct object *array1, struct object *array2, uint size)
+                 struct object *array1, struct object *array2, int size)
 {
     struct object *op, *opnext;
-    uint x, sz;
+    int x, sz;
 
     for (op = base; op < top; op = opnext) {
         /*
@@ -1103,7 +1103,7 @@ static void walk(struct object *base, struct object *top,
          * if it's a binary format.
          */
         if (op->size & FLAG_BIN) {
-            uint trueSize;
+            int trueSize;
 
             /*
              * Skip size/class, and enough words to
@@ -1139,9 +1139,9 @@ static void walk(struct object *base, struct object *top,
  * to the object in array2[] similarly become references to the
  * object in array1[].
  */
-void exchangeObjects(struct object *array1, struct object *array2, uint size)
+void exchangeObjects(struct object *array1, struct object *array2, int size)
 {
-    uint x;
+    int x;
 
     /*
      * Convert our memory spaces
@@ -1170,7 +1170,7 @@ should only be visible here. */
 int symstrcomp(struct object *left, const char *right)
 {
     int leftsize = SIZE(left);
-    int rightsize = strlen(right);
+    int rightsize = (int)strlen(right);
     int minsize = leftsize < rightsize ? leftsize : rightsize;
     register int i;
 

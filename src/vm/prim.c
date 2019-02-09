@@ -26,7 +26,7 @@ char *tmpdir = NULL;
 
 
 #define SOCK_BUF_SIZE 1024
-static char socketReadBuffer[SOCK_BUF_SIZE] = {0,};
+static uint8_t socketReadBuffer[SOCK_BUF_SIZE] = {0,};
 
 #define FILEMAX 200
 static FILE *filePointers[FILEMAX] = {0,};
@@ -77,10 +77,10 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
     case 100:
     {
         /* open a file */
-        int pathSize = (int)SIZE(args->data[0]) + 1;
-        char *pathBuffer = (char *)alloca(pathSize);
+        int pathSize = SIZE(args->data[0]) + 1;
+        char *pathBuffer = (char *)alloca((size_t)pathSize);
         int modeSize = SIZE(args->data[1]) + 1;
-        char *modeBuffer = (char *)alloca(modeSize);
+        char *modeBuffer = (char *)alloca((size_t)modeSize);
 
         getUnixString(pathBuffer, pathSize, args->data[0]);
         getUnixString(modeBuffer, modeSize, args->data[1]);
@@ -150,15 +150,15 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
     {
         /* edit a string */
         char *tmpFileName = NULL;
-        int tmpFileNameSize = 0;
+        size_t tmpFileNameSize = 0;
 
         /* first get the size needed for the temporary path */
-        tmpFileNameSize = snprintf(tmpFileName, 0, "%s/lsteditXXXXXX", tmpdir) + 1;
+        tmpFileNameSize = (size_t)snprintf(tmpFileName, 0, "%s/lsteditXXXXXX", tmpdir) + 1;
 
-        printf("temporary file name size is %d\n", tmpFileNameSize);
+        printf("temporary file name size is %d\n", (int)tmpFileNameSize);
 
         /* allocate it on the stack and write the string into it. */
-        tmpFileName = (char *)alloca(tmpFileNameSize + 1);
+        tmpFileName = (char *)alloca((size_t)tmpFileNameSize + 1);
         memset(tmpFileName, 0, tmpFileNameSize + 1);
         snprintf(tmpFileName, tmpFileNameSize + 1, "%s/lsteditXXXXXX", tmpdir);
 
@@ -186,7 +186,7 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
         fclose(fp);
 
         /* call the editor */
-        int cmdBufSize = tmpFileNameSize + strlen("vi ");
+        size_t cmdBufSize = tmpFileNameSize + strlen("vi ");
         char *cmdBuf = (char*)alloca(cmdBufSize + 1);
         memset(cmdBuf, 0, cmdBufSize + 1);
 
@@ -214,8 +214,9 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
         /* reset to beginning, and read values */
         fseek(fp, 0, 0);
 
+        /* FIXME - check for EOF! */
         for (i = 0; i < j; i++) {
-            stringReturn->bytes[i] = fgetc(fp);
+            stringReturn->bytes[i] = (uint8_t)fgetc(fp);
         }
         /* now clean up files */
         fclose(fp);
@@ -247,7 +248,7 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
         }
 
         /* Do the I/O */
-        i = fread(bytePtr(returnedValue), sizeof(char), i, fp);
+        i = (int)fread(bytePtr(returnedValue), sizeof(char), (size_t)i, fp);
         if (i < 0) {
             *failed = 1;
             break;
@@ -278,7 +279,7 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
         }
 
         /* Do the I/O */
-        i = fwrite(bytePtr(returnedValue), sizeof(char), i, fp);
+        i = (int)fwrite(bytePtr(returnedValue), sizeof(char), (size_t)i, fp);
         if (i < 0) {
             *failed = 1;
             break;
@@ -329,8 +330,8 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
 
         if((i > 0) && (j > 0) && (i>=j)) {
             /* using alloca to make sure that the memory is freed automatically */
-            char *p = (char *)alloca(i+1);
-            char *q = (char *)alloca(j+1);
+            char *p = (char *)alloca((size_t)i+1);
+            char *q = (char *)alloca((size_t)j+1);
             char *r = (char *)0;
 
             getUnixString(p,i+1,args->data[0]);
@@ -378,7 +379,7 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
     {
         struct byteObject *msg = (struct byteObject *)(args->data[0]);
         char *tmpMsg = NULL;
-        int tmpMsgSize = SIZE(msg)+1;
+        size_t tmpMsgSize = (size_t)SIZE(msg)+1;
         int64_t ticks = time_usec();
 
         tmpMsg = (char *)alloca(tmpMsgSize);
@@ -387,7 +388,7 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
 
         memcpy(tmpMsg, msg->bytes, tmpMsgSize-1);
 
-        printf("%ld: (%d) %s\n", ticks, tmpMsgSize, tmpMsg);
+        printf("%ld: (%ld) %s\n", ticks, tmpMsgSize, tmpMsg);
 
         *failed = 0;
 
@@ -462,8 +463,9 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
             printf("Port: %d\n",port);
 
             /* convert the string IP to a network representation */
-            if(inet_aton((const char *)netBuffer,&iaddr) == INADDR_NONE)
+            if(inet_aton((const char *)netBuffer,&iaddr) == 0) {
                 sysError("Illegal address passed to bind primitive.");
+            }
 
             /* build a sockaddr_in struct */
             sin.sin_family = AF_INET;
@@ -471,8 +473,9 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
             /*			sin.sin_port = (u_int16_t)0;*/
             sin.sin_addr = iaddr;
 
-            if(bind(sock,(struct sockaddr *)&sin,sizeof(sin)) == -1)
+            if(bind(sock,(struct sockaddr *)&sin,sizeof(sin)) == -1) {
                 sysError("Cannot bind TCP socket to address.");
+            }
 
             returnedValue = trueObject;
 
@@ -481,10 +484,11 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
         case 7: /* read from a TCP socket.  This returns a byte array. */
             sock = integerValue(args->data[1]);
 
-            for(i=0; i<SOCK_BUF_SIZE; i++)
+            for(i=0; i<SOCK_BUF_SIZE; i++) {
                 socketReadBuffer[i]=(char)0;
+            }
 
-            i = read(sock,(void *)socketReadBuffer,(size_t)SOCK_BUF_SIZE);
+            i = (int)read(sock,(void *)socketReadBuffer,(size_t)SOCK_BUF_SIZE);
 
             printf("Read: %s\n",socketReadBuffer);
 
@@ -492,8 +496,9 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
             ba->class = lookupGlobal("ByteArray");
 
             /* copy data into the new ByteArray */
-            for(j=0; j<i; j++)
+            for(j=0; j<i; j++) {
                 bytePtr(ba)[j] = socketReadBuffer[j];
+            }
 
             returnedValue = (struct object *)ba;
 
@@ -510,7 +515,7 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
             printf("%s\n",socketReadBuffer);
             */
 
-            j = write(sock,(void *)p,(size_t)i);
+            j = (int)write(sock,(void *)p,(size_t)i);
 
             if(j>0)
                 returnedValue = newInteger(j);
@@ -546,7 +551,7 @@ void getUnixString(char * to, int size, struct object * from)
     }
 
     for (i = 0; i < fsize; i++) {
-        to[i] = bobj->bytes[i];
+        to[i] = (char)bobj->bytes[i];
     }
 
     to[i] = '\0';	/* put null terminator at end */
@@ -710,7 +715,7 @@ struct object * urlToString(struct byteObject * from)
             /* this is the first hex char, convert it */
             is_hex--;
 
-            hex_val = strchr(hexDigits,toupper(c)) - hexDigits;
+            hex_val = (int)(strchr(hexDigits,toupper(c)) - hexDigits);
 
             if(hex_val>=0)
                 to_ptr[j] = (char)(hex_val<<4);
@@ -725,13 +730,14 @@ struct object * urlToString(struct byteObject * from)
             that we increment j here. */
             is_hex--;
 
-            hex_val = strchr(hexDigits,toupper(c)) - hexDigits;
+            hex_val = (int)(strchr(hexDigits,toupper(c)) - hexDigits);
 
-            if(hex_val >= 0 )
-                to_ptr[j] += (char)hex_val;
-            else
+            if(hex_val >= 0 ) {
+                to_ptr[j] = (char)((int)to_ptr[j] + hex_val);
+            } else {
                 /* this is an error! */
                 return nilObject;
+            }
 
             j++;
 

@@ -17,9 +17,16 @@
     The next data field is the class
     The following fields are either objects, or character values
 
+
+    KRH - the following is no longer correct.
+
     The initial image is loaded into static memory space --
     space which is never garbage collected
-    This improves speed, as these items are not moved during GC
+    This improves speed, as these items are not moved during GC.
+
+    Now we use a simple two-space algorithm without a static space.
+    This is not as efficient for GC as the minimal generational
+    implementation used before, but is a lot nicer for image writing.
 */
 
 #pragma once
@@ -28,8 +35,10 @@
 #include <stdio.h>
 #include <stdint.h>
 
+/* ints must be at least 32-bit in size! */
+
 struct object {
-    uint32_t size;
+    int size;
     struct object *class;
     struct object *data[];
 };
@@ -40,7 +49,7 @@ struct object {
 */
 
 struct byteObject {
-    uint32_t size;
+    int size;
     struct object *class;
     uint8_t bytes[];
 };
@@ -63,13 +72,13 @@ struct byteObject {
                           (((intptr_t)(x)) <= INT_MAX/2))
 #define CLASS(x) (IS_SMALLINT(x) ? SmallIntClass : ((x)->class))
 #define integerValue(x) ((int)(((intptr_t)(x)) >> 1))
-#define newInteger(x) ((struct object *)((((intptr_t)(x)) << 1) | 0x01))
+#define newInteger(x) ((struct object *)((((intptr_t)(x)) * 2) | 0x01))
 
 /*
  * The "size" field is the top 30 bits; the bottom two are flags
  */
-#define SIZE(op) (((op)->size) >> 2)
-#define SETSIZE(op, val) ((op)->size = ((uint32_t)(val) << 2))
+#define SIZE(op) ((((struct object *)(op))->size) / 4)  /* let the compiler optimize to shift left. */
+#define SETSIZE(op, val) (((struct object *)(op))->size = ((val) * 4)) /* let the compiler optimize to shift right. */
 #define FLAG_GCDONE (0x01)
 #define FLAG_BIN (0x02)
 #define IS_BINOBJ(x) (((struct object *)(x))->size & FLAG_BIN)
@@ -114,7 +123,7 @@ extern struct object *gcollect(int);
 extern struct object *staticAllocate(int);
 extern struct object *staticIAllocate(int);
 extern struct object *gcialloc(int);
-extern void exchangeObjects(struct object *, struct object *, uint);
+extern void exchangeObjects(struct object *, struct object *, int size);
 extern int symstrcomp(struct object *left, const char *right);
 extern int strsymcomp(const char *left, struct object *right);
 extern int isDynamicMemory(struct object *);

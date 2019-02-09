@@ -90,10 +90,10 @@ static void indent(struct object *ctx)
 
 static int symbolcomp(struct object *left, struct object *right)
 {
-    uint leftsize = SIZE(left);
-    uint rightsize = SIZE(right);
-    uint minsize = leftsize;
-    uint i;
+    int leftsize = SIZE(left);
+    int rightsize = SIZE(right);
+    int minsize = leftsize;
+    int i;
 
     if (rightsize < minsize) {
         minsize = rightsize;
@@ -103,13 +103,13 @@ static int symbolcomp(struct object *left, struct object *right)
             return bytePtr(left)[i]-bytePtr(right)[i];
         }
     }
-    return (int)leftsize - (int)rightsize;
+    return leftsize - rightsize;
 }
 
 static struct object *lookupMethod(struct object *selector, struct object *class)
 {
     struct object *dict, *keys, *vals, *val;
-    uint low, high, mid;
+    int low, high, mid;
 
     /*
      * Scan upward through the class hierarchy
@@ -173,7 +173,7 @@ struct object *lookupGlobal(char *name)
     dict = globalsObject;
     keys = dict->data[0];
     low = 0;
-    high = (int)SIZE(keys);
+    high = SIZE(keys);
 
     /*
     * Do a binary search through its keys, which are Symbols.
@@ -343,7 +343,7 @@ static int bulkReplace(struct object *dest, struct object *start,
     /*
      * Range check
      */
-    if (((int)SIZE(dest) < istop) || ((int)SIZE(src) < (irepStart + count))) {
+    if ((SIZE(dest) < istop) || (SIZE(src) < (irepStart + count))) {
         return(1);
     }
 
@@ -825,7 +825,7 @@ checkCache:
                 if (IS_SMALLINT(returnedValue)) {
                     high  = 0;
                 } else {
-                    high = (int)SIZE(returnedValue);
+                    high = SIZE(returnedValue);
                 }
                 returnedValue = newInteger(high);
                 break;
@@ -839,7 +839,7 @@ checkCache:
                 low = integerValue(op)-1;
                 returnedValue = stack->data[--stackTop];
                 /* Bounds check */
-                if ((low < 0) || (low >= (int)SIZE(returnedValue))) {
+                if ((low < 0) || (low >= SIZE(returnedValue))) {
                     stackTop -= 1;
                     goto failPrimitive;
                 }
@@ -881,7 +881,7 @@ checkCache:
                 high = integerValue(returnedValue->data[argumentLocationInBlock]);
                 temporaries = returnedValue->data[temporariesInBlock];
                 low -= 2;
-                x = (temporaries ? ((int)SIZE(temporaries) - high) : 0);
+                x = (temporaries ? (SIZE(temporaries) - high) : 0);
                 if (low >= x) {
                     stackTop -= (low+1);
                     goto failPrimitive;
@@ -1021,7 +1021,7 @@ checkCache:
                 low = integerValue(stack->data[--stackTop])-1;
                 returnedValue = stack->data[--stackTop];
                 if ((low < 0) ||
-                    (low >= (int)SIZE(returnedValue))) {
+                    (low >= SIZE(returnedValue))) {
                     goto failPrimitive;
                 }
                 low = bytePtr(returnedValue)[low];
@@ -1032,7 +1032,7 @@ checkCache:
                 low = integerValue(stack->data[--stackTop])-1;
                 returnedValue = stack->data[--stackTop];
                 if ((low < 0) ||
-                    (low >= (int)SIZE(returnedValue))) {
+                    (low >= SIZE(returnedValue))) {
                     stackTop -= 1;
                     goto failPrimitive;
                 }
@@ -1043,7 +1043,7 @@ checkCache:
                 rootStack[rootTop++] = stack->data[--stackTop];
                 rootStack[rootTop++] = returnedValue
                                        = stack->data[--stackTop];
-                low = (int)SIZE(returnedValue);
+                low = SIZE(returnedValue);
                 returnedValue = gcialloc(low);
                 messageSelector = rootStack[--rootTop];
                 while (low-- > 0)
@@ -1055,7 +1055,7 @@ checkCache:
             case 24:    /* array at */
                 low = integerValue(stack->data[--stackTop])-1;
                 returnedValue = stack->data[--stackTop];
-                if ((low < 0) || (low >= (int)SIZE(returnedValue))) {
+                if ((low < 0) || (low >= SIZE(returnedValue))) {
                     goto failPrimitive;
                 }
                 returnedValue = returnedValue->data[low];
