@@ -62,6 +62,7 @@ static int staticRootTop = 0;
 
 /* local routines */
 //static int64_t time_usec();
+static void do_gc();
 
 
 /*
@@ -264,12 +265,9 @@ static struct object *gc_move(struct mobject *ptr)
     return (struct object *)0;
 }
 
-/*
-    gcollect -- garbage collection entry point
-*/
 
 
-struct object *gcollect(int sz)
+static void do_gc()
 {
     int i;
     int64_t start = time_usec();
@@ -305,13 +303,6 @@ struct object *gcollect(int sz)
         gc_mem_max_copied = ((char *)memoryTop - (char *)memoryPointer);
     }
 
-    /* then see if there is room for allocation */
-    memoryPointer = WORDSDOWN(memoryPointer, sz + 2);
-    if (memoryPointer < memoryBase) {
-        sysErrorInt("insufficient memory after garbage collection", sz);
-    }
-    SETSIZE(memoryPointer, sz);
-
     end = time_usec();
 
     /* calculate stats about the GC runs. */
@@ -321,6 +312,25 @@ struct object *gcollect(int sz)
     if(gc_max_time < (end - start)) {
         gc_max_time = (end - start);
     }
+}
+
+
+/*
+    gcollect -- garbage collection entry point
+*/
+
+
+struct object *gcollect(int sz)
+{
+    /* force a GC */
+    do_gc();
+
+    /* then see if there is room for allocation */
+    memoryPointer = WORDSDOWN(memoryPointer, sz + 2);
+    if (memoryPointer < memoryBase) {
+        sysErrorInt("insufficient memory after garbage collection", sz);
+    }
+    SETSIZE(memoryPointer, sz);
 
     return(memoryPointer);
 }
@@ -782,21 +792,21 @@ static struct object *object_fix_up(struct object *obj, int64_t offset)
 
     /* byte objects, just fix up the class. */
     if (IS_BINOBJ(obj)) {
-        //fprintf(stderr, "Object %p is a binary object of %d bytes.\n", (void *)obj, size);
+        fprintf(stderr, "Object %p is a binary object of %d bytes.\n", (void *)obj, size);
         struct byteObject *bobj = (struct byteObject *) obj;
 
         /* fix up class offset */
         bobj->class = FIX_OFFSET(bobj->class, offset);
-        //fprintf(stderr, "  class is object %p.\n", bobj->class);
+        fprintf(stderr, "  class is object %p.\n", (void *)(bobj->class));
 
         /* fix up size, size of binary objects is in bytes! */
         size = (int)((size + BytesPerWord - 1)/BytesPerWord);
     } else {
         /* ordinary objects */
-        //fprintf(stderr, "Object %p is an ordinary object with %d fields.\n", obj, size);
+        fprintf(stderr, "Object %p is an ordinary object with %d fields.\n", (void *)obj, size);
 
         /* fix the class first */
-        //fprintf(stderr, "  class is object %p.\n", obj->class);
+        fprintf(stderr, "  class is object %p.\n", (void *)(obj->class));
 
         obj->class = FIX_OFFSET(obj->class, offset);
 
@@ -806,12 +816,12 @@ static struct object *object_fix_up(struct object *obj, int64_t offset)
             if(obj->data[i] != NULL) {
                 if(!IS_SMALLINT(obj->data[i])) {
                     obj->data[i] = FIX_OFFSET(obj->data[i], offset);
-                    //fprintf(stderr, "  field %d is object %p.\n", i, obj->data[i]);
+                    fprintf(stderr, "  field %d is object %p.\n", i, (void *)(obj->data[i]));
                 } else {
-                    //fprintf(stderr, "  field %d is SmallInt %d.\n", i, integerValue(obj->data[i]));
+                    fprintf(stderr, "  field %d is SmallInt %d.\n", i, integerValue(obj->data[i]));
                 }
             } else {
-                //fprintf(stderr, "  field %d is NULL, fixing up to nil object.\n", i);
+                fprintf(stderr, "  field %d is NULL, fixing up to nil object.\n", i);
                 obj->data[i] = nilObject;
             }
         }
@@ -975,6 +985,9 @@ int fileOut(FILE *fp)
     int64_t totalCells = 0;
 
     printf("starting to file out\n");
+
+    /* force a GC to clean up the image */
+    do_gc();
 
     /* output header. */
     header.magic[0] = 'l';
