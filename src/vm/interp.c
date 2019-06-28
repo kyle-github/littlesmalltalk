@@ -39,6 +39,9 @@ struct object *nilObject, *trueObject, *falseObject,
         *globalsObject, *initialMethod, *binaryMessages[3],
         *IntegerClass, *badMethodSym;
 
+struct object *StringClass = NULL;
+struct object *ByteArrayClass = NULL;
+
 /*
  * Debugging
  */

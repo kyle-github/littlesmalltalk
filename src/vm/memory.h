@@ -114,6 +114,10 @@ extern struct object *nilObject, *trueObject,
         *ContextClass, *globalsObject, *initialMethod,
         *binaryMessages[3], *IntegerClass, *badMethodSym;
 
+/* useful objects */
+extern struct object *StringClass;
+extern struct object *ByteArrayClass;
+
 /*
     entry points
 */

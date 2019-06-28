@@ -343,17 +343,15 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
             if(r != NULL) {
                 /* the string was found */
                 returnedValue = newInteger((r-p)+1);
+            } else {
+                returnedValue = nilObject;
             }
-
-            /* no GC for primitives on this.  free memory for p and q*/
-            //free((void *)p);
-            //free((void *)q);
 
             /* success */
             break;
         } else {
             if((i>0) && (j>0)) {
-                returnedValue = newInteger(-1);
+                returnedValue = nilObject;
                 break;
             } else {
                 printf("#position: failed due to unusable string sizes, string 1 size %d, string 2 size %d.\n", i, j);
@@ -409,7 +407,9 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
                 sysError("Cannot open TCP socket.");
             }
 
-            if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR,(char*)&sock_opt,sizeof(sock_opt))) {
+            sock_opt = 1;
+
+            if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char*)&sock_opt, sizeof(sock_opt))) {
                 close(sock);
                 sysError("Error setting socket reuse option!");
             }
@@ -489,11 +489,16 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
             }
 
             i = (int)read(sock,(void *)socketReadBuffer,(size_t)SOCK_BUF_SIZE);
+            if((i < 0) && (errno != EAGAIN) && (errno != EWOULDBLOCK)) {
+                printf("socket read returned an error: %d (%d)!\n", i, errno);
+                *failed = 1;
+                break;
+            }
 
-            printf("Read: %s\n",socketReadBuffer);
+//            printf("Read: %s\n",socketReadBuffer);
 
             ba = (struct byteObject *)gcialloc(i);
-            ba->class = lookupGlobal("ByteArray");
+            ba->class = ByteArrayClass;
 
             /* copy data into the new ByteArray */
             for(j=0; j<i; j++) {
@@ -596,7 +601,7 @@ struct object * stringToUrl(struct byteObject * from)
 
     new_size = fsize + (bad_chars * 2);
     newStr = (struct byteObject *)gcialloc(new_size);
-    newStr->class = lookupGlobal("String");
+    newStr->class = StringClass;
 
     /* OK, now done with allocation, get the from string back */
     from = (struct byteObject *)rootStack[--rootTop];
@@ -676,7 +681,7 @@ struct object * urlToString(struct byteObject * from)
         new_size = 0;
 
     newStr = (struct byteObject *)gcialloc(new_size);
-    newStr->class = lookupGlobal("String");
+    newStr->class = StringClass;
 
     /* OK, now done with allocation, get the from string back */
     from = (struct byteObject *)rootStack[--rootTop];

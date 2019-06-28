@@ -792,21 +792,21 @@ static struct object *object_fix_up(struct object *obj, int64_t offset)
 
     /* byte objects, just fix up the class. */
     if (IS_BINOBJ(obj)) {
-        fprintf(stderr, "Object %p is a binary object of %d bytes.\n", (void *)obj, size);
+//        fprintf(stderr, "Object %p is a binary object of %d bytes.\n", (void *)obj, size);
         struct byteObject *bobj = (struct byteObject *) obj;
 
         /* fix up class offset */
         bobj->class = FIX_OFFSET(bobj->class, offset);
-        fprintf(stderr, "  class is object %p.\n", (void *)(bobj->class));
+//        fprintf(stderr, "  class is object %p.\n", (void *)(bobj->class));
 
         /* fix up size, size of binary objects is in bytes! */
         size = (int)((size + BytesPerWord - 1)/BytesPerWord);
     } else {
         /* ordinary objects */
-        fprintf(stderr, "Object %p is an ordinary object with %d fields.\n", (void *)obj, size);
+//        fprintf(stderr, "Object %p is an ordinary object with %d fields.\n", (void *)obj, size);
 
         /* fix the class first */
-        fprintf(stderr, "  class is object %p.\n", (void *)(obj->class));
+//        fprintf(stderr, "  class is object %p.\n", (void *)(obj->class));
 
         obj->class = FIX_OFFSET(obj->class, offset);
 
@@ -816,12 +816,12 @@ static struct object *object_fix_up(struct object *obj, int64_t offset)
             if(obj->data[i] != NULL) {
                 if(!IS_SMALLINT(obj->data[i])) {
                     obj->data[i] = FIX_OFFSET(obj->data[i], offset);
-                    fprintf(stderr, "  field %d is object %p.\n", i, (void *)(obj->data[i]));
+//                    fprintf(stderr, "  field %d is object %p.\n", i, (void *)(obj->data[i]));
                 } else {
-                    fprintf(stderr, "  field %d is SmallInt %d.\n", i, integerValue(obj->data[i]));
+//                    fprintf(stderr, "  field %d is SmallInt %d.\n", i, integerValue(obj->data[i]));
                 }
             } else {
-                fprintf(stderr, "  field %d is NULL, fixing up to nil object.\n", i);
+//                fprintf(stderr, "  field %d is NULL, fixing up to nil object.\n", i);
                 obj->data[i] = nilObject;
             }
         }
@@ -906,11 +906,13 @@ int fileIn_version_2(FILE *fp)
 
     /* fix up the rest of the objects. */
 
+    int64_t start = time_usec();
     fixer = memoryPointer;
     while(fixer < memoryTop) {
         //fprintf(stderr, "Fixing up object %d: ", obj_count++);
         fixer = object_fix_up(fixer, newOffset);
     }
+    int64_t end = time_usec();
 
     /* fix up everything from globals. */
     nilObject = lookupGlobal("nil");
@@ -938,6 +940,14 @@ int fileIn_version_2(FILE *fp)
     staticRoots[staticRootTop++] = &ContextClass;
 
 
+    /* useful classes */
+    StringClass = lookupGlobal("String");
+    staticRoots[staticRootTop++] = &StringClass;
+
+    ByteArrayClass = lookupGlobal("ByteArray");
+    staticRoots[staticRootTop++] = &ByteArrayClass;
+
+    fprintf(stderr, "Object fix up took %d usec.\n", (int)(end - start));
 
     fprintf(stderr, "Read in %ld cells.\n", totalCells);
 
