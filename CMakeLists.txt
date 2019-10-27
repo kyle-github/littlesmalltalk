@@ -8,7 +8,14 @@ add_executable(bootstrap "${PROJECT_SOURCE_DIR}/src/bootstrap/bootstrap.c"
                          "${PROJECT_SOURCE_DIR}/src/vm/memory.h"
                          "${PROJECT_SOURCE_DIR}/src/vm/interp.h" )
 
-add_executable(bootstrap3 "${PROJECT_SOURCE_DIR}/src/bootstrap/bootstrap3.c" )
+add_executable(bootstrap3 "${PROJECT_SOURCE_DIR}/src/vm_new/array.c"
+                          "${PROJECT_SOURCE_DIR}/src/vm_new/array.h"
+                          "${PROJECT_SOURCE_DIR}/src/vm_new/bootstrap3.c"
+                          "${PROJECT_SOURCE_DIR}/src/vm_new/memory.c"
+                          "${PROJECT_SOURCE_DIR}/src/vm_new/memory.h"
+                          "${PROJECT_SOURCE_DIR}/src/vm_new/globals.c"
+                          "${PROJECT_SOURCE_DIR}/src/vm_new/globals.h"
+)
 
 
 # add_executable(bootstrap2 "${PROJECT_SOURCE_DIR}/src/bootstrap/bootstrap2.c")

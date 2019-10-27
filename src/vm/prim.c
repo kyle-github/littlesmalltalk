@@ -325,8 +325,10 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
         i = SIZE(args->data[0]);
         j = SIZE(args->data[1]);
 
-        /* don't bother to compare if either string has a zero length
-        or the second string is longer than the first */
+        /*
+         * don't bother to compare if either string has a zero length
+         * or the second string is longer than the first
+         */
 
         if((i > 0) && (j > 0) && (i>=j)) {
             /* using alloca to make sure that the memory is freed automatically */
@@ -350,11 +352,12 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
             /* success */
             break;
         } else {
-            if((i>0) && (j>0)) {
+            if((i<0) || (j<0)) {
+                printf("#position: failed due to unusable string sizes, string 1 size %d, string 2 size %d.\n", i, j);
+            } else {
+                /* i==0 or j==0 or i<j in which case we have no match but no error. */
                 returnedValue = nilObject;
                 break;
-            } else {
-                printf("#position: failed due to unusable string sizes, string 1 size %d, string 2 size %d.\n", i, j);
             }
         }
 

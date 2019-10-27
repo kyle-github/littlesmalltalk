@@ -4,6 +4,9 @@
 #include <unistd.h>
 #include <string.h>
 
+#include "memory.h"
+#include "globals.h"
+
 
 #define OK (1)
 
@@ -17,12 +20,17 @@ typedef struct {
 } class_source;
 
 
+static class_source **get_sources(char **source_files, int num_sources)
 static void open_source_file(class_source *source, const char *class_file_name);
 static void sort_source_files(class_source **st_sources, int num_sources);
 
 static char *get_delimited_token(char **str, char start_char, char end_char);
 static void error(const char *templ, ...);
 static void info(const char *templ, ...);
+
+
+
+
 
 
 int main(int argc, char **argv)
@@ -33,12 +41,22 @@ int main(int argc, char **argv)
 
     info("Starting up....");
 
+    st_sources = get_sources(argc - 1, argv++);
+
+
+    return 0;
+}
+
+
+class_source **get_sources(char **source_files, int num_sources)
+{
+    class_source **st_sources = NULL;
+
+    info("\tFinding and opening class source files.");
+
     if(num_sources < 1) {
         error("You must pass the Smalltalk files to put into the image on the command line!");
     }
-
-    /* skip the first one on Linux */
-    source_files++;
 
     /* allocate memory for the source structs. */
     st_sources = calloc((size_t)num_sources, sizeof(class_source*));
@@ -69,10 +87,8 @@ int main(int argc, char **argv)
             st_sources[i]->class_var_str);
     }
 
-
-    return 0;
+    return st_sources;
 }
-
 
 void open_source_file(class_source *source, const char *class_file_name)
 {
@@ -142,9 +158,11 @@ void sort_source_files(class_source **st_sources, int num_sources)
 
             //printf("  Checking class %s (index %d).\n", st_sources[possible_child_idx]->class_name, possible_child_idx);
 
+            /* does the parent match? */
             if(strcmp(st_sources[possible_child_idx]->parent_class_name, st_sources[parent_idx]->class_name) == 0) {
                 //printf("  %s is a subclass of %s.\n", st_sources[possible_child_idx]->class_name, st_sources[parent_idx]->class_name);
 
+                /* yes? then swap */
                 class_source *tmp = st_sources[child_idx];
                 st_sources[child_idx] = st_sources[possible_child_idx];
                 st_sources[possible_child_idx] = tmp;
