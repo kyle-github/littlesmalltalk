@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../vm/memory.h"
+#include "../vm/globals.h"
 #include "../vm/interp.h"
 
 #ifdef gcalloc
@@ -154,7 +155,7 @@ int main(int argc, char **argv)
     FILE *fd;
     struct object *bootMethod = 0;
     int i;
-    struct image_header header = {0,};
+    struct image_header header;
 
     printf("%d arguments\n", argc);
     for (i = 0; i < argc; i++) {
@@ -171,15 +172,18 @@ int main(int argc, char **argv)
         printf("Image output file: %s\n", output_file);
     }
 
+    memset(&header, 0, sizeof header);
+
     /* big bang -- create the first classes */
     bigBang();
     addArgument("self");
 
-    if ((fin = fopen(image_source, "r")) == NULL)
+    if ((fin = fopen(image_source, "r")) == NULL) {
         sysErrorStr("file in error", image_source);
+    }
 
     /* then read the image source file */
-    while (fgets((char *) inputBuffer, 1000, fin)) {
+    while (fgets((char *) inputBuffer, sizeof(inputBuffer), fin)) {
         p = inputBuffer;
         skipSpaces();
         readIdentifier();
@@ -1574,7 +1578,7 @@ int parseMethod(struct object *theMethod)
 /*	read the expression beyond the begin statement */
 struct object *BeginCommand(void)
 {
-    struct object *bootMethod;
+    struct object *bootMethod = NULL;
 
     byteTop = 0;
     litTop = 0;

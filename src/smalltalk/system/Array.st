@@ -56,6 +56,7 @@ with: elemA with: elemB with: elemC | ret |
 !
 !Array
 = anArray
+    (anArray isKindOf: Collection) ifFalse: [ ^ false ].
     self size = anArray size ifFalse: [ ^ false ].
     1 to: self size do:
         [:i | (self at: i) = (anArray at: i)
@@ -133,7 +134,13 @@ hash | sz |
 !
 !Array
 includes: aValue
-    self do: [ :element | element = aValue ifTrue: [ ^ true ]].
+    self do: [ :element | 
+        " only compare elements of the same type. "
+        ((element class) = (aValue class)) ifTrue: [
+            element = aValue ifTrue: [ ^ true ].
+        ].
+    ].
+
     ^ false
 
 !

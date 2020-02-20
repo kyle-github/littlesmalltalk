@@ -34,8 +34,14 @@ put: anObj
 
     [ (history size) > 100 ] whileTrue: [ history removeFirst].
 
-    anObj printNl.
-
     ^ anObj
+
+!
+!Transcript
+reset
+    history <- List new.
+
+    ^ self
+
 
 !

@@ -16,7 +16,7 @@
 #include "err.h"
 #include "interp.h"
 #include "memory.h"
-#include "globs.h"
+#include "globals.h"
 
 
 /* temporary directory is shared. */
@@ -418,6 +418,9 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
             }
 
             /* return the value anyway */
+
+            printf("opened socket %d.\n", sock);
+
             returnedValue = newInteger(sock);
 
             break;
@@ -446,6 +449,8 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
 
         case 2: /* close a socket */
             sock = integerValue(args->data[1]);
+
+            printf("closing socket %d.\n", sock);
 
             close(sock);
 

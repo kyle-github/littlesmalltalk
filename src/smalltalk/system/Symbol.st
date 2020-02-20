@@ -41,7 +41,43 @@ hash
 
 !
 !Symbol
+implementors | result classes literals |
+    result <- List new.
+
+    classes <- globals select: [ :o | o isKindOf: Class ].
+
+    classes do: [ :c |
+        ((c methods) at: self ifAbsent: [nil])  notNil ifTrue: [ result add: c ].
+    ].
+
+    ^ result
+
+        
+    
+!
+!Symbol
 printString
     <23 self String>
 
+!
+!Symbol
+senders | result classes literals |
+    result <- List new.
+
+    classes <- globals select: [ :o | o isKindOf: Class ].
+
+    classes do: [ :c |
+        (c methods) binaryDo: [ :n :m |
+            " transcript put: ('Checking method ' + (c printString) + '#' + (n printString)). "
+
+            ((m literals) notNil) ifTrue: [
+                ((m literals) includes: self) ifTrue: [ result add: m ].
+            ].
+        ].
+    ].
+
+    ^ result
+
+        
+    
 !

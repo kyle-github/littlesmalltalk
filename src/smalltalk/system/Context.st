@@ -3,19 +3,31 @@
 " class methods for Context "
 " instance methods for Context "
 !Context
-backtrace | narg |
+backtrace | buf |
+        " backtrace context calls "
+    buf <- StringBuffer new.
+
+    self backtraceOn: buf.
+
+    buf printString printNl.
+
+!
+!Context
+backtraceOn: aStream | narg |
         " backtrace context calls "
     narg <- 0.
-    method name print.
-    '(' print.
+    aStream write: (method name printString).
+    aStream write: '('.
     arguments do: [:a |
-        (narg > 0) ifTrue: [ ', ' print ].
-        a class print.
-        narg <- narg+1
+        (narg > 0) ifTrue: [ aStream write: ', ' ].
+        aStream write: (a class printString).
+        narg <- narg+1.
     ].
-    ')' printNl.
+    aStream write: ')'.
+    aStream write: (Char newline asString).
+
     previousContext notNil
-        ifTrue: [ previousContext backtrace ]
+        ifTrue: [ previousContext backtraceOn: aStream ]
 
 !
 !Context

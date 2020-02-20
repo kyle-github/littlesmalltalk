@@ -74,8 +74,14 @@ isAlphanumeric
 !
 !Char
 isBlank
-        "spaces, tabs and newlines are all blank"
-    ^ value = 32 or: [ value = 9 or: [ value = 10 ] ]
+    " spaces, tabs, carriage returns and newlines are all blank. "
+    " These are ordered in guessed most to least common order. "
+    (value = 32) ifTrue: [ ^ true ].
+    (value = 10) ifTrue: [ ^ true ].
+    (value = 9) ifTrue: [ ^ true ].
+    (value = 13) ifTrue: [ ^ true ].
+
+    ^ false.
 
 !
 !Char

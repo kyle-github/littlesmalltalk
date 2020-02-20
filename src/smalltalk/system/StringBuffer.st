@@ -38,3 +38,10 @@ size | tempSize |
     ^ tempSize
 
 !
+!StringBuffer
+write: anObj
+    self addLast: anObj.
+
+    ^ self
+
+!

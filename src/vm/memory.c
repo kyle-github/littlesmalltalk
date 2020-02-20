@@ -13,15 +13,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
-#include <sys/time.h>
 #include <unistd.h>
 #include <stddef.h>
 #include "memory.h"
-#include "globs.h"
 #include "interp.h"
-
-extern int debugging;   /* true if we are debugging */
+#include "globals.h"
+#include "err.h"
 
 
 int64_t gc_count = 0;
@@ -991,10 +988,12 @@ int fileIn(FILE *fp)
 int fileOut(FILE *fp)
 {
     int i;
-    struct image_header header = {0,};
+    struct image_header header;
     int64_t totalCells = 0;
 
     printf("starting to file out\n");
+
+    memset(&header, 0, sizeof(header));
 
     /* force a GC to clean up the image */
     do_gc();
@@ -1218,15 +1217,3 @@ int strsymcomp(const char *left, struct object *right)
 
 
 
-
-
-/* Misc helpers */
-
-int64_t time_usec()
-{
-    struct timeval tv;
-
-    gettimeofday(&tv,NULL);
-
-    return ((int64_t)1000000 * tv.tv_sec) + tv.tv_usec;
-}

@@ -104,8 +104,10 @@ primitiveFailed
 
 !
 !Object
-print
-    self printString do: [ :c | c print ]
+print | aStr |
+    aStr <- (self printString).
+    transcript put: aStr.
+    aStr do: [ :c | c print ]
 
 !
 !Object

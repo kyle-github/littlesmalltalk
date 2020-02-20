@@ -50,7 +50,12 @@ at: value
 !
 !Collection
 at: value ifAbsent: exceptionBlock
-    self do: [ :element | element = value ifTrue: [ ^ element ]].
+    self do: [ :element | 
+        ((element class) = (value class)) ifTrue: [
+            (element = value) ifTrue: [ ^ element ].
+        ].
+    ].
+
     ^ exceptionBlock value
 
 !

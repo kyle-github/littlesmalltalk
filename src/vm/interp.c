@@ -20,27 +20,16 @@
     Modified by Kyle Hayes for 64-bit systems.
 */
 
-#include "memory.h"
-#include "interp.h"
-#include "prim.h"
-#include "globs.h"
 #include <stdio.h>
 #include <string.h> /* For bzero() */
 #include <stdint.h>
+#include "globals.h"
+#include "interp.h"
+#include "memory.h"
+#include "prim.h"
+#include "err.h"
 
-extern int debugging;
 
-/*
-    The following are roots for the file out
-*/
-
-struct object *nilObject, *trueObject, *falseObject,
-        *SmallIntClass, *ArrayClass, *BlockClass, *ContextClass,
-        *globalsObject, *initialMethod, *binaryMessages[3],
-        *IntegerClass, *badMethodSym;
-
-struct object *StringClass = NULL;
-struct object *ByteArrayClass = NULL;
 
 /*
  * Debugging
@@ -73,6 +62,9 @@ static void indent(struct object *ctx)
 
     oldlev = lev;
 }
+
+
+
 #define PC (bytePointer-1)
 #define DBG0(msg) if (debugging) {indent(context); printf("%d: %s\n", PC, msg);}
 #define DBG1(msg, arg) if (debugging) {indent(context); \
@@ -160,85 +152,6 @@ static struct object *lookupMethod(struct object *selector, struct object *class
     return(NULL);
 }
 
-
-
-/* look up a global entry by name */
-
-struct object *lookupGlobal(char *name)
-{
-    struct object *dict;
-    struct object *keys;
-    struct object *key;
-    struct object *vals;
-    int low,high,mid;
-    int result;
-
-    dict = globalsObject;
-    keys = dict->data[0];
-    low = 0;
-    high = SIZE(keys);
-
-    /*
-    * Do a binary search through its keys, which are Symbols.
-    */
-    while (low < high) {
-        mid = (low + high) / 2;
-        key = keys->data[mid];
-
-        /*
-        * If we find the key, return the
-        * object.
-        */
-
-        result = strsymcomp(name,key);
-
-        if (result == 0) {
-            vals = dict->data[1];
-            return vals->data[mid];
-        } else {
-            if (result < 0) {
-                high = mid;
-            } else {
-                low = mid+1;
-            }
-        }
-    }
-
-    return 0;
-}
-
-
-
-
-
-
-/*
-    method cache for speeding method lookup
-*/
-
-# define cacheSize 703
-
-static struct {
-    struct object *name;
-    struct object *class;
-    struct object *method;
-} cache[cacheSize];
-
-int64_t cache_hit = 0;
-int64_t cache_miss = 0;
-
-
-
-
-/* flush dynamic methods when GC occurs */
-void flushCache(void)
-{
-    int i;
-
-    for (i = 0; i < cacheSize; i++) {
-        cache[i].name = 0;  /* force refill */
-    }
-}
 
 /*
  * newLInteger()
@@ -612,7 +525,7 @@ findMethodFromSymbol:
                  bytePtr(messageSelector));
 checkCache:
             low = (int)((((intptr_t) messageSelector) +
-                         ((intptr_t) receiverClass)) % cacheSize);
+                         ((intptr_t) receiverClass)) % METHOD_CACHE_SIZE);
             if ((cache[low].name == messageSelector) &&
                 (cache[low].class == receiverClass)) {
                 method = cache[low].method;

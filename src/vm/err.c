@@ -1,6 +1,9 @@
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
-#include "globs.h"
+#include <unistd.h>
+#include <string.h>
+#include "globals.h"
 #include "memory.h"
 #include "err.h"
 #include "interp.h"
@@ -24,6 +27,36 @@ void sysErrorStr(char * a, char * b)
     fprintf(stderr,"unrecoverable system error: %s %s\n", a, b);
     exit(1);
 }
+
+
+
+
+void error(const char *templ, ...)
+{
+    va_list va;
+
+    /* print it out. */
+    va_start(va,templ);
+    vfprintf(stderr,templ,va);
+    va_end(va);
+    fprintf(stderr,"\n");
+
+    exit(1);
+}
+
+
+
+void info(const char *templ, ...)
+{
+    va_list va;
+
+    /* print it out. */
+    va_start(va,templ);
+    vfprintf(stderr,templ,va);
+    va_end(va);
+    fprintf(stderr,"\n");
+}
+
 
 
 void backTrace(struct object * aContext)

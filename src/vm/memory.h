@@ -105,18 +105,9 @@ extern struct object *rootStack[];
 extern int rootTop;
 extern void addStaticRoot(struct object **);
 
-/*
-    The following are roots for the file out
-*/
-
-extern struct object *nilObject, *trueObject,
-        *falseObject, *SmallIntClass, *ArrayClass, *BlockClass,
-        *ContextClass, *globalsObject, *initialMethod,
-        *binaryMessages[3], *IntegerClass, *badMethodSym;
-
-/* useful objects */
-extern struct object *StringClass;
-extern struct object *ByteArrayClass;
+/* image reading/writing */
+extern int fileIn(FILE *fp);
+extern int fileOut(FILE *fp);
 
 /*
     entry points

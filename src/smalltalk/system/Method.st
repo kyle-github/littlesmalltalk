@@ -33,6 +33,11 @@ byteCodes
 
 !
 !Method
+containingClass
+    ^ class
+
+!
+!Method
 literals
     ^ literals
 

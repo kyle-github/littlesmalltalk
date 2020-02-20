@@ -13,7 +13,7 @@
 #include <string.h>
 
 #include "err.h"
-#include "globs.h"
+#include "globals.h"
 #include "interp.h"
 #include "memory.h"
 #include "prim.h"
@@ -34,7 +34,6 @@
 
 /* # define COUNTTEMPS */
 
-unsigned int debugging = 0;
 
 extern int errno;
 
