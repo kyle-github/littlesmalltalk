@@ -641,7 +641,7 @@ int symbolBareCmp(const uint8_t *left, int leftsize, const uint8_t *right, int r
 
 int symbolCmp(struct object *left, struct object *right)
 {
-    return symbolBareCmp(bytePtr(left), SIZE(left), bytePtr(right), SIZE(right));
+    return symbolBareCmp(bytePtr(left), (int)SIZE(left), bytePtr(right), (int)SIZE(right));
 }
 
 struct object *newString(char *text)
@@ -665,7 +665,7 @@ struct object *newSymbol(char *text)
 
     /* first see if it is already a symbol */
     for (i = 0; i < symbolTop; i++) {
-        if (symbolBareCmp((uint8_t *)text, (int)strlen(text), bytePtr(oldSymbols[i]), SIZE(oldSymbols[i])) == 0) {
+        if (symbolBareCmp((uint8_t *)text, (int)strlen(text), bytePtr(oldSymbols[i]), (int)SIZE(oldSymbols[i])) == 0) {
             return oldSymbols[i];
         }
     }
@@ -973,7 +973,7 @@ int lookupInstance(struct object *class, char *text, int *low)
     }
 
     for (i = 0; i < size; i++) {
-        if (symbolBareCmp((uint8_t *)text, (int)strlen(text), bytePtr(var->data[i]), SIZE(var->data[i])) == 0) {
+        if (symbolBareCmp((uint8_t *)text, (int)strlen(text), bytePtr(var->data[i]), (int)SIZE(var->data[i])) == 0) {
             return (*low);
         }
         *low += 1;
@@ -1619,7 +1619,7 @@ struct object *insert(struct object *array, int index, struct object *val)
      * Clone the current object, including class.  Make one
      * extra slot in the Array storage.
      */
-    o = gcalloc(SIZE(array) + 1);
+    o = gcalloc((int)SIZE(array) + 1);
     o->class = array->class;
 
     /*

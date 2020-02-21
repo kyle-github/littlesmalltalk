@@ -39,7 +39,7 @@
 /* ints must be at least 32-bit in size! */
 
 struct object {
-    intptr_t size;
+    int size;
     struct object *class;
     struct object *data[];
 };
@@ -50,7 +50,7 @@ struct object {
 */
 
 struct byteObject {
-    intptr_t size;
+    int size;
     struct object *class;
     uint8_t bytes[];
 };
@@ -77,8 +77,8 @@ struct byteObject {
 /*
  * The "size" field is the top 30 bits; the bottom two are flags
  */
-#define SIZE(op) ((uint32_t)((((struct object *)(op))->size) / 4))  /* let the compiler optimize to shift left. */
-#define SETSIZE(op, val) (((struct object *)(op))->size = (intptr_t)((val) * 4)) /* let the compiler optimize to shift right. */
+#define SIZE(op) ((int)((((struct object *)(op))->size) / 4))  /* let the compiler optimize to shift left. */
+#define SETSIZE(op, val) (((struct object *)(op))->size = (int)((val) * 4)) /* let the compiler optimize to shift right. */
 #define FLAG_GCDONE (0x01)
 #define FLAG_BIN (0x02)
 #define IS_BINOBJ(x) (((struct object *)(x))->size & (intptr_t)FLAG_BIN)

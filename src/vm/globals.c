@@ -65,7 +65,7 @@ struct object *lookupGlobal(char *name)
     dict = globalsObject;
     keys = dict->data[0];
     low = 0;
-    high = SIZE(keys);
+    high = (int)SIZE(keys);
 
     /*
     * Do a binary search through its keys, which are Symbols.

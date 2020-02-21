@@ -126,6 +126,8 @@ uint32_t addr_to_offset(struct object *oop)
     intptr_t top_int = (intptr_t)memoryTop;
     ptrdiff_t offset = (top_int - oop_int)/BytesPerWord;
 
+    info("oop=%p, top=%p", oop, memoryTop);
+
     if(offset > UINT32_MAX) {
         error("Object pointer offset is greater than UINT32_MAX!");
     }
@@ -151,7 +153,7 @@ struct object *offset_to_addr(uint32_t raw_offset)
 
 struct object *write_object(FILE *img, struct object *obj)
 {
-    uint32_t size;
+    int size;
 
     /* check for illegal object */
     if (obj == NULL) {
@@ -176,18 +178,21 @@ struct object *write_object(FILE *img, struct object *obj)
         struct byteObject *bobj = (struct byteObject *) obj;
         info("Object %p is a binary object of %d bytes.", (void *)obj, size);
 
-        for(uint32_t i=0; i < size; i++) {
+        for(int i=0; i < size; i++) {
             write_uint8(img, bobj->bytes[i]);
         }
+
+        /* convert size into BytesPerWord units. */
+        size = (size + (BytesPerWord -1))/BytesPerWord;
     } else {
         /* ordinary objects */
         info("Object %p is an ordinary object with %d fields.", (void *)obj, size);
 
         /* write the instance variables of the object */
-        for (uint32_t i = 0; i < size; i++) {
+        for (int i = 0; i < size; i++) {
             /* we only need to stitch this up if it is not a SmallInt. */
             if(obj->data[i] != NULL) {
-                if(!IS_SMALLINT(obj->data[i])) {
+                if(IS_SMALLINT(obj->data[i])) {
                     write_uint32(img, (uint32_t)(intptr_t)obj->data[i]);
                 } else {
                     write_uint32(img, addr_to_offset(obj->data[i]));
@@ -268,7 +273,7 @@ int fileOut(FILE *img)
 
 struct object *read_object(FILE *img, struct object *obj)
 {
-    uint32_t size;
+    int size;
     uint32_t offset;
 
     /* check for illegal object */
@@ -283,8 +288,8 @@ struct object *read_object(FILE *img, struct object *obj)
      */
 
     /* get the size. Note that we need to get the raw value then the fixed up value. */
-    read_uint32(img, &size);
-    obj->size = (intptr_t)size;
+    read_uint32(img, (uint32_t*)&size);
+    obj->size = (int)size;
     size = SIZE(obj);
 
     /* get the class. */
@@ -297,7 +302,7 @@ struct object *read_object(FILE *img, struct object *obj)
 
         info("Object %p is a binary object of %d bytes.", (void *)obj, size);
 
-        for(uint32_t i=0; i < size; i++) {
+        for(int i=0; i < size; i++) {
             read_uint8(img, &(bobj->bytes[i]));
         }
     } else {
@@ -305,7 +310,7 @@ struct object *read_object(FILE *img, struct object *obj)
         info("Object %p is an ordinary object with %d fields.", (void *)obj, size);
 
         /* read the instance variables of the object */
-        for (uint32_t i = 0; i < size; i++) {
+        for (int i = 0; i < size; i++) {
             read_uint32(img, &offset);
 
             /* handle SmallInt */
@@ -568,7 +573,7 @@ int fileIn_version_2(FILE *fp)
     int64_t start = time_usec();
     fixer = memoryPointer;
     while(fixer < memoryTop) {
-        fprintf(stderr, "Fixing up object %d: ", obj_count++);
+        //fprintf(stderr, "Fixing up object %d: ", obj_count++);
         fixer = object_fix_up(fixer, newOffset);
     }
     int64_t end = time_usec();
@@ -872,7 +877,7 @@ struct object *FIX_OFFSET(struct object *old, int64_t offset)
 
 struct object *object_fix_up(struct object *obj, int64_t offset)
 {
-    uint32_t size;
+    int size;
 
     /* check for illegal object */
     if (obj == NULL) {
@@ -892,7 +897,7 @@ struct object *object_fix_up(struct object *obj, int64_t offset)
 //        fprintf(stderr, "  class is object %p.\n", (void *)(bobj->class));
 
         /* fix up size, size of binary objects is in bytes! */
-        size = (uint32_t)((size + BytesPerWord - 1)/BytesPerWord);
+        size = (int)((size + BytesPerWord - 1)/BytesPerWord);
     } else {
         /* ordinary objects */
 //        fprintf(stderr, "Object %p is an ordinary object with %d fields.\n", (void *)obj, size);
@@ -903,7 +908,7 @@ struct object *object_fix_up(struct object *obj, int64_t offset)
         obj->class = FIX_OFFSET(obj->class, offset);
 
         /* write the instance variables of the object */
-        for (uint32_t i = 0; i < size; i++) {
+        for (int i = 0; i < size; i++) {
             /* we only need to stitch this up if it is not a SmallInt. */
             if(obj->data[i] != NULL) {
                 if(!IS_SMALLINT(obj->data[i])) {

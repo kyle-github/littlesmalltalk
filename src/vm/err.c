@@ -64,7 +64,7 @@ void backTrace(struct object * aContext)
     printf("back trace\n");
     while (aContext && (aContext != nilObject)) {
         struct object * arguments;
-        uint32_t i;
+        int i;
         printf("message %s ",
                bytePtr(aContext->data[methodInContext]
                        ->data[nameInMethod]));
