@@ -13,6 +13,7 @@
 
 
 
+static int fileIn_version_3(FILE *img);
 static int fileIn_version_2(FILE *img);
 static int fileIn_version_1(FILE *img);
 static int fileIn_version_0(FILE *img);
@@ -57,6 +58,11 @@ int fileIn(FILE *fp)
     case IMAGE_VERSION_2:
         fprintf(stderr, "Reading in version 2 image.\n");
         return fileIn_version_2(fp);
+        break;
+
+    case IMAGE_VERSION_3:
+        fprintf(stderr, "Reading in version 3 image.\n");
+        return fileIn_version_3(fp);
         break;
 
     default:
@@ -305,6 +311,9 @@ struct object *read_object(FILE *img, struct object *obj)
         for(int i=0; i < size; i++) {
             read_uint8(img, &(bobj->bytes[i]));
         }
+
+        /* convert size into BytesPerWord units. */
+        size = (size + (BytesPerWord -1))/BytesPerWord;
     } else {
         /* ordinary objects */
         info("Object %p is an ordinary object with %d fields.", (void *)obj, size);
@@ -354,6 +363,9 @@ int fileIn_version_3(FILE *img)
 
     /* calculate the pointers. */
     memoryPointer = WORDSDOWN(memoryTop, totalCells);
+
+    info("memoryTop = %p", memoryTop);
+    info("memoryPointer = %p", memoryPointer);
 
     /* read in core objects. */
     READ_OOP(globalsObject);

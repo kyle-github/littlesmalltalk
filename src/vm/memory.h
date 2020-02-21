@@ -58,7 +58,7 @@ struct byteObject {
 #define BytesPerWord ((int)(sizeof (intptr_t)))
 #define bytePtr(x) (((struct byteObject *) x)->bytes)
 #define WORDSUP(ptr, amt) ((struct object *)(((char *)(ptr)) + ((amt) * BytesPerWord)))
-#define WORDSDOWN(ptr, amt) WORDSUP(ptr, 0 - (amt))
+#define WORDSDOWN(ptr, amt) WORDSUP(ptr, 0 - (int32_t)(amt))
 
 /*
  * SmallInt objects are used to represent short integers.  They are
