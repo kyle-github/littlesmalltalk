@@ -31,14 +31,15 @@
 
 #pragma once
 
+#include <limits.h>
+#include <stdint.h>
 #include <sys/types.h>
 #include <stdio.h>
-#include <stdint.h>
 
 /* ints must be at least 32-bit in size! */
 
 struct object {
-    int size;
+    intptr_t size;
     struct object *class;
     struct object *data[];
 };
@@ -49,7 +50,7 @@ struct object {
 */
 
 struct byteObject {
-    int size;
+    intptr_t size;
     struct object *class;
     uint8_t bytes[];
 };
@@ -65,7 +66,6 @@ struct byteObject {
  * distinguishes them from all other objects, which are longword
  * aligned and are proper C memory pointers.
  */
-#include <limits.h>
 
 #define IS_SMALLINT(x) ((((intptr_t)(x)) & 0x01) != 0)
 #define FITS_SMALLINT(x) ((((intptr_t)(x)) >= INT_MIN/2) && \
@@ -77,11 +77,11 @@ struct byteObject {
 /*
  * The "size" field is the top 30 bits; the bottom two are flags
  */
-#define SIZE(op) ((((struct object *)(op))->size) / 4)  /* let the compiler optimize to shift left. */
-#define SETSIZE(op, val) (((struct object *)(op))->size = ((val) * 4)) /* let the compiler optimize to shift right. */
+#define SIZE(op) ((uint32_t)((((struct object *)(op))->size) / 4))  /* let the compiler optimize to shift left. */
+#define SETSIZE(op, val) (((struct object *)(op))->size = (intptr_t)((val) * 4)) /* let the compiler optimize to shift right. */
 #define FLAG_GCDONE (0x01)
 #define FLAG_BIN (0x02)
-#define IS_BINOBJ(x) (((struct object *)(x))->size & FLAG_BIN)
+#define IS_BINOBJ(x) (((struct object *)(x))->size & (intptr_t)FLAG_BIN)
 
 /*
     memoryBase holds the pointer to the current space,
@@ -91,7 +91,15 @@ struct byteObject {
     must take place
 */
 
-extern struct object *memoryPointer, *memoryBase;
+extern int spaceSize;
+extern int inSpaceOne;
+extern struct object *spaceOne;
+extern struct object *spaceTwo;
+extern struct object *memoryBase;
+extern struct object *memoryPointer;
+extern struct object *memoryTop;
+
+
 
 /*
     roots for the memory space
@@ -100,20 +108,24 @@ extern struct object *memoryPointer, *memoryBase;
     staticRoots are values in static memory that point to
     dynamic values
 */
+
 # define ROOTSTACKLIMIT 2000
 extern struct object *rootStack[];
 extern int rootTop;
 extern void addStaticRoot(struct object **);
 
-/* image reading/writing */
-extern int fileIn(FILE *fp);
-extern int fileOut(FILE *fp);
+
+#define STATICROOTLIMIT (200)
+extern struct object **staticRoots[STATICROOTLIMIT];
+extern int staticRootTop;
+
 
 /*
     entry points
 */
 
 extern void gcinit(int, int);
+extern void do_gc();
 extern struct object *gcollect(int);
 extern struct object *staticAllocate(int);
 extern struct object *staticIAllocate(int);
@@ -122,7 +134,6 @@ extern void exchangeObjects(struct object *, struct object *, int size);
 extern int symstrcomp(struct object *left, const char *right);
 extern int strsymcomp(const char *left, struct object *right);
 extern int isDynamicMemory(struct object *);
-extern int fileOut(FILE *fp);
 
 #define gcalloc(sz) (((memoryPointer = WORDSDOWN(memoryPointer, (sz) + 2)) < \
                       memoryBase) ? gcollect(sz) : \
@@ -132,46 +143,7 @@ extern int fileOut(FILE *fp);
 extern struct object *gcalloc(int);
 #endif
 
-
-/* these define the flags used for writing and reading images.
-The bytes per word or size is usually stored in the lower bits */
-# define LST_ERROR_TYPE     (0)
-
-/* normal objects */
-# define LST_OBJ_TYPE       (1<<5)
-
-/* positive small integers */
-# define LST_PINT_TYPE      (2<<5)
-
-/* negative small integers */
-# define LST_NINT_TYPE      (3<<5)
-
-/* byte arrays */
-# define LST_BARRAY_TYPE    (4<<5)
-
-/* previously dumped object */
-# define LST_POBJ_TYPE      (5<<5)
-
-/* nil object */
-# define LST_NIL_TYPE       (6<<5)
-
-# define LST_SMALL_TAG_LIMIT    0x0F
-# define LST_LARGE_TAG_FLAG 0x10
-# define LST_TAG_SIZE_MASK  0x1F
-# define LST_TAG_VALUE_MASK     LST_SMALL_TAG_LIMIT
-# define LST_TAG_TYPE_MASK  0xE0
-
-
-/* image information */
-struct image_header {
-    char magic[4];
-    uint32_t version;
-} __attribute__((packed));
-
-#define IMAGE_VERSION_0 (0)
-#define IMAGE_VERSION_1 (1)
-#define IMAGE_VERSION_2 (2)
-
+/* GC information */
 extern int64_t gc_count;
 extern int64_t gc_total_time;
 extern int64_t gc_max_time;

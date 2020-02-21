@@ -14,6 +14,7 @@
 
 #include "err.h"
 #include "globals.h"
+#include "image.h"
 #include "interp.h"
 #include "memory.h"
 #include "prim.h"

@@ -8,6 +8,7 @@ project(${PROJECT_NAME})
 add_executable(bootstrap "${PROJECT_SOURCE_DIR}/src/bootstrap/bootstrap.c"
                          "${PROJECT_SOURCE_DIR}/src/vm/memory.h"
                          "${PROJECT_SOURCE_DIR}/src/vm/globals.h"
+                         "${PROJECT_SOURCE_DIR}/src/vm/image.h"
                          "${PROJECT_SOURCE_DIR}/src/vm/interp.h"
               )
 
@@ -28,6 +29,8 @@ add_executable(lst "${PROJECT_SOURCE_DIR}/src/vm/main.c"
                    "${PROJECT_SOURCE_DIR}/src/vm/err.h"
                    "${PROJECT_SOURCE_DIR}/src/vm/globals.c"
                    "${PROJECT_SOURCE_DIR}/src/vm/globals.h"
+                   "${PROJECT_SOURCE_DIR}/src/vm/image.c"
+                   "${PROJECT_SOURCE_DIR}/src/vm/image.h"
                    "${PROJECT_SOURCE_DIR}/src/vm/interp.c"
                    "${PROJECT_SOURCE_DIR}/src/vm/interp.h"
                    "${PROJECT_SOURCE_DIR}/src/vm/memory.c"

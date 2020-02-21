@@ -8,6 +8,7 @@
 #include <string.h>
 #include "../vm/memory.h"
 #include "../vm/globals.h"
+#include "../vm/image.h"
 #include "../vm/interp.h"
 
 #ifdef gcalloc

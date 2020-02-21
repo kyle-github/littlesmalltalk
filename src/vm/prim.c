@@ -12,11 +12,12 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <alloca.h>
-#include "prim.h"
 #include "err.h"
+#include "globals.h"
+#include "image.h"
 #include "interp.h"
 #include "memory.h"
-#include "globals.h"
+#include "prim.h"
 
 
 /* temporary directory is shared. */
