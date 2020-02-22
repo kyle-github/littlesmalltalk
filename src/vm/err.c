@@ -82,3 +82,27 @@ void backTrace(struct object * aContext)
         aContext = aContext->data[previousContextInContext];
     }
 }
+
+
+#define BUF_SIZE (256)
+
+void printClass(struct object *obj)
+{
+    if(IS_SMALLINT(obj)) {
+        info("object class SmallInt");
+    } else {
+        char buf[BUF_SIZE];
+        struct byteObject *class_name = (struct byteObject *)obj->class->data[nameInClass];
+
+        memset(buf, 0, sizeof(buf));
+
+        for(int i=0; i < (int)sizeof(buf) && i < (int)SIZE(class_name); i++) {
+            buf[i] = (char)bytePtr(class_name)[i];
+        }
+
+        buf[BUF_SIZE -1] = (char)0;
+
+        info("object class %s", buf);
+    }
+}
+

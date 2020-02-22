@@ -749,6 +749,7 @@ checkCache:
             case 5:     /* Array at put */
                 op = stack->data[--stackTop];
                 if (!IS_SMALLINT(op)) {
+                    info("array index is not a SmallInt!");
                     stackTop -= 2;
                     goto failPrimitive;
                 }
@@ -756,6 +757,7 @@ checkCache:
                 returnedValue = stack->data[--stackTop];
                 /* Bounds check */
                 if ((low < 0) || (low >= SIZE(returnedValue))) {
+                    info("array index is out of bounds (0 <= %d < %d!", low, SIZE(returnedValue));
                     stackTop -= 1;
                     goto failPrimitive;
                 }
@@ -972,6 +974,7 @@ checkCache:
                 low = integerValue(stack->data[--stackTop])-1;
                 returnedValue = stack->data[--stackTop];
                 if ((low < 0) || (low >= SIZE(returnedValue))) {
+                    info("array index is out of bounds (0 <= %d < %d!", low, SIZE(returnedValue));
                     goto failPrimitive;
                 }
                 returnedValue = returnedValue->data[low];
