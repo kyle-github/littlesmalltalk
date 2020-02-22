@@ -60,27 +60,27 @@ int fileIn(FILE *fp)
 
     switch(header.version) {
     case IMAGE_VERSION_0:
-        fprintf(stderr, "Reading in version 0 image.\n");
+        info("Reading in version 0 image.");
         return fileIn_version_0(fp);
         break;
 
     case IMAGE_VERSION_1:
-        fprintf(stderr, "Reading in version 1 image.\n");
+        info("Reading in version 1 image.");
         return fileIn_version_1(fp);
         break;
 
     case IMAGE_VERSION_2:
-        fprintf(stderr, "Reading in version 2 image.\n");
+        info("Reading in version 2 image.");
         return fileIn_version_2(fp);
         break;
 
     case IMAGE_VERSION_3:
-        fprintf(stderr, "Reading in version 3 image.\n");
+        info("Reading in version 3 image.");
         return fileIn_version_3(fp);
         break;
 
     default:
-        sysErrorInt("Unsupported image file version: ", header.version);
+        error("Unsupported image file version: ", header.version);
         break;
     }
 
@@ -93,6 +93,8 @@ int fileIn(FILE *fp)
 struct object *write_object(FILE *img, int obj_num, struct object *obj)
 {
     int size;
+
+    (void)obj_num;
 
     /* check for illegal object */
     if (obj == NULL) {
@@ -217,6 +219,8 @@ struct object *read_object(FILE *img, int obj_num, struct object *obj)
 {
     int size;
     uint32_t offset;
+
+    (void)obj_num;
 
     /* check for illegal object */
     if (obj == NULL) {
@@ -462,7 +466,6 @@ int fileIn_version_2(FILE *fp)
     struct object *fixer;
     int64_t newOffset;
     int64_t totalCells = 0;
-    int obj_count = 0;
 
     /* read in the bottom, pointer and top of the image */
     fread(&imageBase, sizeof imageBase, 1, fp);
@@ -675,7 +678,7 @@ void readTag(FILE *fp, int *type, int *val)
 
     inByte = get_byte(fp);
     if (inByte == EOF) {
-        sysError("Unexpected EOF reading image file: reading tag byte.");
+        error("Unexpected EOF reading image file: reading tag byte.");
     }
 
     tempSize = (int)(inByte & LST_TAG_SIZE_MASK);
@@ -693,14 +696,14 @@ void readTag(FILE *fp, int *type, int *val)
         tempSize = tempSize & LST_SMALL_TAG_LIMIT;
 
         if(tempSize>BytesPerWord) {
-            sysErrorInt("Error reading image file: tag value field exceeds machine word size.  Image created on another machine? Value=", tempSize);
+            error("Error reading image file: tag value field exceeds machine word size.  Image created on another machine? Value=%d", tempSize);
         }
 
         for(i=0; i<tempSize; i++) {
             inByte = get_byte(fp);
 
             if(inByte == EOF) {
-                sysErrorInt("Unexpected EOF reading image file: reading extended value and expecting byte count=", tempSize);
+                error("Unexpected EOF reading image file: reading extended value and expecting byte count=%d", tempSize);
             }
 
             tmp = tmp  | (((uint)inByte & (uint)0xFF) << ((uint)8*(uint)i));
@@ -735,7 +738,7 @@ struct object *objectRead(FILE *fp)
 
     switch(type) {
     case LST_ERROR_TYPE:    /* nil obj */
-        sysErrorInt("Read in a null object", (intptr_t)newObj);
+        error("Read in a null object %p", newObj);
 
         break;
 
@@ -777,7 +780,7 @@ struct object *objectRead(FILE *fp)
 
     case LST_POBJ_TYPE: /* previous object */
         if(val>indirtop) {
-            sysErrorInt("Illegal previous object index",val);
+            error("Out of bounds previous object index %d",val);
         }
 
         newObj = indirArray[val];
@@ -789,7 +792,7 @@ struct object *objectRead(FILE *fp)
         break;
 
     default:
-        sysErrorInt("Illegal tag type: ",type);
+        error("Illegal tag type: %d",type);
         break;
     }
 
@@ -834,7 +837,7 @@ struct object *object_fix_up(struct object *obj, int64_t offset)
 
     /* check for illegal object */
     if (obj == NULL) {
-        sysErrorInt("Fixing up a null object! obj=", (intptr_t)obj);
+        error("Fixing up a null object! obj=%p", obj);
     }
 
     /* get the size, we'll use it regardless of the object type. */

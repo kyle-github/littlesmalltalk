@@ -8,27 +8,6 @@
 #include "err.h"
 #include "interp.h"
 
-void sysError(char * a)
-{
-    fprintf(stderr,"unrecoverable system error: %s\n", a);
-    exit(1);
-}
-
-
-void sysErrorInt(char * a, intptr_t b)
-{
-    fprintf(stderr,"unrecoverable system error: %s %ld\n", a, b);
-    exit(1);
-}
-
-
-void sysErrorStr(char * a, char * b)
-{
-    fprintf(stderr,"unrecoverable system error: %s %s\n", a, b);
-    exit(1);
-}
-
-
 
 
 void error(const char *templ, ...)

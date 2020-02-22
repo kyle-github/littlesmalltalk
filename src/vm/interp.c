@@ -214,7 +214,7 @@ static struct object *do_Integer(int op, struct object *low, struct object *high
         return((l == h) ? trueObject : falseObject);
 
     default:
-        sysErrorInt("Invalid op table jump", op);
+        error("Invalid op table jump %d", op);
     }
     return(NULL);
 }
@@ -416,7 +416,7 @@ int execute(struct object *aProcess, int ticks)
                 stack->data[stackTop++] = falseObject;
                 break;
             default:
-                sysErrorInt("unknown push constant", low);
+                error("unknown push constant %d", low);
             }
             break;
 
@@ -535,7 +535,7 @@ checkCache:
                 method = lookupMethod(messageSelector, receiverClass);
                 if (!method) {
                     if (messageSelector == badMethodSym) {
-                        sysError("doesNotUnderstand: missing");
+                        error("doesNotUnderstand: missing");
                     }
                     op = gcalloc(2);
                     op->class = ArrayClass;
@@ -635,7 +635,7 @@ checkCache:
                 }
                 break;
             default:
-                sysErrorInt("unimplemented SendUnary", low);
+                error("unimplemented SendUnary %d", low);
             }
             stack->data[stackTop++] = returnedValue;
             break;
@@ -1285,13 +1285,13 @@ doReturn2:
                 return(ReturnBreak);
 
             default:
-                sysErrorInt("invalid doSpecial", low);
+                error("invalid doSpecial %d", low);
                 break;
             }
             break;
 
         default:
-            sysErrorInt("invalid bytecode", high);
+            error("invalid bytecode %d", high);
             break;
         }
     }

@@ -84,7 +84,7 @@ void gcinit(int staticsz, int dynamicsz)
     spaceTwo = (struct object *)calloc((size_t)dynamicsz, sizeof(struct object));
 
     if ((staticBase == NULL) || (spaceOne == NULL) || (spaceTwo == NULL)) {
-        sysError("not enough memory for space allocations\n");
+        error("not enough memory for space allocations!");
     }
 
     staticTop = staticBase + staticsz;
@@ -140,12 +140,11 @@ static struct object *gc_move(struct mobject *ptr)
                  * to the new space (other than indirections) then
                  * something is very wrong
                  */
-            } else if ((old_address >=
-                        (struct mobject *) memoryBase)
-                       && (old_address <= (struct mobject *) memoryTop)) {
-                sysErrorInt("GC invariant failure -- address in new space",
-                            (intptr_t)old_address);
 
+                 /* FIXME - comparing addresses is not supported in standard C! */
+            } else if ((old_address >= (struct mobject *) memoryBase)
+                       && (old_address <= (struct mobject *) memoryTop)) {
+                error("GC invariant failure -- address in new space %p", old_address);
                 /* else see if not  in old space */
             } else if ((old_address < (struct mobject *) oldBase) ||
                        (old_address > (struct mobject *) oldTop)) {
@@ -319,39 +318,13 @@ struct object *gcollect(int sz)
     /* then see if there is room for allocation */
     memoryPointer = WORDSDOWN(memoryPointer, sz + 2);
     if (memoryPointer < memoryBase) {
-        sysErrorInt("insufficient memory after garbage collection", sz);
+        error("insufficient memory after garbage collection! %d bytes requested.", sz);
     }
     SETSIZE(memoryPointer, sz);
 
     return(memoryPointer);
 }
 
-/*
-    static allocation -- tries to allocate values in an area
-    that will not be subject to garbage collection
-*/
-
-//struct object *staticAllocate(int sz)
-//{
-//    staticPointer = WORDSDOWN(staticPointer, sz + 2);
-//    if (staticPointer < staticBase) {
-//        sysError("insufficient static memory");
-//    }
-//    SETSIZE(staticPointer, sz);
-//    return(staticPointer);
-//}
-
-//struct object *staticIAllocate(int sz)
-//{
-//    int trueSize;
-//    struct object *result;
-//
-//    trueSize = (sz + BytesPerWord - 1) / BytesPerWord;
-//    result = staticAllocate(trueSize);
-//    SETSIZE(result, sz);
-//    result->size |= FLAG_BIN;
-//    return result;
-//}
 
 /*
     if definition is not in-lined, here  is what it should be
@@ -402,8 +375,7 @@ void addStaticRoot(struct object **objp)
         }
     }
     if (staticRootTop >= STATICROOTLIMIT) {
-        sysErrorInt("addStaticRoot: too many static references",
-                    (intptr_t)objp);
+        error("addStaticRoot: too many static references %d", staticRootTop);
     }
     staticRoots[staticRootTop++] = objp;
 }
