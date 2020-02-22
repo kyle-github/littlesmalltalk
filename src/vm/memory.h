@@ -38,11 +38,27 @@
 
 /* ints must be at least 32-bit in size! */
 
+
+/*
+ * various structs that are views on the same underlying memory.
+ *
+ * Each one is used for a specific type or object or purpose.
+ */
+
+
+/* internally used for GC and very low level memory operations. */
+struct mobject {
+    uintptr_t size;
+    struct mobject *data[];
+};
+
+/* common object. */
 struct object {
-    int size;
+    intptr_t size;
     struct object *class;
     struct object *data[];
 };
+
 
 /*
     byte objects are used to represent strings and symbols
@@ -50,7 +66,7 @@ struct object {
 */
 
 struct byteObject {
-    int size;
+    intptr_t size;
     struct object *class;
     uint8_t bytes[];
 };
@@ -58,7 +74,7 @@ struct byteObject {
 #define BytesPerWord ((int)(sizeof (intptr_t)))
 #define bytePtr(x) (((struct byteObject *) x)->bytes)
 #define WORDSUP(ptr, amt) ((struct object *)(((char *)(ptr)) + ((amt) * BytesPerWord)))
-#define WORDSDOWN(ptr, amt) WORDSUP(ptr, 0 - (int32_t)(amt))
+#define WORDSDOWN(ptr, amt) WORDSUP(ptr, 0 - (intptr_t)(amt))
 #define TO_BPW(offset) ((int)(((offset) + BytesPerWord - 1)/BytesPerWord))
 #define FROM_BPW(offset) ((int)(offset * BytesPerWord))
 
@@ -79,8 +95,8 @@ struct byteObject {
 /*
  * The "size" field is the top 30 bits; the bottom two are flags
  */
-#define SIZE(op) ((int)((((struct object *)(op))->size) / 4))  /* let the compiler optimize to shift left. */
-#define SETSIZE(op, val) (((struct object *)(op))->size = (int)((val) * 4)) /* let the compiler optimize to shift right. */
+#define SIZE(op) ((int)((((struct object *)(op))->size) >> 2))
+#define SETSIZE(op, val) (((struct object *)(op))->size = (int)((val) << 2))
 #define FLAG_GCDONE (0x01)
 #define FLAG_BIN (0x02)
 #define IS_BINOBJ(x) (((struct object *)(x))->size & (intptr_t)FLAG_BIN)

@@ -111,10 +111,6 @@ void gcinit(int staticsz, int dynamicsz)
     and moves it, and everything it points to, into the new space
     The returned value is the address in the new space.
 */
-struct mobject {
-    uint size;
-    struct mobject *data[];
-};
 
 static struct object *gc_move(struct mobject *ptr)
 {
