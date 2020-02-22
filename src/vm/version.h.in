@@ -1,0 +1,21 @@
+#pragma once
+
+#include <stdint.h>
+
+/*
+ * The library version in various ways.
+ *
+ * The defines are for building in specific versions and then
+ * checking them against a dynamically linked library.
+ */
+
+#define LIB_VER_STRING "@VERSION@"
+#define LIB_VER_MAJOR (@lst_VERSION_MAJOR@)
+#define LIB_VER_MINOR (@lst_VERSION_MINOR@)
+#define LIB_VER_PATCH (@lst_VERSION_PATCH@)
+
+extern const char *VERSION;
+extern const uint64_t version_major;
+extern const uint64_t version_minor;
+extern const uint64_t version_patch;
+
