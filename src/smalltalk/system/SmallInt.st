@@ -3,14 +3,14 @@
 " class methods for SmallInt "
 =SmallInt
 atRandom
-    " Set up seed one time.  TBD: init from something external;
-      getpid() or time() "
+    " Set up seed one time.  TBD: init from something external; getpid() or time() "
+
     seed isNil ifTrue: [ seed <- 17 ].
 
-    " Rotate the random number generator. "
-    seed <- ((seed * 1103515245 + 12345) truncSmallInt)
-        bitAnd: 268435455.
-    ^ seed
+    " Rotate the random number generator. From Wikipedia. "
+    seed <- (((seed * 8121) + 28411) rem: 134456) truncSmallInt.
+
+    ^ seed.
 
 !
 " instance methods for SmallInt "
