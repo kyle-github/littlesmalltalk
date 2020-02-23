@@ -135,12 +135,12 @@ methodCommand: classCmd | name aClass text line |
     name <- self readLine asSymbol.
 
     aClass <- globals at: name ifAbsent: [
-        ^ self error: 'unknown class name in file-in: ' + name printString 
+        ^ self error: 'unknown class name in file-in: ' + name printString
     ].
 
     text <- ''.
-    [ line <- self readLine. line isNil ifTrue: [ ^ self error: 'unexpected end of input during fileIn' ]. line ~= '!' ] whileTrue: [ 
-          text <- text + line + Char newline asString 
+    [ line <- self readLine. line isNil ifTrue: [ ^ self error: 'unexpected end of input during fileIn' ]. line ~= '!' ] whileTrue: [
+          text <- text + line + Char newline asString
     ].
     classCmd
         ifTrue: [ (aClass addMethod: text) printNl ]
@@ -194,8 +194,9 @@ writeCharValue: n
 !
 !File
 writeImage
-        " save the current image in a file "
-    fileID notNil
-        ifTrue: [ <104 fileID> ]
+    " save the current image in a file "
+    <104 fileID>
+    fileID isNil ifTrue: [ self notOpened ].
+    self primitiveFailed
 
 !
