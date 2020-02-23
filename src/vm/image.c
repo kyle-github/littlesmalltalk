@@ -124,7 +124,7 @@ struct object *write_object(FILE *img, int obj_num, struct object *obj)
         }
 
         /* convert size into BytesPerWord units. */
-        size = (size + (BytesPerWord -1))/BytesPerWord;
+        size = TO_BPW(size);
     } else {
         /* ordinary objects */
 //        info("Object %d is an ordinary object with %d fields.", obj_num, size);
@@ -253,7 +253,7 @@ struct object *read_object(FILE *img, int obj_num, struct object *obj)
         }
 
         /* convert size into BytesPerWord units. */
-        size = (size + (BytesPerWord -1))/BytesPerWord;
+        size = TO_BPW(size);
     } else {
         /* ordinary objects */
 //        info("Object %d is an ordinary object with %d fields.", obj_num, size);
@@ -944,7 +944,7 @@ struct object *dump_object(int obj_num, struct object *obj)
         }
 
         /* convert size into BytesPerWord units. */
-        size = (size + (BytesPerWord -1))/BytesPerWord;
+        size = TO_BPW(size);
     } else {
         /* ordinary objects */
         info("Object %d (offset 0x%x) is an object of %d instance vars:", obj_num, (uint32_t)offset, size);
