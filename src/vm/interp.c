@@ -120,7 +120,7 @@ static struct object *lookupMethod(struct object *selector, struct object *class
 
         /*
          * Do a binary search through its keys, which are
-         * Symbol's.
+         * Symbols.
          */
         while (low < high) {
             mid = (low + high) / 2;
@@ -535,7 +535,13 @@ checkCache:
                 method = lookupMethod(messageSelector, receiverClass);
                 if (!method) {
                     if (messageSelector == badMethodSym) {
-                        error("doesNotUnderstand: missing");
+                        //struct object *receiver = arguments->data[receiverInArguments];
+
+                        printClass(receiverClass);
+                        info("selector %s", bytePtr(messageSelector));
+                        info("  failing selector %s", bytePtr(arguments->data[1]));
+                        backTrace(context);
+                        error("#doesNotUnderstand: missing");
                     }
                     op = gcalloc(2);
                     op->class = ArrayClass;
