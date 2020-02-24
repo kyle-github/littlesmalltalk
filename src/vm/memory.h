@@ -39,6 +39,8 @@
 /* ints must be at least 32-bit in size! */
 
 
+typedef int32_t smallint_t;
+
 /*
  * various structs that are views on the same underlying memory.
  *
