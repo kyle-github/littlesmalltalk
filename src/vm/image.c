@@ -13,8 +13,8 @@
 #include "memory.h"
 
 
-static int dump_image(void);
-static struct object *dump_object(int obj_num, struct object *obj);
+//static int dump_image(void);
+//static struct object *dump_object(int obj_num, struct object *obj);
 
 static int fileIn_version_3(FILE *img);
 static int fileIn_version_2(FILE *img);
@@ -205,7 +205,7 @@ int fileOut(FILE *img)
 
     info("image contains %d objects.", object_count);
 
-    dump_image();
+    //dump_image();
 
     return (int)totalCells;
 }
@@ -282,6 +282,48 @@ struct object *read_object(FILE *img, int obj_num, struct object *obj)
 
 
 
+struct object *fixup_class(int obj_num, struct object *obj)
+{
+    struct object *old_class;
+    struct object *new_class;
+    struct object *class_name_symbol;
+    smallint_t size;
+
+    /* check for illegal object */
+    if (obj == NULL) {
+        error("Cannot read to a null pointer!");
+    }
+
+    /* get the class and the class name. */
+    old_class = CLASS(obj);
+    class_name_symbol = old_class->data[nameInClass];
+
+    new_class = lookupGlobal((char *)bytePtr(class_name_symbol));
+
+    if(new_class && new_class != nilObject) {
+        if(new_class != old_class) {
+            info("object %d points to class %s that is not the class in globals!", obj_num, bytePtr(class_name_symbol));
+            //obj->class = new_class;
+        } else {
+            //info("object %d points to correct class %s.", obj_num, bytePtr(class_name_symbol));
+        }
+    }
+
+    /* skip to the next object. */
+    size = SIZE(obj);
+
+    /* byte objects are sized differently */
+    if (IS_BINOBJ(obj)) {
+        /* convert size into BytesPerWord units. */
+        size = TO_BPW(size);
+    }
+
+    /* size is number of fields plus header plus class */
+    return WORDSUP(obj, size + 2);
+}
+
+
+
 #define READ_OOP(o) \
     read_uint32(img, &obj_offset); \
     info("object at " #o "=%p (%u)", offset_to_addr(obj_offset), obj_offset); \
@@ -332,7 +374,7 @@ int fileIn_version_3(FILE *img)
 
     info("image contains %d objects.", object_count);
 
-    /* fix up everything from globals. */
+    /* lookup up everything from globals. */
     nilObject = lookupGlobal("nil");
     staticRoots[staticRootTop++] = &nilObject;
 
@@ -364,11 +406,20 @@ int fileIn_version_3(FILE *img)
     ByteArrayClass = lookupGlobal("ByteArray");
     staticRoots[staticRootTop++] = &ByteArrayClass;
 
+    /* fix up any dangling or old references to classes. */
+    info("Fix up dangling classes.");
+    current_obj = memoryPointer;
+    object_count=0;
+    while((intptr_t)current_obj < (intptr_t)memoryTop) {
+        current_obj = fixup_class(object_count, current_obj);
+        object_count++;
+    }
+
     printf("Image read and fixup took %d usec.\n", (int)(end - start));
 
     printf("Read in %d cells.\n", (int)totalCells);
 
-    dump_image();
+    //dump_image();
 
     return (int)totalCells;
 }
@@ -887,89 +938,89 @@ struct object *object_fix_up(struct object *obj, int64_t offset)
 
 
 
-int dump_image(void)
-{
-    uint32_t totalCells = 0;
-    struct object *current_obj = NULL;
-    int object_count = 0;
-
-    info("starting to dump image");
-
-    /* how much to write?   FIXME - check for overflow! */
-    totalCells = (uint32_t)(((intptr_t)memoryTop - (intptr_t)memoryPointer)/(intptr_t)BytesPerWord);
-
-    info("image contains %u total cells.", totalCells);
-
-    /* dump out object image. */
-    current_obj = memoryPointer;
-    while((intptr_t)current_obj < (intptr_t)memoryTop) {
-        //info("Writing out object %p", current_obj);
-        current_obj = dump_object(object_count, current_obj);
-        object_count++;
-    }
-
-    info("image contains %d objects.", object_count);
-
-    return (int)totalCells;
-}
-
-
-
-struct object *dump_object(int obj_num, struct object *obj)
-{
-    int size;
-    ptrdiff_t offset = addr_to_offset(obj);
-
-    /* check for illegal object */
-    if (obj == NULL) {
-        error("Dumping a null object!");
-    }
-
-    /*
-     * all objects have the same header:
-     *    size + flags (32-bits)
-     *    class OOP
-     */
-
-    /* get the size, we'll use it regardless of the object type. */
-    size = SIZE(obj);
-    /* byte objects, write out the data. */
-    if (IS_BINOBJ(obj)) {
-        struct byteObject *bobj = (struct byteObject *) obj;
-        info("Object %d (offset 0x%x) is a binary object of %d bytes:", obj_num, (uint32_t)offset, size);
-        printClass(obj);
-
-        for(int i=0; i < size; i++) {
-            info("\tbytes[%d]=0x%x (%c)", i, bobj->bytes[i], (isalnum((char)bobj->bytes[i]) ? (char)bobj->bytes[i] : '?'));
-        }
-
-        /* convert size into BytesPerWord units. */
-        size = TO_BPW(size);
-    } else {
-        /* ordinary objects */
-        info("Object %d (offset 0x%x) is an object of %d instance vars:", obj_num, (uint32_t)offset, size);
-        printClass(obj);
-
-        /* write the instance variables of the object */
-        for (int i = 0; i < size; i++) {
-            /* we only need to stitch this up if it is not a SmallInt. */
-            if(obj->data[i] != NULL) {
-                if(IS_SMALLINT(obj->data[i])) {
-                    info("\tdata[%d]=SMALLINT(%d)", i, integerValue(obj->data[i]));
-                } else {
-                    info("\tdata[%d]=0x%x", i, (uint32_t)addr_to_offset(obj->data[i]));
-                }
-            } else {
-                /* fix up the value to the nil object. */
-                info("\tdata[%d]= nil", i);
-            }
-        }
-    }
-
-    /* size is number of fields plus header plus class */
-    return WORDSUP(obj, size + 2);
-}
-
+//int dump_image(void)
+//{
+//    uint32_t totalCells = 0;
+//    struct object *current_obj = NULL;
+//    int object_count = 0;
+//
+//    info("starting to dump image");
+//
+//    /* how much to write?   FIXME - check for overflow! */
+//    totalCells = (uint32_t)(((intptr_t)memoryTop - (intptr_t)memoryPointer)/(intptr_t)BytesPerWord);
+//
+//    info("image contains %u total cells.", totalCells);
+//
+//    /* dump out object image. */
+//    current_obj = memoryPointer;
+//    while((intptr_t)current_obj < (intptr_t)memoryTop) {
+//        //info("Writing out object %p", current_obj);
+//        current_obj = dump_object(object_count, current_obj);
+//        object_count++;
+//    }
+//
+//    info("image contains %d objects.", object_count);
+//
+//    return (int)totalCells;
+//}
+//
+//
+//
+//struct object *dump_object(int obj_num, struct object *obj)
+//{
+//    int size;
+//    ptrdiff_t offset = addr_to_offset(obj);
+//
+//    /* check for illegal object */
+//    if (obj == NULL) {
+//        error("Dumping a null object!");
+//    }
+//
+//    /*
+//     * all objects have the same header:
+//     *    size + flags (32-bits)
+//     *    class OOP
+//     */
+//
+//    /* get the size, we'll use it regardless of the object type. */
+//    size = SIZE(obj);
+//    /* byte objects, write out the data. */
+//    if (IS_BINOBJ(obj)) {
+//        struct byteObject *bobj = (struct byteObject *) obj;
+//        info("Object %d (offset 0x%x) is a binary object of %d bytes:", obj_num, (uint32_t)offset, size);
+//        printClass(obj);
+//
+//        for(int i=0; i < size; i++) {
+//            info("\tbytes[%d]=0x%x (%c)", i, bobj->bytes[i], (isalnum((char)bobj->bytes[i]) ? (char)bobj->bytes[i] : '?'));
+//        }
+//
+//        /* convert size into BytesPerWord units. */
+//        size = TO_BPW(size);
+//    } else {
+//        /* ordinary objects */
+//        info("Object %d (offset 0x%x) is an object of %d instance vars:", obj_num, (uint32_t)offset, size);
+//        printClass(obj);
+//
+//        /* write the instance variables of the object */
+//        for (int i = 0; i < size; i++) {
+//            /* we only need to stitch this up if it is not a SmallInt. */
+//            if(obj->data[i] != NULL) {
+//                if(IS_SMALLINT(obj->data[i])) {
+//                    info("\tdata[%d]=SMALLINT(%d)", i, integerValue(obj->data[i]));
+//                } else {
+//                    info("\tdata[%d]=0x%x", i, (uint32_t)addr_to_offset(obj->data[i]));
+//                }
+//            } else {
+//                /* fix up the value to the nil object. */
+//                info("\tdata[%d]= nil", i);
+//            }
+//        }
+//    }
+//
+//    /* size is number of fields plus header plus class */
+//    return WORDSUP(obj, size + 2);
+//}
+//
 
 
 /* offset in BytesPerWord units! */
