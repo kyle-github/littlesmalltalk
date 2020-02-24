@@ -16,6 +16,7 @@
 //static int dump_image(void);
 //static struct object *dump_object(int obj_num, struct object *obj);
 
+static int fileIn_version_4(FILE *img);
 static int fileIn_version_3(FILE *img);
 static int fileIn_version_2(FILE *img);
 static int fileIn_version_1(FILE *img);
@@ -29,6 +30,8 @@ static struct object *FIX_OFFSET(struct object *old, int64_t offset);
 
 static uint32_t addr_to_offset(struct object *oop);
 static struct object *offset_to_addr(uint32_t raw_offset);
+static uint32_t addr_to_offset_4(struct object *oop);
+static struct object *offset_to_addr_cell(uint32_t raw_offset);
 
 static int write_uint32(FILE *img, uint32_t val);
 int write_uint8(FILE *img, uint8_t val);
@@ -79,6 +82,11 @@ int fileIn(FILE *fp)
         return fileIn_version_3(fp);
         break;
 
+    case IMAGE_VERSION_4:
+        info("Reading in version 4 image.");
+        return fileIn_version_4(fp);
+        break;
+
     default:
         error("Unsupported image file version: ", header.version);
         break;
@@ -109,10 +117,10 @@ struct object *write_object(FILE *img, int obj_num, struct object *obj)
 
     /* get the size, we'll use it regardless of the object type. */
     size = SIZE(obj);
-    write_uint32(img, (uint32_t)obj->size); /* we write the _unconverted size with the flags! */
+    write_uint32(img, (uint32_t)obj->size); /* we write the unconverted size with the flags! */
 
     /* now we write out the class. */
-    write_uint32(img, addr_to_offset(obj->class));
+    write_uint32(img, addr_to_offset_4(obj->class));
 
     /* byte objects, write out the data. */
     if (IS_BINOBJ(obj)) {
@@ -136,12 +144,11 @@ struct object *write_object(FILE *img, int obj_num, struct object *obj)
                 if(IS_SMALLINT(obj->data[i])) {
                     write_uint32(img, (uint32_t)(intptr_t)obj->data[i]);
                 } else {
-                    write_uint32(img, addr_to_offset(obj->data[i]));
+                    write_uint32(img, addr_to_offset_4(obj->data[i]));
                 }
             } else {
                 /* fix up the value to the nil object. */
                 write_uint32(img, (uint32_t)0);
-//                write_uint32(img, addr_to_offset(nilObject));
             }
         }
     }
@@ -154,11 +161,11 @@ struct object *write_object(FILE *img, int obj_num, struct object *obj)
 
 
 #define WRITE_OOP(o) \
-    info("object at " #o "=%p (%u)", o, addr_to_offset(o)); \
-    write_uint32(img, addr_to_offset(o));
+    info("object at " #o "=%p (%u)", o, addr_to_offset_4(o)); \
+    write_uint32(img, addr_to_offset_4(o));
 
 
-
+/* version 4 */
 int fileOut(FILE *img)
 {
     struct image_header header;
@@ -166,7 +173,7 @@ int fileOut(FILE *img)
     struct object *current_obj = NULL;
     int object_count = 0;
 
-    info("starting to file out image version %d.", IMAGE_VERSION_3);
+    info("starting to file out image version %d.", IMAGE_VERSION_4);
 
     memset(&header, 0, sizeof(header));
 
@@ -174,7 +181,7 @@ int fileOut(FILE *img)
     do_gc();
 
     /* FIXME - catch return value! */
-    put_image_header(img, IMAGE_VERSION_3);
+    put_image_header(img, IMAGE_VERSION_4);
 
     /* how much to write?   FIXME - check for overflow! */
     totalCells = (uint32_t)(((intptr_t)memoryTop - (intptr_t)memoryPointer)/(intptr_t)BytesPerWord);
@@ -246,7 +253,7 @@ struct object *read_object(FILE *img, int obj_num, struct object *obj)
     if (IS_BINOBJ(obj)) {
         struct byteObject *bobj = (struct byteObject *) obj;
 
-//        info("Object %d is a binary object of %d bytes.", obj_num, size);
+        info("Object %d is a binary object of %d bytes.", obj_num, size);
 
         for(int i=0; i < size; i++) {
             read_uint8(img, &(bobj->bytes[i]));
@@ -256,7 +263,7 @@ struct object *read_object(FILE *img, int obj_num, struct object *obj)
         size = TO_BPW(size);
     } else {
         /* ordinary objects */
-//        info("Object %d is an ordinary object with %d fields.", obj_num, size);
+        info("Object %d is an ordinary object with %d fields.", obj_num, size);
 
         /* read the instance variables of the object */
         for (int i = 0; i < size; i++) {
@@ -424,6 +431,186 @@ int fileIn_version_3(FILE *img)
     return (int)totalCells;
 }
 
+
+
+
+
+
+
+
+struct object *read_object_4(FILE *img, int obj_num, struct object *obj)
+{
+    int size;
+    uint32_t offset;
+
+    (void)obj_num;
+
+    /* check for illegal object */
+    if (obj == NULL) {
+        error("Cannot read to a null pointer!");
+    }
+
+    /*
+     * all objects have the same header:
+     *    size + flags (32-bits)
+     *    class OOP offset.
+     */
+
+    /* get the size. Note that we need to get the raw value then the fixed up value. */
+    read_uint32(img, (uint32_t*)&size);
+    obj->size = (int)size;
+    size = SIZE(obj);
+
+    /* get the class. */
+    read_uint32(img, &offset);
+    obj->class = offset_to_addr_cell(offset);
+
+    /* byte objects are read in differently */
+    if (IS_BINOBJ(obj)) {
+        struct byteObject *bobj = (struct byteObject *) obj;
+
+        info("Object %d is a binary object of %d bytes.", obj_num, size);
+
+        for(int i=0; i < size; i++) {
+            read_uint8(img, &(bobj->bytes[i]));
+        }
+
+        /* convert size into BytesPerWord units. */
+        size = TO_BPW(size);
+    } else {
+        /* ordinary objects */
+        info("Object %d is an ordinary object with %d fields.", obj_num, size);
+
+        /* read the instance variables of the object */
+        for (int i = 0; i < size; i++) {
+            read_uint32(img, &offset);
+
+            /* handle SmallInt */
+            if(offset & 0x01) {
+                obj->data[i] = (struct object *)(intptr_t)(int)offset;
+            } else if(offset == 0) {
+                /* nil */
+                obj->data[i] = (struct object *)NULL;
+            } else {
+                /* handle normal object. */
+                obj->data[i] = offset_to_addr_cell(offset);
+            }
+        }
+    }
+
+    /* size is number of fields plus header plus class */
+    return WORDSUP(obj, size + 2);
+}
+
+
+
+
+
+
+
+
+
+
+
+#define READ_OOP_4(o) \
+    read_uint32(img, &obj_offset); \
+    info("object at " #o "=%p (%u)", offset_to_addr_cell(obj_offset), obj_offset); \
+    o = offset_to_addr_cell(obj_offset); \
+    staticRoots[staticRootTop++] = &(o);
+
+
+
+int fileIn_version_4(FILE *img)
+{
+    uint32_t totalCells = 0;
+    uint32_t obj_offset = 0;
+    struct object *current_obj = NULL;
+    int object_count = 0;
+
+    info("Starting to file in image version %d.", IMAGE_VERSION_4);
+
+    /* How many cells to read? */
+    read_uint32(img, &totalCells);
+
+    info("image contains %u total cells.", totalCells);
+
+    /* calculate the pointers. */
+    memoryPointer = WORDSDOWN(memoryTop, totalCells);
+
+    info("memoryTop = %p", memoryTop);
+    info("memoryPointer = %p", memoryPointer);
+
+    /* read in core objects. */
+    READ_OOP_4(globalsObject);
+    READ_OOP_4(initialMethod);
+
+    for(int i=0; i < 3; i++) {
+        READ_OOP_4(binaryMessages[i]);
+    }
+
+    READ_OOP_4(badMethodSym);
+
+    /* read in object image. */
+    int64_t start = time_usec();
+    current_obj = memoryPointer;
+    while((intptr_t)current_obj < (intptr_t)memoryTop) {
+        //info("Reading in object at %p", current_obj);
+        current_obj = read_object_4(img, object_count, current_obj);
+        object_count++;
+    }
+    int64_t end = time_usec();
+
+    info("image contains %d objects.", object_count);
+
+    /* lookup up everything from globals. */
+    nilObject = lookupGlobal("nil");
+    staticRoots[staticRootTop++] = &nilObject;
+
+    trueObject = lookupGlobal("true");
+    staticRoots[staticRootTop++] = &trueObject;
+
+    falseObject = lookupGlobal("false");
+    staticRoots[staticRootTop++] = &falseObject;
+
+    SmallIntClass = lookupGlobal("SmallInt");
+    staticRoots[staticRootTop++] = &SmallIntClass;
+
+    IntegerClass = lookupGlobal("Integer");
+    staticRoots[staticRootTop++] = &IntegerClass;
+
+    ArrayClass = lookupGlobal("Array");
+    staticRoots[staticRootTop++] = &ArrayClass;
+
+    BlockClass = lookupGlobal("Block");
+    staticRoots[staticRootTop++] = &BlockClass;
+
+    ContextClass = lookupGlobal("Context");
+    staticRoots[staticRootTop++] = &ContextClass;
+
+    /* useful classes */
+    StringClass = lookupGlobal("String");
+    staticRoots[staticRootTop++] = &StringClass;
+
+    ByteArrayClass = lookupGlobal("ByteArray");
+    staticRoots[staticRootTop++] = &ByteArrayClass;
+
+    /* fix up any dangling or old references to classes. */
+    info("Fix up dangling classes.");
+    current_obj = memoryPointer;
+    object_count=0;
+    while((intptr_t)current_obj < (intptr_t)memoryTop) {
+        current_obj = fixup_class(object_count, current_obj);
+        object_count++;
+    }
+
+    printf("Image read and fixup took %d usec.\n", (int)(end - start));
+
+    printf("Read in %d cells.\n", (int)totalCells);
+
+    //dump_image();
+
+    return (int)totalCells;
+}
 
 
 
@@ -1056,6 +1243,42 @@ struct object *offset_to_addr(uint32_t raw_offset)
     return (struct object *)oop_int;
 }
 
+
+
+uint32_t addr_to_offset_4(struct object *oop)
+{
+    intptr_t oop_int = (intptr_t)oop;
+    intptr_t top_int = (intptr_t)memoryTop;
+
+    /*
+     * Calculate the offset in word-sized cells.   But, we cannot
+     * allow the lowest bit to be a one because that indicates a
+     * SmallInt.   So rotate it up one bit.
+     */
+    ptrdiff_t offset = ((top_int - oop_int)/BytesPerWord) << 1;
+
+    //info("oop=%p, top=%p", oop, memoryTop);
+
+    if(offset > UINT32_MAX) {
+        error("Object pointer offset is greater than UINT32_MAX!");
+    }
+
+    if(offset < 0) {
+        error("Object pointer offset is less than zero!");
+    }
+
+    return (uint32_t)offset;
+}
+
+
+struct object *offset_to_addr_cell(uint32_t raw_offset)
+{
+    intptr_t offset = (intptr_t)raw_offset;
+    intptr_t top_int = (intptr_t)memoryTop;
+    intptr_t oop_int = top_int - ((offset >> 1) * BytesPerWord);
+
+    return (struct object *)oop_int;
+}
 
 
 
