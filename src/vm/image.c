@@ -16,6 +16,7 @@
 //static int dump_image(void);
 //static struct object *dump_object(int obj_num, struct object *obj);
 
+static int fileIn_version_5(FILE *img);
 static int fileIn_version_4(FILE *img);
 static int fileIn_version_3(FILE *img);
 static int fileIn_version_2(FILE *img);
@@ -25,6 +26,8 @@ static int fileIn_version_0(FILE *img);
 
 static void readTag(FILE *fp, int *type, int *val);
 static struct object *objectRead(FILE *fp);
+
+static struct object *fixup_class(int obj_num, struct object *obj);
 
 static struct object *FIX_OFFSET(struct object *old, int64_t offset);
 
@@ -48,13 +51,66 @@ static int put_image_header(FILE *img, uint32_t version);
 
 
 
-static int indirtop = 0;
-static struct object **indirArray;
+static int obj_table_size = 0;
+static struct object **obj_table;
 
 /*
  * Image handling entry points.  These will dispatch on the actual
  * version of the image (at least fileIn()).
  */
+
+/*
+
+New image format process:
+
+write image:
+ scan objects low addr to high.
+    for each object, add entry in unused space
+       struct object *obj_table[];
+    put object address into obj_table[]
+ write total number of objects out.
+ find object index of globals and write it out << 1
+ find object index of other special objects and write them out.
+ scan objects low addr to high again
+   write object size out as uint32_t.
+   get class pointer
+   do binary search in obj_table to find index of class object.data
+   write out object table index << 1 as class object index.
+   if bin obj
+     write out binary data in single bytes.
+   if normal obj
+     for each instance data object
+       find the object index and write it out << 1
+
+read image
+
+  read in # of objects.
+  set up obj_table in unused space, zero out.
+  read in special object indexes and set them aside.
+  read in object data
+    store current object pointer in obj_table[];
+    read in object size
+    if object is bin object
+      read in single bytes.
+      calculate total number of cells.
+    if object is normal object
+      read in object indexes into data[] fields
+        take care to handle object pointers vs. SmallInts
+      calculate total number of cells.
+    bump allocation pointer to next object
+    increment object index
+  once all objects are read in
+  scan through object memory low to high.
+    lookup all struct object * data (class and data[]) in the obj_table and replace the index with the pointer
+      take care with SmallInt vs. object index (SmallInt has low bit set)
+
+  update the special object indexes to pointers
+
+  load the special classes from the globals object.data
+
+*/
+
+
 
 
 int fileIn(FILE *fp)
@@ -87,6 +143,11 @@ int fileIn(FILE *fp)
         return fileIn_version_4(fp);
         break;
 
+    case IMAGE_VERSION_5:
+        info("Reading in version 5 image.");
+        return fileIn_version_5(fp);
+        break;
+
     default:
         error("Unsupported image file version: ", header.version);
         break;
@@ -96,31 +157,56 @@ int fileIn(FILE *fp)
 }
 
 
-
-
-struct object *write_object(FILE *img, int obj_num, struct object *obj)
+/* binary search for the object in the table. */
+int obj_to_index(struct object *obj)
 {
-    int size;
+    int low,high,mid;
 
-    (void)obj_num;
+    low = 0;
+    high = obj_table_size;
 
-    /* check for illegal object */
-    if (obj == NULL) {
-        error("Fixing up a null object!");
+    lst_assert(obj != NULL, "obj_to_index() passed %p object pointer!", obj);
+
+    while(low < high) {
+        mid = (low + high) / 2;
+
+        if((intptr_t)obj == (intptr_t)(obj_table[mid])) {
+            return mid;
+        } else {
+            if((intptr_t)obj < (intptr_t)(obj_table[mid])) {
+                high = mid;
+            } else {
+                low = mid + 1;
+            }
+        }
     }
 
-    /*
-     * all objects have the same header:
-     *    size + flags (32-bits)
-     *    class OOP
-     */
+    /* fatal if we did not find the object. */
+    error("object %p not found in object table!", obj);
 
-    /* get the size, we'll use it regardless of the object type. */
-    size = SIZE(obj);
-    write_uint32(img, (uint32_t)obj->size); /* we write the unconverted size with the flags! */
+    return -1;
+}
+
+
+
+#define TO_INDEX(o) ((uint32_t)(uintptr_t)((IS_SMALLINT(o) ? (smallint_t)(intptr_t)(o): (smallint_t)(obj_to_index(o) << 1))))
+
+
+void write_object(FILE *img, int obj_num, struct object *obj)
+{
+    smallint_t size;
+
+    /* check for illegal object */
+    lst_assert(obj != NULL, "Object %d is a null pointer!", obj_num);
+
+    /* The size is the object header and is small enough to write directly. */
+    write_uint32(img, (uint32_t)(uintptr_t)(obj->size)); /* we write the unconverted size with the flags! */
 
     /* now we write out the class. */
-    write_uint32(img, addr_to_offset_4(obj->class));
+    write_uint32(img, TO_INDEX(obj->class));
+
+    /* we need the number of elements in the object, but this is type-specific. */
+    size = SIZE(obj);
 
     /* byte objects, write out the data. */
     if (IS_BINOBJ(obj)) {
@@ -130,68 +216,97 @@ struct object *write_object(FILE *img, int obj_num, struct object *obj)
         for(int i=0; i < size; i++) {
             write_uint8(img, bobj->bytes[i]);
         }
-
-        /* convert size into BytesPerWord units. */
-        size = TO_BPW(size);
     } else {
         /* ordinary objects */
 //        info("Object %d is an ordinary object with %d fields.", obj_num, size);
 
         /* write the instance variables of the object */
         for (int i = 0; i < size; i++) {
-            /* we only need to stitch this up if it is not a SmallInt. */
-            if(obj->data[i] != NULL) {
-                if(IS_SMALLINT(obj->data[i])) {
-                    write_uint32(img, (uint32_t)(intptr_t)obj->data[i]);
-                } else {
-                    write_uint32(img, addr_to_offset_4(obj->data[i]));
-                }
-            } else {
-                /* fix up the value to the nil object. */
-                write_uint32(img, (uint32_t)0);
+            /* fix up NULL to nilObject. */
+            if(obj->data[i] == NULL) {
+                obj->data[i] = nilObject;
             }
+
+            write_uint32(img, TO_INDEX(obj->data[i]));
         }
     }
-
-    /* size is number of fields plus header plus class */
-    return WORDSUP(obj, size + 2);
 }
 
 
-
-
 #define WRITE_OOP(o) \
-    info("object at " #o "=%p (%u)", o, addr_to_offset_4(o)); \
-    write_uint32(img, addr_to_offset_4(o));
+    info("object at " #o "=%p (%u)", o, TO_INDEX(o)); \
+    write_uint32(img, TO_INDEX(o));
 
 
-/* version 4 */
+/* version 5 */
 int fileOut(FILE *img)
 {
-    struct image_header header;
-    uint32_t totalCells = 0;
     struct object *current_obj = NULL;
     int object_count = 0;
 
-    info("starting to file out image version %d.", IMAGE_VERSION_4);
-
-    memset(&header, 0, sizeof(header));
+    info("starting to file out image version %d.", IMAGE_VERSION_5);
 
     /* force a GC to clean up the image */
     do_gc();
 
+    /* point the object table base to the unused memory space. */
+    if(inSpaceOne) {
+        obj_table = (struct object **)spaceTwo;
+    } else {
+        obj_table = (struct object **)spaceOne;
+    }
+
+    /*
+     * build the object table from low to high addresses.
+     * It is easier to do this because we know that the first object
+     * starts at memoryPointer since allocation grows downward.  If we wanted
+     * to start at the top we would have to scan downward to find what looked
+     * like an object header.   Not reliable.
+     */
+    object_count = 0;
+    current_obj = memoryPointer;
+    while((intptr_t)current_obj < (intptr_t)memoryTop) {
+        smallint_t size = SIZE(current_obj);
+
+        /* save this object's address. */
+        obj_table[object_count] = current_obj;
+
+        /* adjust the pointer to the next object. */
+        current_obj = WORDSUP(current_obj, 2 + (IS_BINOBJ(current_obj) ? TO_BPW(size) : size));
+
+        object_count++;
+    }
+
+    /* save the top of the object table. */
+    obj_table_size = object_count;
+
+    /* start writing out the image. */
+
     /* FIXME - catch return value! */
-    put_image_header(img, IMAGE_VERSION_4);
+    put_image_header(img, IMAGE_VERSION_5);
 
     /* how much to write?   FIXME - check for overflow! */
-    totalCells = (uint32_t)(((intptr_t)memoryTop - (intptr_t)memoryPointer)/(intptr_t)BytesPerWord);
-
-    info("image contains %u total cells.", totalCells);
+    info("image contains %d objects.", object_count);
 
     /* save the amount out to the image. */
-    write_uint32(img, totalCells);
+    write_uint32(img, (uint32_t)object_count);
 
-    /* write out core objects. */
+    /*
+     * write out objects from the top down.
+     *
+     * Yes, we scan up to build the table and scan down to
+     * to save out the image.   We want to read in the image
+     * in top to bottom order so that we can bump the allocation
+     * pointer in order to make room for the new object.  This
+     * allows us to fill in the object table as we read in the
+     * image.
+     */
+    for(--object_count; object_count >= 0; object_count--) {
+        current_obj = obj_table[object_count];
+        write_object(img, object_count, current_obj);
+    }
+
+    /* write out core objects. Do this after we dumped the rest of the image. */
 
     WRITE_OOP(globalsObject);
     WRITE_OOP(initialMethod);
@@ -200,23 +315,176 @@ int fileOut(FILE *img)
         WRITE_OOP(binaryMessages[i]);
     }
 
-    WRITE_OOP(badMethodSym);
+    //dump_image();
 
-    /* write out object image. */
-    current_obj = memoryPointer;
-    while((intptr_t)current_obj < (intptr_t)memoryTop) {
-        //info("Writing out object %p", current_obj);
-        current_obj = write_object(img, object_count, current_obj);
-        object_count++;
+    return (int)obj_table_size;
+}
+
+
+
+#define FROM_INDEX(i) ((IS_SMALLINT(i) ? (struct object *)(intptr_t)(i) : obj_table[((uint32_t)(intptr_t)(i)) >> 1]))
+
+
+#define READ_OOP_5(o) \
+    read_uint32(img, (uint32_t*)&index); \
+    info("object at " #o "=%p (%d)", FROM_INDEX(index), index); \
+    o = FROM_INDEX(index); \
+    staticRoots[staticRootTop++] = &(o);
+
+
+int fileIn_version_5(FILE *img)
+{
+    struct object *obj = NULL;
+    int index = 0;
+    smallint_t size = 0;
+    smallint_t class_index = 0;
+
+    info("Starting to file in image version %d.", IMAGE_VERSION_5);
+
+    /* determine where the obj_table lives */
+    if(inSpaceOne) {
+        obj_table = (struct object **)spaceTwo;
+    } else {
+        obj_table = (struct object **)spaceOne;
     }
 
-    info("image contains %d objects.", object_count);
+    /* How many objects to read? */
+    read_uint32(img, (uint32_t*)&obj_table_size);
+
+    info("image contains %d objects.", obj_table_size);
+
+    /* The objects are in top to bottom order.  Scan in the objects with indexes then fix them up. */
+    obj = memoryTop;
+    for(index = obj_table_size - 1; index >= 0; index--) {
+        /* get the size word. */
+        read_uint32(img, (uint32_t *)&size);
+
+        /* get the class index. */
+        read_uint32(img, (uint32_t *)&class_index);
+
+        /* calculate the position in memory and save it in the table. */
+        obj_table[index] = obj = WORDSDOWN(obj, 2 + ((size & (smallint_t)FLAG_BIN) ? TO_BPW(size/4) : (size/4)));
+
+        /* cast so that we do not sign extend. */
+        obj->size = (intptr_t)(uint32_t)size;
+        obj->class = (struct object *)(intptr_t)(uint32_t)class_index;
+
+        /* get direct size. */
+        size = SIZE(obj);
+
+        /* is it a binary object? */
+        if(IS_BINOBJ(obj)) {
+            /* size is in bytes. */
+
+            /* alias for convenience. */
+            struct byteObject *bobj = (struct byteObject *)obj;
+
+            info("Object %d(%d) is a binary object of %d bytes.", index, (int)((intptr_t*)memoryTop - (intptr_t*)bobj), size);
+
+            /* read in the data for the binary object. */
+            for(int byte_index = 0; byte_index < size; byte_index++) {
+//                uint8_t tmp;
+//
+//                read_uint8(img, &tmp);
+//
+//                info("   read %x at position %d", tmp, byte_index);
+//
+//                bobj->bytes[byte_index] = tmp;
+                read_uint8(img, &(bobj->bytes[byte_index]));
+            }
+        } else {
+            /* regular object. */
+
+            info("Object %d(%d) is an object of %d fields.", index, (int)((intptr_t*)memoryTop - (intptr_t*)obj), size);
+
+            /* read in the data for the object. */
+            for(int data_index = 0; data_index < size; data_index++) {
+                uint32_t tmp_obj_index = 0;
+
+                read_uint32(img, &tmp_obj_index);
+                obj->data[data_index] = (struct object *)(uintptr_t)tmp_obj_index;
+            }
+        }
+    }
+
+    /* set the bump pointer */
+    memoryPointer = obj;
+
+    info("memoryTop = %p", memoryTop);
+    info("memoryPointer = %p", memoryPointer);
+
+    /* now fix up the pointers. */
+    for(index = 0; index < obj_table_size; index++) {
+        obj = obj_table[index];
+        size = SIZE(obj);
+
+        if(IS_BINOBJ(obj)) {
+            /* only need to fix up the class. */
+            obj->class = FROM_INDEX(obj->class);
+        } else {
+            struct mobject *mobj = (struct mobject *)obj;
+
+            for(int data_index = 0; data_index <= size; data_index++) {
+                mobj->data[data_index] = (struct mobject *)FROM_INDEX(mobj->data[data_index]);
+            }
+        }
+    }
+
+    /* read in core objects. */
+    READ_OOP_5(globalsObject);
+    READ_OOP_5(initialMethod);
+
+    for(int i=0; i < 3; i++) {
+        READ_OOP_5(binaryMessages[i]);
+    }
+
+    READ_OOP_5(badMethodSym);
+
+    /* lookup up everything from globals. */
+    nilObject = lookupGlobal("nil");
+    staticRoots[staticRootTop++] = &nilObject;
+
+    trueObject = lookupGlobal("true");
+    staticRoots[staticRootTop++] = &trueObject;
+
+    falseObject = lookupGlobal("false");
+    staticRoots[staticRootTop++] = &falseObject;
+
+    SmallIntClass = lookupGlobal("SmallInt");
+    staticRoots[staticRootTop++] = &SmallIntClass;
+
+    IntegerClass = lookupGlobal("Integer");
+    staticRoots[staticRootTop++] = &IntegerClass;
+
+    ArrayClass = lookupGlobal("Array");
+    staticRoots[staticRootTop++] = &ArrayClass;
+
+    BlockClass = lookupGlobal("Block");
+    staticRoots[staticRootTop++] = &BlockClass;
+
+    ContextClass = lookupGlobal("Context");
+    staticRoots[staticRootTop++] = &ContextClass;
+
+    /* useful classes */
+    StringClass = lookupGlobal("String");
+    staticRoots[staticRootTop++] = &StringClass;
+
+    ByteArrayClass = lookupGlobal("ByteArray");
+    staticRoots[staticRootTop++] = &ByteArrayClass;
+
+    /* fix up any dangling or old references to classes. */
+//    info("Fix up dangling classes.");
+//    obj = memoryPointer;
+//    index=0;
+//    while((intptr_t)obj < (intptr_t)memoryTop) {
+//        obj = fixup_class(index, obj);
+//        index++;
+//    }
 
     //dump_image();
 
-    return (int)totalCells;
+    return (int)obj_table_size;
 }
-
 
 
 
@@ -469,7 +737,7 @@ struct object *read_object_4(FILE *img, int obj_num, struct object *obj)
     if (IS_BINOBJ(obj)) {
         struct byteObject *bobj = (struct byteObject *) obj;
 
-        info("Object %d is a binary object of %d bytes.", obj_num, size);
+        info("Object %d(%d) is a binary object of %d bytes.", obj_num, (int)((intptr_t*)memoryTop - (intptr_t*)obj), size);
 
         for(int i=0; i < size; i++) {
             read_uint8(img, &(bobj->bytes[i]));
@@ -479,7 +747,7 @@ struct object *read_object_4(FILE *img, int obj_num, struct object *obj)
         size = TO_BPW(size);
     } else {
         /* ordinary objects */
-        info("Object %d is an ordinary object with %d fields.", obj_num, size);
+        info("Object %d(%d) is an ordinary object with %d fields.", obj_num, (int)((intptr_t*)memoryTop - (intptr_t*)obj), size);
 
         /* read the instance variables of the object */
         for (int i = 0; i < size; i++) {
@@ -514,7 +782,7 @@ struct object *read_object_4(FILE *img, int obj_num, struct object *obj)
 
 #define READ_OOP_4(o) \
     read_uint32(img, &obj_offset); \
-    info("object at " #o "=%p (%u)", offset_to_addr_cell(obj_offset), obj_offset); \
+    info("object at " #o "=%p (%d)", offset_to_addr_cell(obj_offset), (int)((intptr_t*)memoryTop - (intptr_t*)offset_to_addr_cell(obj_offset))); \
     o = offset_to_addr_cell(obj_offset); \
     staticRoots[staticRootTop++] = &(o);
 
@@ -628,11 +896,11 @@ int fileIn_version_1(FILE *fp)
 
     /* use the currently unused space for the indir pointers */
     if (inSpaceOne) {
-        indirArray = (struct object * *) spaceTwo;
+        obj_table = (struct object * *) spaceTwo;
     } else {
-        indirArray = (struct object * *) spaceOne;
+        obj_table = (struct object * *) spaceOne;
     }
-    indirtop = 0;
+    obj_table_size = 0;
 
     /* read the base objects from the image file. */
 
@@ -680,11 +948,11 @@ int fileIn_version_1(FILE *fp)
     staticRoots[staticRootTop++] = &ContextClass;
 
     /* clean up after ourselves. */
-    memset((void *) indirArray,(int)0,(size_t)((size_t)spaceSize * sizeof(struct object)));
+    memset((void *) obj_table,(int)0,(size_t)((size_t)spaceSize * sizeof(struct object)));
 
-    fprintf(stderr, "Read in %d objects.\n", indirtop);
+    fprintf(stderr, "Read in %d objects.\n", obj_table_size);
 
-    return indirtop;
+    return obj_table_size;
 }
 
 
@@ -827,11 +1095,11 @@ int fileIn_version_0(FILE *fp)
 
     /* use the currently unused space for the indir pointers */
     if (inSpaceOne) {
-        indirArray = (struct object * *) spaceTwo;
+        obj_table = (struct object * *) spaceTwo;
     } else {
-        indirArray = (struct object * *) spaceOne;
+        obj_table = (struct object * *) spaceOne;
     }
-    indirtop = 0;
+    obj_table_size = 0;
 
     /* read in the image file */
     fprintf(stderr, "reading nil object.\n");
@@ -885,11 +1153,11 @@ int fileIn_version_0(FILE *fp)
     staticRoots[staticRootTop++] = &badMethodSym;
 
     /* clean up after ourselves. */
-    memset((void *) indirArray,(int)0,(size_t)((size_t)spaceSize * sizeof(struct object)));
+    memset((void *) obj_table,(int)0,(size_t)((size_t)spaceSize * sizeof(struct object)));
 
-    fprintf(stderr, "Read in %d objects.\n", indirtop);
+    fprintf(stderr, "Read in %d objects.\n", obj_table_size);
 
-    return indirtop;
+    return obj_table_size;
 }
 
 
@@ -984,7 +1252,7 @@ struct object *objectRead(FILE *fp)
         size = val;
 //        newObj = staticAllocate(size);
         newObj = gcalloc(size);
-        indirArray[indirtop++] = newObj;
+        obj_table[obj_table_size++] = newObj;
         newObj->class = objectRead(fp);
 
         /* get object field values. */
@@ -1006,7 +1274,7 @@ struct object *objectRead(FILE *fp)
         size = val;
 //        newObj = staticIAllocate(size);
         newObj = gcialloc(size);
-        indirArray[indirtop++] = newObj;
+        obj_table[obj_table_size++] = newObj;
         bnewObj = (struct byteObject *) newObj;
         for (i = 0; i < size; i++) {
             /* FIXME check for EOF! */
@@ -1017,16 +1285,16 @@ struct object *objectRead(FILE *fp)
         break;
 
     case LST_POBJ_TYPE: /* previous object */
-        if(val>indirtop) {
+        if(val>obj_table_size) {
             error("Out of bounds previous object index %d",val);
         }
 
-        newObj = indirArray[val];
+        newObj = obj_table[val];
 
         break;
 
     case LST_NIL_TYPE:  /* object 0 (nil object) */
-        newObj = indirArray[0];
+        newObj = obj_table[0];
         break;
 
     default:

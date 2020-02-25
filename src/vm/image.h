@@ -18,6 +18,7 @@ struct image_header {
 #define IMAGE_VERSION_2 (2)
 #define IMAGE_VERSION_3 (3)
 #define IMAGE_VERSION_4 (4)
+#define IMAGE_VERSION_5 (5)
 
 
 /* image reading/writing */
