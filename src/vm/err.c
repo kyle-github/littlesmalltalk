@@ -37,7 +37,6 @@ void info(const char *templ, ...)
 }
 
 
-
 void backTrace(struct object * aContext)
 {
     printf("back trace\n");
