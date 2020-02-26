@@ -23,9 +23,9 @@ typedef struct {
     struct object *method;
 } method_cache_entry;
 
-#define METHOD_CACHE_SIZE (703)
+#define METHOD_CACHE_MASK (0x3FF)
 
-extern method_cache_entry cache[METHOD_CACHE_SIZE];
+extern method_cache_entry cache[];
 
 extern int64_t cache_hit;
 extern int64_t cache_miss;

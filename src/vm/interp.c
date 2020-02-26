@@ -31,6 +31,17 @@
 
 
 
+/* relatively stupid but hopefully fast.   Assume the lower 16 to 24 bits are the most important. */
+static inline smallint_t lookup_hash(void *arg1, void *arg2, uint32_t mask)
+{
+    uintptr_t arg1_u = (uintptr_t)arg1;
+    uintptr_t arg2_u = (uintptr_t)arg2;
+    uintptr_t tmp1 = (arg1_u >> 8) ^ (arg1_u << 4);
+
+    return (smallint_t)(uint32_t)((tmp1 ^ arg2_u) & mask);
+}
+
+
 /*
  * Debugging
  */
@@ -524,8 +535,8 @@ findMethodFromSymbol:
                  bytePtr(receiverClass->data[nameInClass]),
                  bytePtr(messageSelector));
 checkCache:
-            low = (int)((((intptr_t) messageSelector) +
-                         ((intptr_t) receiverClass)) % METHOD_CACHE_SIZE);
+//            low = (int)((((uintptr_t) messageSelector) + ((uintptr_t) receiverClass)) % (uintptr_t)METHOD_CACHE_SIZE);
+            low = lookup_hash(messageSelector, receiverClass, METHOD_CACHE_MASK);
             if ((cache[low].name == messageSelector) &&
                 (cache[low].class == receiverClass)) {
                 method = cache[low].method;
@@ -1302,3 +1313,5 @@ doReturn2:
         }
     }
 }
+
+
