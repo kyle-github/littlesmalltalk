@@ -7,10 +7,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-struct image_header {
-    char magic[4];
-    uint32_t version;
-} __attribute__((packed));
 
 #define IMAGE_VERSION_ERROR (0xFFFFFFFF)
 #define IMAGE_VERSION_0 (0)
