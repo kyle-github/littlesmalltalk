@@ -419,7 +419,7 @@ struct object *gcalloc(int size)
         sysErrorStr("out of memory", "gcalloc");
     }
 
-    SETSIZE(result, size);
+    SET_SIZE(result, size);
 
     while (size > 0) {
         result->data[--size] = nilObject;
@@ -433,10 +433,10 @@ struct byteObject *binaryAlloc(int size)
     int osize;
     struct byteObject *result;
 
-    osize = (size + BytesPerWord - 1) / BytesPerWord;
+    osize = TO_WORDS(size);
     result = (struct byteObject *) gcalloc(osize);
-    SETSIZE(result, size);
-    result->size |= FLAG_BIN;
+    SET_SIZE(result, size);
+    SET_BINOBJ(result);
     return result;
 }
 
@@ -1637,7 +1637,7 @@ struct object *insert(struct object *array, int index, struct object *val)
     /*
      * Now copy the rest
      */
-    for (; j < SIZE(array); ++j) {
+    for (; j < (int)SIZE(array); ++j) {
         o->data[i++] = array->data[j];
     }
     return (o);
@@ -1927,7 +1927,7 @@ void objectWrite(FILE * fp, struct object *obj)
     writtenObjects[imageTop++] = obj;
 
     /* byte objects */
-    if (obj->size & FLAG_BIN) {
+    if (IS_BINOBJ(obj)) {
         struct byteObject *bobj = (struct byteObject *) obj;
 
         size = (int)SIZE(obj);

@@ -97,7 +97,7 @@ void backTrace(struct object * aContext)
         arguments = aContext->data[argumentsInContext];
         if (NOT_NIL(arguments)) {
             printf("(");
-            for (i = 0; i < SIZE(arguments); i++) {
+            for (i = 0; i < (int)SIZE(arguments); i++) {
                 if(i > 0) { printf(", "); }
                 if(arguments->data[i]) {
                     struct object *arg = arguments->data[i];

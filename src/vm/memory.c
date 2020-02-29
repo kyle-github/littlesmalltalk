@@ -113,10 +113,9 @@ void gcinit(int staticsz, int dynamicsz)
     and moves it, and everything it points to, into the new space
     The returned value is the address in the new space.
 */
-struct mobject {
-    uint size;
-    struct mobject *data[];
-};
+
+#define IN_NEWSPACE(obj) (((intptr_t)obj >= (intptr_t)memoryBase) && ((intptr_t)obj <= (intptr_t)memoryTop))
+#define IN_OLDSPACE(obj) (((intptr_t)obj >= (intptr_t)oldBase) && ((intptr_t)obj <= (intptr_t)oldTop))
 
 static struct object *gc_move(struct mobject *ptr)
 {
@@ -146,22 +145,20 @@ static struct object *gc_move(struct mobject *ptr)
                  * to the new space (other than indirections) then
                  * something is very wrong
                  */
-            } else if ((old_address >=
-                        (struct mobject *) memoryBase)
-                       && (old_address <= (struct mobject *) memoryTop)) {
+            } else if (IN_NEWSPACE(old_address)) {
                 sysErrorInt("GC invariant failure -- address in new space",
                             (intptr_t)old_address);
 
                 /* else see if not  in old space */
-            } else if ((old_address < (struct mobject *) oldBase) ||
-                       (old_address > (struct mobject *) oldTop)) {
+            } else if (!IN_OLDSPACE(old_address)) {
                 replacement = old_address;
                 old_address = previous_object;
                 break;
 
                 /* else see if already forwarded */
-            } else if (old_address->size & FLAG_GCDONE)  {
-                if (old_address->size & FLAG_BIN) {
+            } else if (IS_GCDONE(old_address))  {
+                if (IS_BINOBJ(old_address)) {
+                    /* reuse class element. */
                     replacement = old_address->data[0];
                 } else {
                     sz = SIZE(old_address);
@@ -171,22 +168,23 @@ static struct object *gc_move(struct mobject *ptr)
                 break;
 
                 /* else see if binary object */
-            } else if (old_address->size & FLAG_BIN) {
+            } else if (IS_BINOBJ(old_address)) {
                 int isz;
 
                 isz = SIZE(old_address);
-                sz = (isz + BytesPerWord - 1)/BytesPerWord;
+                sz = TO_WORDS(isz);
                 memoryPointer = WORDSDOWN(memoryPointer,
                                           sz + 2);
                 new_address = (struct mobject *)memoryPointer;
-                SETSIZE(new_address, isz);
-                new_address->size |= FLAG_BIN;
+                SET_SIZE(new_address, isz);
+                SET_BINOBJ(new_address);
+                /* FIXME - use memcpy */
                 while (sz) {
                     new_address->data[sz] =
                         old_address->data[sz];
                     sz--;
                 }
-                old_address->size |= FLAG_GCDONE;
+                SET_GCDONE(old_address);
                 new_address->data[0] = previous_object;
                 previous_object = old_address;
                 old_address = old_address->data[0];
@@ -199,8 +197,8 @@ static struct object *gc_move(struct mobject *ptr)
                 memoryPointer = WORDSDOWN(memoryPointer,
                                           sz + 2);
                 new_address = (struct mobject *)memoryPointer;
-                SETSIZE(new_address, sz);
-                old_address->size |= FLAG_GCDONE;
+                SET_SIZE(new_address, sz);
+                SET_GCDONE(old_address);
                 new_address->data[sz] = previous_object;
                 previous_object = old_address;
                 old_address = old_address->data[sz];
@@ -247,8 +245,8 @@ static struct object *gc_move(struct mobject *ptr)
                     new_address->data[sz--] = 0;
                 }
 
-                SETSIZE(old_address, sz);
-                old_address->size |= FLAG_GCDONE;
+                SET_SIZE(old_address, sz);
+                SET_GCDONE(old_address);
                 new_address->data[sz] = previous_object;
                 previous_object = old_address;
                 old_address = old_address->data[sz];
@@ -324,10 +322,10 @@ struct object *gcollect(int sz)
 
     /* then see if there is room for allocation */
     memoryPointer = WORDSDOWN(memoryPointer, sz + 2);
-    if (memoryPointer < memoryBase) {
+    if ((intptr_t)memoryPointer < (intptr_t)memoryBase) {
         sysErrorInt("insufficient memory after garbage collection", sz);
     }
-    SETSIZE(memoryPointer, sz);
+    SET_SIZE(memoryPointer, sz);
 
     return(memoryPointer);
 }
@@ -371,7 +369,7 @@ struct object *gcalloc(int sz)
     if (memoryPointer < memoryBase) {
         return gcollect(sz);
     }
-    SETSIZE(memoryPointer, sz);
+    SET_SIZE(memoryPointer, sz);
     return(memoryPointer);
 }
 # endif
@@ -381,10 +379,10 @@ struct object *gcialloc(int sz)
     int trueSize;
     struct object *result;
 
-    trueSize = (sz + BytesPerWord - 1) / BytesPerWord;
+    trueSize = TO_WORDS(sz);
     result = gcalloc(trueSize);
-    SETSIZE(result, sz);
-    result->size |= FLAG_BIN;
+    SET_SIZE(result, sz);
+    SET_BINOBJ(result);
     return result;
 }
 
@@ -1124,14 +1122,14 @@ static void walk(struct object *base, struct object *top,
          * Don't have to worry about instance variables
          * if it's a binary format.
          */
-        if (op->size & FLAG_BIN) {
+        if (IS_BINOBJ(op)) {
             int trueSize;
 
             /*
              * Skip size/class, and enough words to
              * contain the binary bytes.
              */
-            trueSize = (sz + BytesPerWord - 1) / BytesPerWord;
+            trueSize = TO_WORDS(sz);
             opnext = WORDSUP(op, trueSize + 2);
             continue;
         }

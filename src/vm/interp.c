@@ -259,14 +259,14 @@ static int bulkReplace(struct object *dest, struct object *start,
     /*
      * Range check
      */
-    if ((SIZE(dest) < istop) || (SIZE(src) < (irepStart + count))) {
+    if ((SIZE(dest) < (uint32_t)istop) || (SIZE(src) < (uint32_t)(irepStart + count))) {
         return(1);
     }
 
     /*
      * If both source and dest are binary, do a bcopy()
      */
-    if ((src->size & FLAG_BIN) && (dest->size & FLAG_BIN)) {
+    if (IS_BINOBJ(src) && IS_BINOBJ(dest)) {
         /*
          * Do it.
          */
@@ -277,7 +277,7 @@ static int bulkReplace(struct object *dest, struct object *start,
     /*
      * If not both regular storage, fail
      */
-    if ((src->size & FLAG_BIN) || (dest->size & FLAG_BIN)) {
+    if (IS_BINOBJ(src) || IS_BINOBJ(dest)) {
         return(1);
     }
 
@@ -524,8 +524,8 @@ findMethodFromSymbol:
                  bytePtr(receiverClass->data[nameInClass]),
                  bytePtr(messageSelector));
 checkCache:
-            low = (int)((((intptr_t) messageSelector) +
-                         ((intptr_t) receiverClass)) % METHOD_CACHE_SIZE);
+            low = (int)((((uintptr_t) messageSelector) +
+                         ((uintptr_t) receiverClass)) % (uintptr_t)METHOD_CACHE_SIZE);
             if ((cache[low].name == messageSelector) &&
                 (cache[low].class == receiverClass)) {
                 method = cache[low].method;
@@ -755,7 +755,7 @@ checkCache:
                 low = integerValue(op)-1;
                 returnedValue = stack->data[--stackTop];
                 /* Bounds check */
-                if ((low < 0) || (low >= SIZE(returnedValue))) {
+                if ((low < 0) || (low >= (int)SIZE(returnedValue))) {
                     stackTop -= 1;
                     goto failPrimitive;
                 }
@@ -797,7 +797,7 @@ checkCache:
                 high = integerValue(returnedValue->data[argumentLocationInBlock]);
                 temporaries = returnedValue->data[temporariesInBlock];
                 low -= 2;
-                x = (temporaries ? (SIZE(temporaries) - high) : 0);
+                x = (temporaries ? ((int)SIZE(temporaries) - high) : 0);
                 if (low >= x) {
                     stackTop -= (low+1);
                     goto failPrimitive;
@@ -936,8 +936,7 @@ checkCache:
             case 21:    /* string at */
                 low = integerValue(stack->data[--stackTop])-1;
                 returnedValue = stack->data[--stackTop];
-                if ((low < 0) ||
-                    (low >= SIZE(returnedValue))) {
+                if ((low < 0) || (low >= (int)SIZE(returnedValue))) {
                     goto failPrimitive;
                 }
                 low = bytePtr(returnedValue)[low];
@@ -947,8 +946,7 @@ checkCache:
             case 22:    /* string at put */
                 low = integerValue(stack->data[--stackTop])-1;
                 returnedValue = stack->data[--stackTop];
-                if ((low < 0) ||
-                    (low >= SIZE(returnedValue))) {
+                if ((low < 0) || (low >= (int)SIZE(returnedValue))) {
                     stackTop -= 1;
                     goto failPrimitive;
                 }
@@ -971,7 +969,7 @@ checkCache:
             case 24:    /* array at */
                 low = integerValue(stack->data[--stackTop])-1;
                 returnedValue = stack->data[--stackTop];
-                if ((low < 0) || (low >= SIZE(returnedValue))) {
+                if ((low < 0) || (low >= (int)SIZE(returnedValue))) {
                     goto failPrimitive;
                 }
                 returnedValue = returnedValue->data[low];

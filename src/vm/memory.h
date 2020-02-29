@@ -38,7 +38,7 @@
 /* ints must be at least 32-bit in size! */
 
 struct object {
-    int size;
+    uintptr_t header;
     struct object *class;
     struct object *data[];
 };
@@ -49,15 +49,28 @@ struct object {
 */
 
 struct byteObject {
-    int size;
+    uintptr_t header;
     struct object *class;
     uint8_t bytes[];
 };
+
+/*
+ * Used for GC.  Exposed here to keep all the
+ * object definitions in one place.
+ */
+
+struct mobject {
+    uintptr_t header;
+    struct mobject *data[];
+};
+
 
 #define BytesPerWord ((int)(sizeof (intptr_t)))
 #define bytePtr(x) (((struct byteObject *) x)->bytes)
 #define WORDSUP(ptr, amt) ((struct object *)(((char *)(ptr)) + ((amt) * BytesPerWord)))
 #define WORDSDOWN(ptr, amt) WORDSUP(ptr, 0 - (amt))
+
+#define TO_WORDS(isz) (((isz) + BytesPerWord - 1)/BytesPerWord)
 
 /*
  * SmallInt objects are used to represent short integers.  They are
@@ -77,11 +90,19 @@ struct byteObject {
 /*
  * The "size" field is the top 30 bits; the bottom two are flags
  */
-#define SIZE(op) ((((struct object *)(op))->size) / 4)  /* let the compiler optimize to shift left. */
-#define SETSIZE(op, val) (((struct object *)(op))->size = ((val) * 4)) /* let the compiler optimize to shift right. */
+#define SIZE(op) ((uint32_t)(((struct object *)(op))->header) >> 2)
+#define SET_SIZE(op, val) (((struct object *)(op))->header = (uintptr_t)((uint32_t)(val) << 2))
+
+/* handle the other flags in the header. */
 #define FLAG_GCDONE (0x01)
+#define IS_GCDONE(o) (((struct object *)(o))->header & (uintptr_t)FLAG_GCDONE)
+#define SET_GCDONE(o) (((struct object *)(o))->header |= (uintptr_t)FLAG_GCDONE)
+
 #define FLAG_BIN (0x02)
-#define IS_BINOBJ(x) (((struct object *)(x))->size & FLAG_BIN)
+#define IS_BINOBJ(o) (((struct object *)(o))->header & (uintptr_t)FLAG_BIN)
+#define SET_BINOBJ(o) (((struct object *)(o))->header |= (uintptr_t)FLAG_BIN)
+
+#define NOT_NIL(o) ((o) && ((o) != nilObject))
 
 /*
     memoryBase holds the pointer to the current space,
@@ -124,9 +145,9 @@ extern int strsymcomp(const char *left, struct object *right);
 extern int isDynamicMemory(struct object *);
 extern int fileOut(FILE *fp);
 
-#define gcalloc(sz) (((memoryPointer = WORDSDOWN(memoryPointer, (sz) + 2)) < \
-                      memoryBase) ? gcollect(sz) : \
-                     (SETSIZE(memoryPointer, (sz)), memoryPointer))
+#define gcalloc(sz) (((intptr_t)(memoryPointer = WORDSDOWN(memoryPointer, (sz) + 2)) < \
+                      (intptr_t)memoryBase) ? gcollect(sz) : \
+                     (SET_SIZE(memoryPointer, (sz)), memoryPointer))
 
 #ifndef gcalloc
 extern struct object *gcalloc(int);

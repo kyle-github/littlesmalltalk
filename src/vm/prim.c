@@ -235,14 +235,14 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
 
         /* Make sure we're populating an array of bytes */
         returnedValue = args->data[1];
-        if ((returnedValue->size & FLAG_BIN) == 0) {
+        if (!IS_BINOBJ(returnedValue)) {
             *failed = 1;
             break;
         }
 
         /* Sanity check on I/O count */
         i = integerValue(args->data[2]);
-        if ((i < 0) || (i > SIZE(returnedValue))) {
+        if ((i < 0) || (i > (int)SIZE(returnedValue))) {
             *failed = 1;
             break;
         }
@@ -266,14 +266,14 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
 
         /* Make sure we're writing an array of bytes */
         returnedValue = args->data[1];
-        if ((returnedValue->size & FLAG_BIN) == 0) {
+        if (!IS_BINOBJ(returnedValue)) {
             *failed = 1;
             break;
         }
 
         /* Sanity check on I/O count */
         i = integerValue(args->data[2]);
-        if ((i < 0) || (i > SIZE(returnedValue))) {
+        if ((i < 0) || (i > (int)SIZE(returnedValue))) {
             *failed = 1;
             break;
         }
@@ -309,13 +309,13 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
 
     case 150:	/* match substring in a string. Return index of substring or fail. */
         /* make sure we've got strings */
-        if((args->data[0]->size & FLAG_BIN) == 0) {
+        if(!IS_BINOBJ(args->data[0])) {
             printf("#position: failed, first arg is not a binary object.\n");
             *failed = 1;
             break;
         }
 
-        if((args->data[1]->size & FLAG_BIN) == 0) {
+        if(!IS_BINOBJ(args->data[1])) {
             printf("#position: failed, second arg is not a binary object.\n");
             *failed = 1;
             break;
@@ -582,12 +582,12 @@ void getUnixString(char * to, int size, struct object * from)
 struct object * stringToUrl(struct byteObject * from)
 {
     int i,j;
-    struct byteObject *newStr = (struct byteObject *)0;
+    struct byteObject *newStr = NULL;
     int new_size = 0;
     int bad_chars = 0;
-    int fsize = from->size >> 2;
-    char *from_ptr = (char *)from->bytes;
-    char *to_ptr = (char *)0;
+    int fsize = SIZE(from);
+    char *from_ptr = (char *)bytePtr(from);
+    char *to_ptr = NULL;
     char c;
 
     /* count bad chars */
@@ -656,12 +656,12 @@ struct object * stringToUrl(struct byteObject * from)
 struct object * urlToString(struct byteObject * from)
 {
     int i,j;
-    struct byteObject *newStr = (struct byteObject *)0;
+    struct byteObject *newStr = NULL;
     int new_size = 0;
     int url_chars = 0;
-    int fsize = from->size >> 2;
-    char *from_ptr = (char *)from->bytes;
-    char *to_ptr = (char *)0;
+    int fsize = (int)SIZE(from);
+    char *from_ptr = (char *)bytePtr(from);
+    char *to_ptr = NULL;
     int is_hex=0;
     int hex_val;
     char c;
@@ -693,7 +693,7 @@ struct object * urlToString(struct byteObject * from)
 
     /* OK, now done with allocation, get the from string back */
     from = (struct byteObject *)rootStack[--rootTop];
-    from_ptr = (char *)from->bytes;
+    from_ptr = (char *)bytePtr(from);
 
     /* Did allocation succeed? */
     if(NULL == newStr) {
@@ -703,7 +703,7 @@ struct object * urlToString(struct byteObject * from)
 
     /* copy the characters */
     j = 0;
-    to_ptr = (char *)newStr->bytes;
+    to_ptr = (char *)bytePtr(newStr);
     is_hex = 0;
 
     for(i=0; i<fsize && j<new_size; i++) {
