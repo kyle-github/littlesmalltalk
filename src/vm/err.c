@@ -62,23 +62,73 @@ void info(const char *templ, ...)
 void backTrace(struct object * aContext)
 {
     printf("back trace\n");
-    while (aContext && (aContext != nilObject)) {
-        struct object * arguments;
+    while (NOT_NIL(aContext)) {
+        struct object *method = aContext->data[methodInContext];
+        struct object *class;
+        struct object *symbol;
+        struct object *arguments;
         int i;
-        printf("message %s ",
-               bytePtr(aContext->data[methodInContext]
-                       ->data[nameInMethod]));
+
+        if(NOT_NIL(method)) {
+            class = method->data[classInMethod];
+
+            if(NOT_NIL(class)) {
+                symbol = class->data[nameInClass];
+
+                if(NOT_NIL(symbol)) {
+                    printf("class %.*s", SIZE(symbol), bytePtr(symbol));
+                } else {
+                    printf("nil class name");
+                }
+            } else {
+                printf("nil class");
+            }
+
+            symbol = method->data[nameInMethod];
+            if(NOT_NIL(symbol)) {
+                printf(" #%.*s ", SIZE(symbol), bytePtr(symbol));
+            } else {
+                printf(" nil symbol ");
+            }
+        } else {
+            printf(" nil method ");
+        }
+
         arguments = aContext->data[argumentsInContext];
-        if (arguments && (arguments != nilObject)) {
+        if (NOT_NIL(arguments)) {
             printf("(");
-            for (i = 0; i < SIZE(arguments); i++)
-                printf("%s%s",
-                       ((i == 0) ? "" : ", "),
-                       bytePtr(arguments->data[i]->class->
-                               data[nameInClass]));
+            for (i = 0; i < SIZE(arguments); i++) {
+                if(i > 0) { printf(", "); }
+                if(arguments->data[i]) {
+                    struct object *arg = arguments->data[i];
+
+                    if(IS_SMALLINT(arg)) {
+                        printf("%d", integerValue(arg));
+                    } else {
+                        class = CLASS(arg);
+
+                        if(NOT_NIL(class)) {
+                            symbol = class->data[nameInClass];
+
+                            if(NOT_NIL(symbol)) {
+                                printf("%.*s", SIZE(symbol), bytePtr(symbol));
+                            } else {
+                                printf("nil class name");
+                            }
+                        } else {
+                            printf("nil class");
+                        }
+                    }
+                } else {
+                    printf("nil arg");
+                }
+            }
+
             printf(")");
         }
         printf("\n");
+
         aContext = aContext->data[previousContextInContext];
     }
 }
+
