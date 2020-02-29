@@ -38,9 +38,9 @@ add_executable(lst "${PROJECT_SOURCE_DIR}/src/vm/main.c"
 
 
 # gather the Smalltalk sources.
-file(GLOB_RECURSE st_sources CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/src/smalltalk/system/*.st")
+#file(GLOB_RECURSE st_sources CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/src/smalltalk/system/*.st")
 
-message("Smalltalk source files: ${st_sources}.")
+#message("Smalltalk source files: ${st_sources}.")
 
 # set up the boot strapping target to make the image.
 
