@@ -149,6 +149,16 @@ static struct object *lookupMethod(struct object *selector, struct object *class
     struct object *dict, *keys, *vals, *val;
     int low, high, mid;
 
+    if(!selector || selector == nilObject) {
+        info("lookupMethod(): selector is NULL or nil!");
+        return NULL;
+    }
+
+    if(!class || class == nilObject) {
+        info("lookupMethod(): lookup called with selector %.*s on NULL/nil class object!", SIZE(selector), bytePtr(selector));
+        return NULL;
+    }
+
     /*
      * Scan upward through the class hierarchy
      */
@@ -192,7 +202,7 @@ static struct object *lookupMethod(struct object *selector, struct object *class
     /*
      * Sorry, couldn't find a method
      */
-    return(NULL);
+    return NULL;
 }
 
 
