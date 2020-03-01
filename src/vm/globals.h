@@ -40,6 +40,7 @@ extern struct object *IntegerClass;
 extern struct object *SmallIntClass;
 extern struct object *StringClass;
 extern struct object *SymbolClass;
+extern struct object *UndefinedClass;
 
 /*
     The following are the objects with ``hard-wired''

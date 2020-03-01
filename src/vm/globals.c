@@ -34,6 +34,7 @@ struct object *IntegerClass = NULL;
 struct object *SmallIntClass = NULL;
 struct object *StringClass = NULL;
 struct object *SymbolClass = NULL;
+struct object *UndefinedClass = NULL;
 
 
 
