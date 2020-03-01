@@ -99,26 +99,3 @@ struct object *lookupGlobal(char *name)
 
 
 
-
-
-/*
-    method cache for speeding method lookup
-*/
-
-method_cache_entry cache[METHOD_CACHE_SIZE];
-
-int64_t cache_hit = 0;
-int64_t cache_miss = 0;
-
-
-
-
-/* flush dynamic methods when GC occurs */
-void flushCache(void)
-{
-    int i;
-
-    for (i = 0; i < METHOD_CACHE_SIZE; i++) {
-        cache[i].name = 0;  /* force refill */
-    }
-}

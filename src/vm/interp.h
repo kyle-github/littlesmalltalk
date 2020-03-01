@@ -13,6 +13,11 @@
 //extern int64_t cache_miss;
 
 extern int execute(struct object *aProcess, int ticks);
+extern void flushCache(void);
+
+extern int64_t cache_hit;
+extern int64_t cache_miss;
+
 
 /*
     symbolic definitions for the bytecodes

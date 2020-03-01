@@ -15,23 +15,6 @@ extern int64_t time_usec();
 /* used all over for looking up classes and other globals */
 extern struct object *lookupGlobal(char *name);
 
-/* method cache */
-
-typedef struct {
-    struct object *name;
-    struct object *class;
-    struct object *method;
-} method_cache_entry;
-
-#define METHOD_CACHE_SIZE (703)
-
-extern method_cache_entry cache[METHOD_CACHE_SIZE];
-
-extern int64_t cache_hit;
-extern int64_t cache_miss;
-
-extern void flushCache(void);
-
 
 /* global debugging flag */
 extern unsigned int debugging;
@@ -74,10 +57,12 @@ extern struct object *SymbolClass;
 /*
     A Context has:
         * method (which has bytecode pointer)
+        * arguments - an array
+        * temporaries - an array
+        * stack - an array
         * bytecode offset (an integer)
-        * arguments
-        * temporaries and stack
         * stack pointer
+        * a reference to the previous context in the chain.
 */
 
 # define contextSize 7

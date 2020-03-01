@@ -8,6 +8,7 @@
 #include <string.h>
 #include "../vm/memory.h"
 #include "../vm/globals.h"
+#include "../vm/image.h"
 #include "../vm/interp.h"
 
 #ifdef gcalloc
@@ -19,7 +20,7 @@ static struct object *lookupGlobalName(char *name, int ok_missing);
 static int parseStatement(void), parseExpression(void), parseTerm(void);
 static struct object *newOrderedArray(void), *newArray(int size);
 static void sysError(const char *a);
-static void sysErrorInt(const char *a, intptr_t b);
+//static void sysErrorInt(const char *a, intptr_t b);
 static void sysErrorStr(const char *a, const char *b);
 
 static int parseError(char *msg);
@@ -95,12 +96,12 @@ static void dictionaryInsert(struct object *dict, struct object *index,
 static void MethodCommand(void);
 static void RawClassCommand(void);
 static void ClassCommand(void);
-static int getIntSize(int val);
-static void writeTag(FILE * fp, int type, int val);
+//static int getIntSize(int val);
+//static void writeTag(FILE * fp, int type, int val);
 
 
 
-static void objectWrite(FILE * fp, struct object *obj);
+//static void objectWrite(FILE * fp, struct object *obj);
 static struct object *symbolTreeInsert(struct object *base,
                                        struct object *symNode);
 static struct object *fixSymbols(void);
@@ -135,10 +136,6 @@ struct object *IntegerClass;
 struct object *SymbolClass;
 
 static struct object *currentClass;
-
-#define imageMaxNumberOfObjects 5000
-static struct object *writtenObjects[imageMaxNumberOfObjects];
-static int imageTop = 0;
 
 
 
@@ -235,7 +232,7 @@ int main(int argc, char **argv)
     objectWrite(fd, newSymbol("+"));
     objectWrite(fd, newSymbol("doesNotUnderstand:"));
     fclose(fd);
-    printf("%d objects written\n", imageTop);
+//    printf("%d objects written\n", imageTop);
     printf("bye for now!\n");
     return (0);
 }
@@ -386,11 +383,11 @@ void sysError(const char *a)
 }
 
 
-void sysErrorInt(const char *a, intptr_t b)
-{
-    fprintf(stderr, "unrecoverable system error: %s %ld\n", a, b);
-    exit(1);
-}
+//void sysErrorInt(const char *a, intptr_t b)
+//{
+//    fprintf(stderr, "unrecoverable system error: %s %ld\n", a, b);
+//    exit(1);
+//}
 
 
 void sysErrorStr(const char *a, const char *b)
@@ -1812,151 +1809,6 @@ void ClassCommand(void)
     free(super);
     free(ivars);
 }
-
-/* ------------------------------------------------------------- */
-
-/*	writing image   */
-
-/* ------------------------------------------------------------- */
-
-
-/* return the size in bytes necessary to accurately handle the integer
-value passed.  Note that negatives will always get BytesPerWord size.
-This will return zero if the passed value is less than LST_SMALL_TAG_LIMIT.
-In this case, the value can be packed into the tag it self when read or
-written. */
-
-int getIntSize(int val)
-{
-    int i;
-
-    /* negatives need sign extension.  this is a to do. */
-    if (val < 0)
-        return BytesPerWord;
-
-    if (val < LST_SMALL_TAG_LIMIT)
-        return 0;
-
-    /* how many bytes? */
-
-    for (i = 1; i < BytesPerWord; i++)
-        if (val < (1 << (8 * i)))
-            return i;
-
-    return BytesPerWord;
-}
-
-
-
-
-/**
-* writeTag
-*
-* This write a special tag to the output file.  This tag has three bits
-* for a type field and five bits for either a value or a size.
-*/
-
-void writeTag(FILE * fp, int type, int val)
-{
-    int tempSize;
-    int i;
-
-    /* get the number of bytes required to store the value */
-    tempSize = getIntSize(val);
-
-    if (tempSize) {
-        /*write the tag byte */
-        fputc((type | tempSize | LST_LARGE_TAG_FLAG), fp);
-
-        for (i = 0; i < tempSize; i++)
-            fputc((val >> (8 * i)), fp);
-    } else {
-        fputc((type | val), fp);
-    }
-}
-
-
-
-/**
-* objectWrite
-*
-* This routine writes an object to the output image file.
-*/
-
-void objectWrite(FILE * fp, struct object *obj)
-{
-    int i;
-    int size;
-    int intVal;
-
-    if (imageTop > imageMaxNumberOfObjects) {
-        fprintf(stderr, "too many indirect objects\n");
-        exit(1);
-    }
-
-    /* check for illegal object */
-    if (obj == 0) {
-        sysErrorInt("writing out a null object", (intptr_t) obj);
-    }
-
-    /* small integer?, if so, treat this specially as this is not a pointer */
-
-    if (IS_SMALLINT(obj)) {	/* SmallInt */
-        intVal = integerValue(obj);
-
-        /* if it is negative, we use the positive value and use a special tag. */
-        if (intVal < 0)
-            writeTag(fp, LST_NINT_TYPE, -intVal);
-        else
-            writeTag(fp, LST_PINT_TYPE, intVal);
-        return;
-    }
-
-    /* see if already written */
-    for (i = 0; i < imageTop; i++)
-        if (obj == writtenObjects[i]) {
-            if (i == 0)
-                writeTag(fp, LST_NIL_TYPE, 0);
-            else {
-                writeTag(fp, LST_POBJ_TYPE, i);
-            }
-            return;
-        }
-
-    /* not written, do it now */
-    writtenObjects[imageTop++] = obj;
-
-    /* byte objects */
-    if (IS_BINOBJ(obj)) {
-        struct byteObject *bobj = (struct byteObject *) obj;
-
-        size = (int)SIZE(obj);
-
-        /* write the header tag */
-        writeTag(fp, LST_BARRAY_TYPE, size);
-
-        /*write out bytes */
-        for (i = 0; i < size; i++)
-            fputc(bobj->bytes[i], fp);
-
-        objectWrite(fp, obj->class);
-
-        return;
-    }
-
-    /* ordinary objects */
-    size = SIZE(obj);
-
-    writeTag(fp, LST_OBJ_TYPE, size);
-
-    /* write the class first */
-    objectWrite(fp, obj->class);
-
-    /* write the instance variables of the object */
-    for (i = 0; i < size; i++)
-        objectWrite(fp, obj->data[i]);
-}
-
 
 
 
