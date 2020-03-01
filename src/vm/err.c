@@ -8,25 +8,25 @@
 #include "err.h"
 #include "interp.h"
 
-void sysError(char * a)
-{
-    fprintf(stderr,"unrecoverable system error: %s\n", a);
-    exit(1);
-}
-
-
-void sysErrorInt(char * a, intptr_t b)
-{
-    fprintf(stderr,"unrecoverable system error: %s %ld\n", a, b);
-    exit(1);
-}
-
-
-void sysErrorStr(char * a, char * b)
-{
-    fprintf(stderr,"unrecoverable system error: %s %s\n", a, b);
-    exit(1);
-}
+//void sysError(char * a)
+//{
+//    fprintf(stderr,"unrecoverable system error: %s\n", a);
+//    exit(1);
+//}
+//
+//
+//void sysErrorInt(char * a, intptr_t b)
+//{
+//    fprintf(stderr,"unrecoverable system error: %s %ld\n", a, b);
+//    exit(1);
+//}
+//
+//
+//void sysErrorStr(char * a, char * b)
+//{
+//    fprintf(stderr,"unrecoverable system error: %s %s\n", a, b);
+//    exit(1);
+//}
 
 
 
@@ -62,6 +62,23 @@ void info(const char *templ, ...)
 void backTrace(struct object * aContext)
 {
     printf("back trace\n");
+
+    /* check if we actually got a Context. */
+    if(NOT_NIL(aContext)) {
+        if(! isDynamicMemory(aContext)) {
+            info("  Cannot dump context, pointer is not to a live object!");
+            return;
+
+            if(aContext->class != ContextClass) {
+                info("  Cannot dump context, pointer is not to a Context object!");
+                return;
+            }
+        }
+    } else {
+        info("   Cannot dump context, point is NULL or points to the nil object!");
+        return;
+    }
+
     while (NOT_NIL(aContext)) {
         struct object *method = aContext->data[methodInContext];
         struct object *class;

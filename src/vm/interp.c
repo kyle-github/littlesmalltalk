@@ -257,7 +257,7 @@ static struct object *do_Integer(int op, struct object *low, struct object *high
         return((l == h) ? trueObject : falseObject);
 
     default:
-        sysErrorInt("Invalid op table jump", op);
+        error("do_Integer(): Invalid primitive integer operation %d!", op);
     }
     return(NULL);
 }
@@ -459,7 +459,7 @@ int execute(struct object *aProcess, int ticks)
                 stack->data[stackTop++] = falseObject;
                 break;
             default:
-                sysErrorInt("unknown push constant", low);
+                error("unknown push constant %d", low);
             }
             break;
 
@@ -578,12 +578,12 @@ checkCache:
                 method = lookupMethod(messageSelector, receiverClass);
                 if (!method) {
                     if (messageSelector == badMethodSym) {
-                        sysError("doesNotUnderstand: missing");
+                        backTrace(context);
+                        error("doesNotUnderstand: missing");
                     }
                     op = gcalloc(2);
                     op->class = ArrayClass;
-                    op->data[receiverInArguments] =
-                        arguments->data[receiverInArguments];
+                    op->data[receiverInArguments] = arguments->data[receiverInArguments];
                     op->data[1] = messageSelector;
                     arguments = op;
                     messageSelector = badMethodSym;
@@ -632,8 +632,7 @@ checkCache:
             /* now go off and build the new context */
             context = gcalloc(contextSize);
             context->class = ContextClass;
-            temporaries = context->data[temporariesInContext]
-                          = rootStack[--rootTop];
+            temporaries = context->data[temporariesInContext] = rootStack[--rootTop];
             stack = context->data[stackInContext] = rootStack[--rootTop];
             stack->class = ArrayClass;
             context->data[stackTopInContext] = newInteger(0);
@@ -678,7 +677,7 @@ checkCache:
                 }
                 break;
             default:
-                sysErrorInt("unimplemented SendUnary", low);
+                error("unimplemented SendUnary %d", low);
             }
             stack->data[stackTop++] = returnedValue;
             break;
@@ -1323,13 +1322,13 @@ doReturn2:
                 return(ReturnBreak);
 
             default:
-                sysErrorInt("invalid doSpecial", low);
+                error("invalid doSpecial %d!", low);
                 break;
             }
             break;
 
         default:
-            sysErrorInt("invalid bytecode", high);
+            error("invalid bytecode %d!", high);
             break;
         }
     }

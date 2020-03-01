@@ -93,9 +93,7 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
                 }
             }
             if (i >= FILEMAX) {
-                sysError("too many open files");
-                fclose(fp);
-                *failed = 1;
+                error("too many open files");
             } else {
                 returnedValue = newInteger(i);
                 filePointers[i] = fp;
@@ -155,24 +153,24 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
         /* first get the size needed for the temporary path */
         tmpFileNameSize = (size_t)snprintf(tmpFileName, 0, "%s/lsteditXXXXXX", tmpdir) + 1;
 
-        printf("temporary file name size is %d\n", (int)tmpFileNameSize);
+        info("temporary file name size is %d", (int)tmpFileNameSize);
 
         /* allocate it on the stack and write the string into it. */
         tmpFileName = (char *)alloca((size_t)tmpFileNameSize + 1);
         memset(tmpFileName, 0, tmpFileNameSize + 1);
         snprintf(tmpFileName, tmpFileNameSize + 1, "%s/lsteditXXXXXX", tmpdir);
 
-        printf("DEBUG: temp file name pattern: %s\n",tmpFileName);
+        info("DEBUG: temp file name pattern: %s",tmpFileName);
 
         rc = mkstemp(tmpFileName);
         /* copy string to file */
         if(rc == -1) {
-            sysErrorInt("error making temporary file name: errno=", errno);
+            error("error making temporary file name: errno=%d!", errno);
         }
 
         fp = fopen(tmpFileName, "w");
         if (fp == NULL) {
-            sysError("cannot open temp edit file");
+            error("cannot open temp edit file %s!", tmpFileName);
         }
 
         j = SIZE(args->data[0]);
@@ -195,13 +193,13 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
         rc = system(cmdBuf);
 
         if(rc == -1) {
-            sysErrorInt("error starting editor: %ld",(intptr_t)rc);
+            error("error starting editor: %d!",(int)errno);
         }
 
         /* copy back to new string */
         fp = fopen(tmpFileName, "r");
         if (fp == NULL) {
-            sysError("cannot open temp edit file");
+            error("cannot open temp edit file %s!", tmpFileName);
         }
 
         /* get length of file */
@@ -407,19 +405,19 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
             sock = socket(PF_INET,SOCK_STREAM,0);
 
             if(sock == -1) {
-                sysError("Cannot open TCP socket.");
+                error("Cannot open TCP socket.");
             }
 
             sock_opt = 1;
 
             if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char*)&sock_opt, sizeof(sock_opt))) {
                 close(sock);
-                sysError("Error setting socket reuse option!");
+                error("Error setting socket reuse option!");
             }
 
             /* return the value anyway */
 
-            printf("opened socket %d.\n", sock);
+            info("opened socket %d.", sock);
 
             returnedValue = newInteger(sock);
 
@@ -429,7 +427,7 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
             sock = integerValue(args->data[1]);
 
             if(listen(sock, 10) == -1) {
-                sysError("Error listening on TCP socket.");
+                error("Error listening on TCP socket.");
             }
 
             /* set the maximum size */
@@ -439,8 +437,7 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
 
             sock = accept(sock, &myAddr, &myAddrSize);
             if(sock == -1) {
-                printf("errno: %d\nsock: %d\n",errno,sock);
-                sysError("Error accepting on TCP socket.");
+                error("Error accepting on TCP socket.  Errno=%d", errno);
             }
 
             returnedValue = newInteger(sock);
@@ -450,7 +447,7 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
         case 2: /* close a socket */
             sock = integerValue(args->data[1]);
 
-            printf("closing socket %d.\n", sock);
+            info("closing socket %d.", sock);
 
             close(sock);
 
@@ -466,13 +463,13 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
             getUnixString(netBuffer, sizeof(netBuffer)-1, args->data[2]);
             port = integerValue(args->data[3]);
 
-            printf("Socket: %d\n",sock);
-            printf("IP: %s\n",netBuffer);
-            printf("Port: %d\n",port);
+            info("Socket: %d",sock);
+            info("IP: %s",netBuffer);
+            info("Port: %d",port);
 
             /* convert the string IP to a network representation */
             if(inet_aton((const char *)netBuffer,&iaddr) == 0) {
-                sysError("Illegal address passed to bind primitive.");
+                error("Illegal address passed to bind primitive.");
             }
 
             /* build a sockaddr_in struct */
@@ -482,7 +479,7 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
             sin.sin_addr = iaddr;
 
             if(bind(sock,(struct sockaddr *)&sin,sizeof(sin)) == -1) {
-                sysError("Cannot bind TCP socket to address.");
+                error("Cannot bind TCP socket to address.");
             }
 
             returnedValue = trueObject;
@@ -498,7 +495,7 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
 
             i = (int)read(sock,(void *)socketReadBuffer,(size_t)SOCK_BUF_SIZE);
             if((i < 0) && (errno != EAGAIN) && (errno != EWOULDBLOCK)) {
-                printf("socket read returned an error: %d (%d)!\n", i, errno);
+                info("socket read returned an error: %d (%d)!", i, errno);
                 *failed = 1;
                 break;
             }
@@ -538,14 +535,14 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
             break;
 
         default: /* unknown socket primitive */
-            sysErrorInt("Unknown socket primitive operation: ",subPrim);
+            error("Unknown socket primitive operation: %d!",subPrim);
             break;
         }
 
         break;
 
     default:
-        sysErrorInt("unknown primitive", primitiveNumber);
+        error("unknown primitive %d!", primitiveNumber);
     }
     return(returnedValue);
 }
@@ -560,7 +557,7 @@ void getUnixString(char * to, int size, struct object * from)
     struct byteObject * bobj = (struct byteObject *) from;
 
     if (fsize >= size) {
-        sysErrorInt("getUnixString(): String too long for buffer!", fsize);
+        error("getUnixString(): String too long, %d, for buffer, %d bytes!", fsize, size);
     }
 
     for (i = 0; i < fsize; i++) {
@@ -617,7 +614,7 @@ struct object * stringToUrl(struct byteObject * from)
 
     /* did allocation succeed? */
     if(NULL == newStr) {
-        sysError("stringToUrl(): unable to allocate string!");
+        error("stringToUrl(): unable to allocate string!");
         return nilObject;
     }
 
@@ -697,7 +694,7 @@ struct object * urlToString(struct byteObject * from)
 
     /* Did allocation succeed? */
     if(NULL == newStr) {
-        sysError("urlToString(): unable to allocate string!");
+        error("urlToString(): unable to allocate string!");
         return nilObject;
     }
 

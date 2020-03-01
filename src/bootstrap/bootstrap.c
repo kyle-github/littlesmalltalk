@@ -6,10 +6,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../vm/memory.h"
+#include "../vm/err.h"
 #include "../vm/globals.h"
 #include "../vm/image.h"
 #include "../vm/interp.h"
+#include "../vm/memory.h"
 
 #ifdef gcalloc
 #   undef gcalloc
@@ -19,9 +20,9 @@
 static struct object *lookupGlobalName(char *name, int ok_missing);
 static int parseStatement(void), parseExpression(void), parseTerm(void);
 static struct object *newOrderedArray(void), *newArray(int size);
-static void sysError(const char *a);
+//static void sysError(const char *a);
 //static void sysErrorInt(const char *a, intptr_t b);
-static void sysErrorStr(const char *a, const char *b);
+//static void sysErrorStr(const char *a, const char *b);
 
 static int parseError(char *msg);
 static struct object *gcalloc(int size);
@@ -152,7 +153,6 @@ int main(int argc, char **argv)
     FILE *fd;
     struct object *bootMethod = 0;
     int i;
-    struct image_header header;
 
     printf("%d arguments\n", argc);
     for (i = 0; i < argc; i++) {
@@ -169,14 +169,12 @@ int main(int argc, char **argv)
         printf("Image output file: %s\n", output_file);
     }
 
-    memset(&header, 0, sizeof header);
-
     /* big bang -- create the first classes */
     bigBang();
     addArgument("self");
 
     if ((fin = fopen(image_source, "r")) == NULL) {
-        sysErrorStr("file in error", image_source);
+        error("file in error for file %s!", image_source);
     }
 
     /* then read the image source file */
@@ -198,7 +196,7 @@ int main(int argc, char **argv)
         } else if (strcmp(tokenBuffer, "END") == 0) {
             break;
         } else {
-            sysErrorStr("unknown command ", tokenBuffer);
+            error("unknown command %s!", tokenBuffer);
         }
     }
 
@@ -212,18 +210,11 @@ int main(int argc, char **argv)
     checkGlobals();
 
     if ((fd = fopen(output_file, "w")) == NULL) {
-        sysErrorStr("file out error", output_file);
+        error("file out error for file %s!", output_file);
     }
 
     printf("starting to file out\n");
-
-    header.magic[0] = 'l';
-    header.magic[1] = 's';
-    header.magic[2] = 't';
-    header.magic[3] = '!';
-    header.version = IMAGE_VERSION_1;
-
-    fwrite(&header, sizeof header, 1, fd);
+    put_image_version(fd, IMAGE_VERSION_1);
 
     objectWrite(fd, globalValues);
     objectWrite(fd, bootMethod);
@@ -233,7 +224,7 @@ int main(int argc, char **argv)
     objectWrite(fd, newSymbol("doesNotUnderstand:"));
     fclose(fd);
 //    printf("%d objects written\n", imageTop);
-    printf("bye for now!\n");
+    info("bye for now!");
     return (0);
 }
 
@@ -376,11 +367,11 @@ int parseError(char *msg)
     return 0;
 }
 
-void sysError(const char *a)
-{
-    fprintf(stderr, "unrecoverable system error: %s\n", a);
-    exit(1);
-}
+//void sysError(const char *a)
+//{
+//    fprintf(stderr, "unrecoverable system error: %s\n", a);
+//    exit(1);
+//}
 
 
 //void sysErrorInt(const char *a, intptr_t b)
@@ -390,12 +381,12 @@ void sysError(const char *a)
 //}
 
 
-void sysErrorStr(const char *a, const char *b)
-{
-    fprintf(stderr, "unrecoverable system error: %s %s\n", a, b);
-    exit(1);
-}
-
+//void sysErrorStr(const char *a, const char *b)
+//{
+//    fprintf(stderr, "unrecoverable system error: %s %s\n", a, b);
+//    exit(1);
+//}
+//
 
 /* ------------------------------------------------------------- */
 
@@ -413,7 +404,7 @@ struct object *gcalloc(int size)
 
     result = malloc(sizeof(struct object) + (sizeof(struct object *) * (uint)size));
     if (!result) {
-        sysErrorStr("out of memory", "gcalloc");
+        error("gcalloc(): out of memory!");
     }
 
     SET_SIZE(result, size);
@@ -454,7 +445,7 @@ void addGlobalName(char *name, struct object *value)
 
     newName = strdup(name);
     if (!newName) {
-        sysErrorStr("out of memory", "newname in add global");
+        error("addGlobalName(): out of memory!");
     }
     globalNames[globalTop] = newName;
     globals[globalTop] = value;
@@ -472,7 +463,7 @@ struct object *lookupGlobalName(char *name, int ok_missing)
     }
     /* not found, return 0 */
     if (!ok_missing) {
-        sysErrorStr("Missing global", name);
+        error("lookupGlobalName(): Missing global %s!", name);
     }
     return 0;
 }
@@ -756,7 +747,7 @@ struct object *newOrderedArray(void)
 
 /* ------------------------------------------------------------- */
 
-#define ByteBufferTop 512
+#define ByteBufferTop (2048)
 static unsigned char byteBuffer[ByteBufferTop];
 static int byteTop;
 
@@ -764,14 +755,14 @@ void genByte(int v)
 {
     byteBuffer[byteTop++] = (uint8_t)v;
     if (byteTop >= ByteBufferTop) {
-        sysError("too many bytecodes");
+        error("too many bytecodes");
     }
 }
 
 void genVal(int v)
 {
     if ((v < 0) || (v > 0xFFFF)) {
-        sysError("illegal value");
+        error("genVal(): illegal value %d!", v);
     }
     genByte(v & 0xFF);
     genByte(v >> 8);
@@ -780,7 +771,7 @@ void genVal(int v)
 void genValPos(int pos, int v)
 {
     if ((v < 0) || (v > 0xFFFF)) {
-        sysError("illegal value");
+        error("genValPos() illegal value %d!", v);
     }
     byteBuffer[pos] = (uint8_t)(v & 0xFF);
     byteBuffer[pos + 1] = (uint8_t)(v >> 8);
@@ -810,7 +801,7 @@ struct object *buildByteArray()
     return (struct object *) newObj;
 }
 
-#define LiteralBufferTop 60
+#define LiteralBufferTop (128)
 static struct object *litBuffer[LiteralBufferTop];
 static int litTop = 0;
 
@@ -818,8 +809,9 @@ static int litTop = 0;
 int addLiteral(struct object *a)
 {
     litBuffer[litTop++] = a;
+
     if (litTop >= LiteralBufferTop) {
-        sysError("too many literals");
+        error("too many literals");
     }
     return (int)(litTop - 1);
 }
@@ -838,7 +830,7 @@ struct object *buildLiteralArray(void)
     return result;
 }
 
-#define ArgumentBufferTop 30
+#define ArgumentBufferTop (64)
 static char *argumentNames[ArgumentBufferTop];
 static int argumentTop;
 
@@ -848,12 +840,16 @@ void addArgument(char *name)
 
     p = strdup(name);
     if (!p) {
-        sysErrorStr("malloc failure", "addArgument");
+        error("addArgument(): malloc failure");
     }
     argumentNames[argumentTop++] = p;
+
+    if(argumentTop >= ArgumentBufferTop) {
+        error("addArgument(): too many arguments!");
+    }
 }
 
-#define TempBufferTop 500
+#define TempBufferTop (500)
 static char *tempBuffer[TempBufferTop];
 static int tempTop, maxTemp;
 
@@ -863,9 +859,15 @@ void addTemporary(char *name)
 
     p = strdup(name);
     if (!p) {
-        sysErrorStr("malloc failure", "addTemporary");
+        error("addTemporary(): malloc failure!");
     }
+
     tempBuffer[tempTop++] = p;
+
+    if(tempTop >= TempBufferTop) {
+        error("addTemporary(): too many temporaries!");
+    }
+
     if (tempTop > maxTemp) {
         maxTemp = tempTop;
     }
@@ -1647,7 +1649,7 @@ struct object *insert(struct object *array, int index, struct object *val)
 void dictionaryInsert(struct object *dict, struct object *index,
                       struct object *value)
 {
-    struct object *keys = dict->data[0], *vals = dict->data[1];
+    struct object *keys = dict->data[keysInDictionary], *vals = dict->data[valuesInDictionary];
     int i, lim, res;
 
     /*
@@ -1666,7 +1668,7 @@ void dictionaryInsert(struct object *dict, struct object *index,
         } else if (res > 0) {
             continue;
         } else {
-            sysErrorStr("dictionary insert:", "duplicate key");
+            error("dictionaryInsert(): duplicate key");
         }
     }
 
@@ -1680,8 +1682,8 @@ void dictionaryInsert(struct object *dict, struct object *index,
 static void MethodCommand(void);
 static void RawClassCommand(void);
 static void ClassCommand(void);
-static int getIntSize(int val);
-static void writeTag(FILE * fp, int type, int val);
+//static int getIntSize(int val);
+//static void writeTag(FILE * fp, int type, int val);
 
 
 void MethodCommand(void)
@@ -1692,7 +1694,7 @@ void MethodCommand(void)
     readIdentifier();
     currentClass = lookupGlobalName(tokenBuffer, 1);
     if (!currentClass) {
-        sysErrorStr("unknown class in Method", tokenBuffer);
+        error("MethodCommand(): unknown class in Method %s!", tokenBuffer);
     }
 
     inputMethodText();
@@ -1736,7 +1738,7 @@ void RawClassCommand(void)
     readIdentifier();
     instClass = lookupGlobalName(tokenBuffer, 1);
     if (!instClass) {
-        sysErrorStr("can't find instance class", tokenBuffer);
+        error("can't find instance class %s!", tokenBuffer);
     }
     nClass->class = instClass;
 
@@ -1744,7 +1746,7 @@ void RawClassCommand(void)
     readIdentifier();
     supClass = lookupGlobalName(tokenBuffer, 1);
     if (!supClass) {
-        sysErrorStr("can't find super class", tokenBuffer);
+        error("can't find super class %s!", tokenBuffer);
     }
     nClass->data[parentClassInClass] = supClass;
 
@@ -1754,7 +1756,7 @@ void RawClassCommand(void)
     /* Now parse the new instance variables */
     while (*p) {
         if (!isIdentifierChar(*p)) {
-            sysErrorStr("looking for var", p);
+            error("looking for var %s", p);
         }
         readIdentifier();
         addLiteral(newSymbol(tokenBuffer));
@@ -1884,7 +1886,7 @@ static void checkGlobals(void)
     for (i = 0; i < globalTop; i++) {
         o = globals[i];
         if (!o->class) {
-            sysErrorStr("Never defined", globalNames[i]);
+            error("checkGlobals(): Class %s never defined!", globalNames[i]);
         }
     }
 }

@@ -89,7 +89,7 @@ void gcinit(int staticsz, int dynamicsz)
     spaceTwo = (struct object *)calloc((size_t)dynamicsz, sizeof(struct object));
 
     if ((staticBase == NULL) || (spaceOne == NULL) || (spaceTwo == NULL)) {
-        sysError("not enough memory for space allocations\n");
+        error("gcinit(): not enough memory for object space allocations!");
     }
 
     staticTop = staticBase + staticsz;
@@ -101,11 +101,12 @@ void gcinit(int staticsz, int dynamicsz)
     memoryTop = memoryPointer;
 
     if (debugging) {
-        printf("space one 0x%lx, top 0x%lx,"
-               " space two 0x%lx , top 0x%lx\n",
-               (intptr_t)spaceOne, (intptr_t)(spaceOne + spaceSize),
-               (intptr_t)spaceTwo, (intptr_t)(spaceTwo + spaceSize));
+        info("space one 0x%p, top 0x%p,"
+               " space two 0x%p , top 0x%p",
+               (void *)spaceOne, (void *)(spaceOne + spaceSize),
+               (void *)spaceTwo, (void *)(spaceTwo + spaceSize));
     }
+
     inSpaceOne = 1;
 }
 
@@ -149,8 +150,7 @@ static struct object *gc_move(struct mobject *ptr)
                  * something is very wrong
                  */
             } else if (IN_NEWSPACE(old_address)) {
-                sysErrorInt("GC invariant failure -- address in new space",
-                            (intptr_t)old_address);
+                error("gc_move(): GC invariant failure -- old address points to new space %p", old_address);
 
                 /* else see if not  in old space */
             } else if (!IN_OLDSPACE(old_address)) {
@@ -326,7 +326,7 @@ struct object *gcollect(int sz)
     /* then see if there is room for allocation */
     memoryPointer = WORDSDOWN(memoryPointer, sz + 2);
     if ((intptr_t)memoryPointer < (intptr_t)memoryBase) {
-        sysErrorInt("insufficient memory after garbage collection", sz);
+        error("insufficient memory after garbage collection when allocating object of size %d!", sz);
     }
     SET_SIZE(memoryPointer, sz);
 
@@ -410,8 +410,7 @@ void addStaticRoot(struct object **objp)
         }
     }
     if (staticRootTop >= STATICROOTLIMIT) {
-        sysErrorInt("addStaticRoot: too many static references",
-                    (intptr_t)objp);
+        error("addStaticRoot(): too many static references (max %d) to store object %p!", STATICROOTLIMIT, objp);
     }
     staticRoots[staticRootTop++] = objp;
 }

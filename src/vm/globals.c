@@ -49,21 +49,16 @@ int64_t time_usec()
 }
 
 
-
-
-/* look up a global entry by name */
-
-struct object *lookupGlobal(char *name)
+/* lookup dictionary entry by C string. */
+struct object *dictLookup(struct object *dict, char *name)
 {
-    struct object *dict;
     struct object *keys;
     struct object *key;
     struct object *vals;
     int low,high,mid;
     int result;
 
-    dict = globalsObject;
-    keys = dict->data[0];
+    keys = dict->data[keysInDictionary];
     low = 0;
     high = SIZE(keys);
 
@@ -82,7 +77,7 @@ struct object *lookupGlobal(char *name)
         result = strsymcomp(name,key);
 
         if (result == 0) {
-            vals = dict->data[1];
+            vals = dict->data[valuesInDictionary];
             return vals->data[mid];
         } else {
             if (result < 0) {
@@ -93,7 +88,53 @@ struct object *lookupGlobal(char *name)
         }
     }
 
-    return 0;
+    return NULL;
+}
+
+/* look up a global entry by name */
+
+struct object *lookupGlobal(char *name)
+{
+    return dictLookup(globalsObject, name);
+//    struct object *dict;
+//    struct object *keys;
+//    struct object *key;
+//    struct object *vals;
+//    int low,high,mid;
+//    int result;
+//
+//    dict = globalsObject;
+//    keys = dict->data[0];
+//    low = 0;
+//    high = SIZE(keys);
+//
+//    /*
+//    * Do a binary search through its keys, which are Symbols.
+//    */
+//    while (low < high) {
+//        mid = (low + high) / 2;
+//        key = keys->data[mid];
+//
+//        /*
+//        * If we find the key, return the
+//        * object.
+//        */
+//
+//        result = strsymcomp(name,key);
+//
+//        if (result == 0) {
+//            vals = dict->data[1];
+//            return vals->data[mid];
+//        } else {
+//            if (result < 0) {
+//                high = mid;
+//            } else {
+//                low = mid+1;
+//            }
+//        }
+//    }
+//
+//    return 0;
 }
 
 

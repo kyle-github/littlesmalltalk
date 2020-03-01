@@ -45,11 +45,8 @@ The bytes per word or size is usually stored in the lower bits */
 #define PTR_BETWEEN(p, low, high) (((intptr_t)p >= (intptr_t)low) && ((intptr_t)p < (intptr_t)high))
 
 
-
-
-
-static uint32_t get_image_version(FILE *fp);
-static void put_image_version(FILE *fp, uint32_t version);
+//static uint8_t get_image_version(FILE *fp);
+//static void put_image_version(FILE *fp, uint8_t version);
 
 static int fileIn_version_0(FILE *fp);
 static int fileIn_version_1(FILE *fp);
@@ -63,7 +60,7 @@ static int get_byte(FILE *fp);
 
 static int fileOut_version_2(FILE *fp);
 static int fileIn_version_2(FILE *fp);
-static struct object *FIX_OFFSET(struct object *old, int64_t offset);
+static struct object *fix_offset(struct object *old, int64_t offset);
 static struct object *object_fix_up(struct object *obj, int64_t offset);
 
 /* used for image pointer remapping */
@@ -88,21 +85,21 @@ static struct object **indirArray;
 
 int fileIn(FILE *fp)
 {
-    uint32_t version = get_image_version(fp);
+    uint8_t version = get_image_version(fp);
 
     switch(version) {
     case IMAGE_VERSION_0:
-        fprintf(stderr, "Reading in version 0 image.\n");
+        info("Reading in version 0 image.");
         return fileIn_version_0(fp);
         break;
 
     case IMAGE_VERSION_1:
-        fprintf(stderr, "Reading in version 1 image.\n");
+        info("Reading in version 1 image.");
         return fileIn_version_1(fp);
         break;
 
     case IMAGE_VERSION_2:
-        fprintf(stderr, "Reading in version 2 image.\n");
+        info("Reading in version 2 image.");
         return fileIn_version_2(fp);
         break;
 
@@ -351,8 +348,8 @@ void objectWrite(FILE * fp, struct object *obj)
     }
 
     /* check for illegal object */
-    if (obj == 0) {
-        sysErrorInt("writing out a null object", (intptr_t) obj);
+    if (obj == NULL) {
+        error("objectWrite(): writing out a NULL object!");
     }
 
     /* small integer?, if so, treat this specially as this is not a pointer */
@@ -439,7 +436,7 @@ struct object *objectRead(FILE *fp)
 
     switch(type) {
     case LST_ERROR_TYPE:    /* nil obj */
-        sysErrorInt("Read in a null object", (intptr_t)newObj);
+        error("objectRead(): Read in a NULL object!");
 
         break;
 
@@ -480,7 +477,7 @@ struct object *objectRead(FILE *fp)
 
     case LST_POBJ_TYPE: /* previous object */
         if(val>indirtop) {
-            sysErrorInt("Illegal previous object index",val);
+            error("Illegal previous object index %d (max %d)!",val, indirtop);
         }
 
         newObj = indirArray[val];
@@ -492,7 +489,7 @@ struct object *objectRead(FILE *fp)
         break;
 
     default:
-        sysErrorInt("Illegal tag type: ",type);
+        error("Illegal tag type %d!",type);
         break;
     }
 
@@ -524,7 +521,7 @@ static void readTag(FILE *fp, int *type, int *val)
 
     inByte = get_byte(fp);
     if (inByte == EOF) {
-        sysError("Unexpected EOF reading image file: reading tag byte.");
+        error("Unexpected EOF reading image file: reading tag byte.");
     }
 
     tempSize = (int)(inByte & LST_TAG_SIZE_MASK);
@@ -542,14 +539,14 @@ static void readTag(FILE *fp, int *type, int *val)
         tempSize = tempSize & LST_SMALL_TAG_LIMIT;
 
         if(tempSize>BytesPerWord) {
-            sysErrorInt("Error reading image file: tag value field exceeds machine word size.  Image created on another machine? Value=", tempSize);
+            error("readTag(): Error reading image file: tag value field exceeds machine word size.  Image created on another machine? Field size=%d", tempSize);
         }
 
         for(i=0; i<tempSize; i++) {
             inByte = get_byte(fp);
 
             if(inByte == EOF) {
-                sysErrorInt("Unexpected EOF reading image file: reading extended value and expecting byte count=", tempSize);
+                error("readTag(): Unexpected EOF reading image file!");
             }
 
             tmp = tmp  | (((uint)inByte & (uint)0xFF) << ((uint)8*(uint)i));
@@ -679,25 +676,25 @@ int fileIn_version_2(FILE *fp)
 
     /* everything starts with globals */
     fread(&globalsObject, sizeof globalsObject, 1, fp);
-    globalsObject = FIX_OFFSET(globalsObject, newOffset);
+    globalsObject = fix_offset(globalsObject, newOffset);
     addStaticRoot(&globalsObject);
     fprintf(stderr, "Read in globals object=%p\n", (void *)globalsObject);
 
     fread(&initialMethod, sizeof initialMethod, 1, fp);
-    initialMethod = FIX_OFFSET(initialMethod, newOffset);
+    initialMethod = fix_offset(initialMethod, newOffset);
     addStaticRoot(&initialMethod);
     fprintf(stderr, "Read in initial method=%p\n", (void *)initialMethod);
 
     fprintf(stderr, "Reading binary message objects.\n");
     for (i = 0; i < 3; i++) {
         fread(&(binaryMessages[i]), sizeof binaryMessages[i], 1, fp);
-        binaryMessages[i] = FIX_OFFSET(binaryMessages[i], newOffset);
+        binaryMessages[i] = fix_offset(binaryMessages[i], newOffset);
         addStaticRoot(&binaryMessages[i]);
         fprintf(stderr, "  Read in binary message %d=%p\n", i, (void *)binaryMessages[i]);
     }
 
     fread(&badMethodSym, sizeof badMethodSym, 1, fp);
-    badMethodSym = FIX_OFFSET(badMethodSym, newOffset);
+    badMethodSym = fix_offset(badMethodSym, newOffset);
     addStaticRoot(&badMethodSym);
     fprintf(stderr, "Read in doesNotUnderstand: symbol=%p\n", (void *)badMethodSym);
 
@@ -757,7 +754,7 @@ int fileIn_version_2(FILE *fp)
 
 
 
-struct object *FIX_OFFSET(struct object *old, int64_t offset)
+struct object *fix_offset(struct object *old, int64_t offset)
 {
     struct object *tmp;
 
@@ -771,8 +768,8 @@ struct object *FIX_OFFSET(struct object *old, int64_t offset)
 
     /* sanity checking, is the new pointer in the new memory range? */
     if(!PTR_BETWEEN(tmp, memoryPointer, memoryTop)) {
-        fprintf(stderr, "!!! old pointer=%p, offset=%ld, low bound=%p, high bound=%p, new pointer=%p\n", (void *)old, offset, (void *)memoryPointer, (void *)memoryTop, (void *)tmp);
-        sysErrorInt("!!! swizzled pointer from image does not point into new address range! oop=", (intptr_t)tmp);
+        info("!!! old pointer=%p, offset=%ld, low bound=%p, high bound=%p, new pointer=%p", (void *)old, offset, (void *)memoryPointer, (void *)memoryTop, (void *)tmp);
+        error("fix_offset(): swizzled pointer from image does not point into new address range! oop=%p", (intptr_t)tmp);
     }
 
     return tmp;
@@ -787,7 +784,7 @@ struct object *object_fix_up(struct object *obj, int64_t offset)
 
     /* check for illegal object */
     if (obj == NULL) {
-        sysErrorInt("Fixing up a null object! obj=", (intptr_t)obj);
+        error("Fixing up a null object!");
     }
 
     /* get the size, we'll use it regardless of the object type. */
@@ -799,7 +796,7 @@ struct object *object_fix_up(struct object *obj, int64_t offset)
         struct byteObject *bobj = (struct byteObject *) obj;
 
         /* fix up class offset */
-        bobj->class = FIX_OFFSET(bobj->class, offset);
+        bobj->class = fix_offset(bobj->class, offset);
 //        fprintf(stderr, "  class is object %p.\n", (void *)(bobj->class));
 
         /* fix up size, size of binary objects is in bytes! */
@@ -811,14 +808,14 @@ struct object *object_fix_up(struct object *obj, int64_t offset)
         /* fix the class first */
 //        fprintf(stderr, "  class is object %p.\n", (void *)(obj->class));
 
-        obj->class = FIX_OFFSET(obj->class, offset);
+        obj->class = fix_offset(obj->class, offset);
 
         /* write the instance variables of the object */
         for (i = 0; i < size; i++) {
             /* we only need to stitch this up if it is not a SmallInt. */
             if(obj->data[i] != NULL) {
                 if(!IS_SMALLINT(obj->data[i])) {
-                    obj->data[i] = FIX_OFFSET(obj->data[i], offset);
+                    obj->data[i] = fix_offset(obj->data[i], offset);
 //                    fprintf(stderr, "  field %d is object %p.\n", i, (void *)(obj->data[i]));
                 } else {
 //                    fprintf(stderr, "  field %d is SmallInt %d.\n", i, integerValue(obj->data[i]));
@@ -837,23 +834,61 @@ struct object *object_fix_up(struct object *obj, int64_t offset)
 
 
 
-static uint32_t get_image_version(FILE *fp)
+uint8_t get_image_version(FILE *fp)
 {
-    struct image_header header;
+    uint8_t header[IMAGE_HEADER_SIZE];
     int rc;
 
     rc = (int)fread(&header, sizeof(header), 1, fp);
 
     if(rc != 1) {
-        error("Unable to read version header data!");
+        error("get_image_version(): Unable to read version header data!");
     }
 
-    if(header.magic[0] == 'l' && header.magic[1] == 's' && header.magic[2] == 't' && header.magic[3] == '!') {
-        return header.version;
+    if(header[0] == 'l' && header[1] == 's' && header[2] == 't' && header[3] == '!') {
+        uint8_t ver = header[4];
+
+        if(ver <= IMAGE_VERSION_2) {
+            /* old version, seek past the extra 3 bytes. */
+            fseek(fp, IMAGE_HEADER_SIZE_OLD, SEEK_SET);
+        }
+
+        return ver;
     } else {
-        /* not a newer version, seek back to the start. */
+        /* not a version with a header, seek back to the start. */
         fseek(fp, 0, SEEK_SET);
         return 0;
+    }
+}
+
+
+void put_image_version(FILE *fp, uint8_t version)
+{
+    uint8_t header[IMAGE_HEADER_SIZE_OLD];
+    size_t header_size = 0;
+    int rc = 0;
+
+    header[0] = (uint8_t)'l';
+    header[1] = (uint8_t)'s';
+    header[2] = (uint8_t)'t';
+    header[3] = (uint8_t)'!';
+    header[4] = version;
+
+    if(version <= IMAGE_VERSION_2) {
+        /* add the padding. */
+        header[5] = (uint8_t)0;
+        header[6] = (uint8_t)0;
+        header[7] = (uint8_t)0;
+
+        header_size = IMAGE_HEADER_SIZE_OLD;
+    } else {
+        header_size = IMAGE_HEADER_SIZE;
+    }
+
+    rc = (int)fwrite(&header, header_size, 1, fp);
+
+    if(rc != 1) {
+        error("put_image_version(): Unable to write version header data!");
     }
 }
 
