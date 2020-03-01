@@ -50,9 +50,9 @@ The bytes per word or size is usually stored in the lower bits */
 
 static int fileIn_version_0(FILE *fp);
 static int fileIn_version_1(FILE *fp);
+static int fileOut_version_1(FILE *fp);
 static int getIntSize(int val);
 static void writeTag(FILE * fp, int type, int val);
-
 
 static struct object *objectRead(FILE *fp);
 static void readTag(FILE *fp, int *type, int *val);
@@ -115,7 +115,7 @@ int fileIn(FILE *fp)
 
 
 int fileOut(FILE *fp) {
-    return fileOut_version_2(fp);
+    return fileOut_version_1(fp);
 }
 
 
@@ -236,25 +236,69 @@ int fileIn_version_1(FILE *fp)
     falseObject = lookupGlobal("false");
     addStaticRoot(&falseObject);
 
-    SmallIntClass = lookupGlobal("SmallInt");
-    addStaticRoot(&SmallIntClass);
-
-    IntegerClass = lookupGlobal("Integer");
-    addStaticRoot(&IntegerClass);
-
     ArrayClass = lookupGlobal("Array");
     addStaticRoot(&ArrayClass);
 
     BlockClass = lookupGlobal("Block");
     addStaticRoot(&BlockClass);
 
+    ByteArrayClass = lookupGlobal("ByteArray");
+    addStaticRoot(&ByteArrayClass);
+
     ContextClass = lookupGlobal("Context");
     addStaticRoot(&ContextClass);
+
+    DictionaryClass = lookupGlobal("Dictionary");
+    addStaticRoot(&DictionaryClass);
+
+    IntegerClass = lookupGlobal("Integer");
+    addStaticRoot(&IntegerClass);
+
+    SmallIntClass = lookupGlobal("SmallInt");
+    addStaticRoot(&SmallIntClass);
+
+    StringClass = lookupGlobal("String");
+    addStaticRoot(&StringClass);
+
+    SymbolClass = lookupGlobal("Symbol");
+    addStaticRoot(&SymbolClass);
+
+    UndefinedClass = lookupGlobal("Undefined");
+    addStaticRoot(&UndefinedClass);
 
     /* clean up after ourselves. */
     memset((void *) indirArray,(int)0,(size_t)((size_t)spaceSize * sizeof(struct object)));
 
     fprintf(stderr, "Read in %d objects.\n", indirtop);
+
+    return indirtop;
+}
+
+
+
+
+int fileOut_version_1(FILE *img)
+{
+    /* use the currently unused space for the indir pointers */
+    if (inSpaceOne) {
+        indirArray = (struct object * *) spaceTwo;
+    } else {
+        indirArray = (struct object * *) spaceOne;
+    }
+    indirtop = 0;
+
+    info("Writing out image version 1.");
+
+    /* write the header. */
+    put_image_version(img, IMAGE_VERSION_1);
+
+    /* write the main objects. */
+    objectWrite(img, globalsObject);
+    objectWrite(img, initialMethod);
+    objectWrite(img, binaryMessages[0]);
+    objectWrite(img, binaryMessages[1]);
+    objectWrite(img, binaryMessages[2]);
+    objectWrite(img, badMethodSym);
 
     return indirtop;
 }
@@ -560,6 +604,8 @@ static void readTag(FILE *fp, int *type, int *val)
 
 
 
+
+
 /*
  * Version 2 Image
  */
@@ -721,27 +767,35 @@ int fileIn_version_2(FILE *fp)
     falseObject = lookupGlobal("false");
     addStaticRoot(&falseObject);
 
-    SmallIntClass = lookupGlobal("SmallInt");
-    addStaticRoot(&SmallIntClass);
-
-    IntegerClass = lookupGlobal("Integer");
-    addStaticRoot(&IntegerClass);
-
     ArrayClass = lookupGlobal("Array");
     addStaticRoot(&ArrayClass);
 
     BlockClass = lookupGlobal("Block");
     addStaticRoot(&BlockClass);
 
+    ByteArrayClass = lookupGlobal("ByteArray");
+    addStaticRoot(&ByteArrayClass);
+
     ContextClass = lookupGlobal("Context");
     addStaticRoot(&ContextClass);
 
-    /* useful classes */
+    DictionaryClass = lookupGlobal("Dictionary");
+    addStaticRoot(&DictionaryClass);
+
+    IntegerClass = lookupGlobal("Integer");
+    addStaticRoot(&IntegerClass);
+
+    SmallIntClass = lookupGlobal("SmallInt");
+    addStaticRoot(&SmallIntClass);
+
     StringClass = lookupGlobal("String");
     addStaticRoot(&StringClass);
 
-    ByteArrayClass = lookupGlobal("ByteArray");
-    addStaticRoot(&ByteArrayClass);
+    SymbolClass = lookupGlobal("Symbol");
+    addStaticRoot(&SymbolClass);
+
+    UndefinedClass = lookupGlobal("Undefined");
+    addStaticRoot(&UndefinedClass);
 
     fprintf(stderr, "Object fix up took %d usec.\n", (int)(end - start));
 
