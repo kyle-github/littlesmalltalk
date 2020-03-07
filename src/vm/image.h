@@ -9,10 +9,12 @@ extern uint8_t get_image_version(FILE *fp);
 extern void put_image_version(FILE *fp, uint8_t version);
 
 extern int fileOut(FILE *fp);
+extern int fileOut_object_version_3(FILE *fp, struct object *obj);
+
 extern int fileIn(FILE *fp);
 
 /* used for bootstrap */
-extern void objectWrite(FILE * fp, struct object *obj);
+//extern void objectWrite(FILE * fp, struct object *obj);
 
 /* image information */
 struct image_header {
@@ -35,4 +37,5 @@ struct image_header {
 #define IMAGE_VERSION_0 (0)
 #define IMAGE_VERSION_1 (1)
 #define IMAGE_VERSION_2 (2)
+#define IMAGE_VERSION_3 (3)
 

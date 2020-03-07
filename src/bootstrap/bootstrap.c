@@ -154,8 +154,10 @@ int main(int argc, char **argv)
     const char *image_source = "imageSource";
     const char *output_file = "lst.img";
     FILE *fd;
-    struct object *bootMethod = 0;
+    struct object *bootMethod = NULL;
+    struct object *specialSymbols = NULL;
     int i;
+    int num_objs = 0;
 
     printf("%d arguments\n", argc);
     for (i = 0; i < argc; i++) {
@@ -205,8 +207,48 @@ int main(int argc, char **argv)
 
     fclose(fin);
 
+    /* set up special symbols */
+    specialSymbols = newArray(4);
+    specialSymbols->data[0] = newSymbol("<");
+    specialSymbols->data[1] = newSymbol("<=");
+    specialSymbols->data[2] = newSymbol("+");
+    specialSymbols->data[3] = newSymbol("doesNotUnderstand:");
+
+    /* add important objects to globals for later lookup. */
+    if(!lookupGlobalName("specialSymbols", 1)) {
+        addGlobalName("specialSymbols", specialSymbols);
+    } else {
+        info("specialSymbols already exists!");
+    }
+
+    if(!lookupGlobalName("nil", 1)) {
+        addGlobalName("nil", nilObject);
+    } else {
+        info("nil already exists!");
+    }
+
+    if(!lookupGlobalName("true", 1)) {
+        addGlobalName("true", trueObject);
+    } else {
+        info("true already exists!");
+    }
+
+    if(!lookupGlobalName("false", 1)) {
+        addGlobalName("false", falseObject);
+    } else {
+        info("false already exists!");
+    }
+
+    if(!lookupGlobalName("boot", 1)) {
+        addGlobalName("boot", bootMethod);
+    } else {
+        info("boot already exists!");
+    }
+
     /* then create the tree of symbols */
     SymbolClass->data[symbolsInSymbol] = fixSymbols();
+
+    /* fix up globals. */
     fixGlobals();
 
     /* see if anything was never defined in the class source */
@@ -216,18 +258,24 @@ int main(int argc, char **argv)
         error("file out error for file %s!", output_file);
     }
 
-    printf("starting to file out\n");
-    put_image_version(fd, IMAGE_VERSION_1);
+    num_objs = fileOut_object_version_3(fd, globalValues);
 
-    objectWrite(fd, globalValues);
-    objectWrite(fd, bootMethod);
-    objectWrite(fd, newSymbol("<"));
-    objectWrite(fd, newSymbol("<="));
-    objectWrite(fd, newSymbol("+"));
-    objectWrite(fd, newSymbol("doesNotUnderstand:"));
+
+//    printf("starting to file out\n");
+//    put_image_version(fd, IMAGE_VERSION_3);
+//
+//    objectWrite(fd, globalValues);
+//    objectWrite(fd, bootMethod);
+//    objectWrite(fd, newSymbol("<"));
+//    objectWrite(fd, newSymbol("<="));
+//    objectWrite(fd, newSymbol("+"));
+//    objectWrite(fd, newSymbol("doesNotUnderstand:"));
+
     fclose(fd);
-//    printf("%d objects written\n", imageTop);
+
+    info("%d objects written\n", num_objs);
     info("bye for now!");
+
     return (0);
 }
 

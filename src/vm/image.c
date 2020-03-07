@@ -52,6 +52,7 @@ static int fileIn_version_0(FILE *fp);
 static int fileIn_version_1(FILE *fp);
 static int fileOut_version_1(FILE *fp);
 static int getIntSize(int val);
+static void objectWrite(FILE * fp, struct object *obj);
 static void writeTag(FILE * fp, int type, int val);
 
 static struct object *objectRead(FILE *fp);
@@ -62,6 +63,10 @@ static int fileOut_version_2(FILE *fp);
 static int fileIn_version_2(FILE *fp);
 static struct object *fix_offset(struct object *old, int64_t offset);
 static struct object *object_fix_up(struct object *obj, int64_t offset);
+
+static int fileIn_version_3(FILE *fp);
+static int fileOut_version_3(FILE *fp);
+
 
 /* used for image pointer remapping */
 static int indirtop = 0;
@@ -103,6 +108,11 @@ int fileIn(FILE *fp)
         return fileIn_version_2(fp);
         break;
 
+    case IMAGE_VERSION_3:
+        info("Reading in version 3 image.");
+        return fileIn_version_3(fp);
+        break;
+
     default:
         error("Unsupported image file version: %u.", version);
         break;
@@ -115,7 +125,7 @@ int fileIn(FILE *fp)
 
 
 int fileOut(FILE *fp) {
-    return fileOut_version_1(fp);
+    return fileOut_version_3(fp);
 }
 
 
@@ -299,6 +309,135 @@ int fileOut_version_1(FILE *img)
     objectWrite(img, binaryMessages[1]);
     objectWrite(img, binaryMessages[2]);
     objectWrite(img, badMethodSym);
+
+    return indirtop;
+}
+
+
+
+
+
+int fileIn_version_3(FILE *fp)
+{
+    int i;
+    struct object *specialSymbols = NULL;
+
+    /* use the currently unused space for the indir pointers */
+    if (inSpaceOne) {
+        indirArray = (struct object * *) spaceTwo;
+    } else {
+        indirArray = (struct object * *) spaceOne;
+    }
+    indirtop = 0;
+
+    /* read the base objects from the image file. */
+
+    info("reading globals object.");
+    globalsObject = objectRead(fp);
+    addStaticRoot(&globalsObject);
+
+    /* fix up everything from globals. */
+    info("Finding initial method.");
+//    initialMethod = objectRead(fp);
+    initialMethod = lookupGlobal("boot");
+    addStaticRoot(&initialMethod);
+
+    info("Finding special symbols.");
+    specialSymbols = lookupGlobal("specialSymbols");
+
+    binaryMessages[0] = specialSymbols->data[0];
+    addStaticRoot(&binaryMessages[0]);
+
+    binaryMessages[1] = specialSymbols->data[1];
+    addStaticRoot(&binaryMessages[1]);
+
+    binaryMessages[2] = specialSymbols->data[2];
+    addStaticRoot(&binaryMessages[2]);
+
+    badMethodSym = specialSymbols->data[3];
+    addStaticRoot(&badMethodSym);
+
+
+//    fprintf(stderr, "reading binary message objects.\n");
+//    for (i = 0; i < 3; i++) {
+//        binaryMessages[i] = objectRead(fp);
+//        addStaticRoot(&binaryMessages[i]);
+//    }
+//
+//    fprintf(stderr, "reading bad method symbol.\n");
+//    badMethodSym = objectRead(fp);
+//    addStaticRoot(&badMethodSym);
+
+    nilObject = lookupGlobal("nil");
+    addStaticRoot(&nilObject);
+
+    trueObject = lookupGlobal("true");
+    addStaticRoot(&trueObject);
+
+    falseObject = lookupGlobal("false");
+    addStaticRoot(&falseObject);
+
+    ArrayClass = lookupGlobal("Array");
+    addStaticRoot(&ArrayClass);
+
+    BlockClass = lookupGlobal("Block");
+    addStaticRoot(&BlockClass);
+
+    ByteArrayClass = lookupGlobal("ByteArray");
+    addStaticRoot(&ByteArrayClass);
+
+    ContextClass = lookupGlobal("Context");
+    addStaticRoot(&ContextClass);
+
+    DictionaryClass = lookupGlobal("Dictionary");
+    addStaticRoot(&DictionaryClass);
+
+    IntegerClass = lookupGlobal("Integer");
+    addStaticRoot(&IntegerClass);
+
+    SmallIntClass = lookupGlobal("SmallInt");
+    addStaticRoot(&SmallIntClass);
+
+    StringClass = lookupGlobal("String");
+    addStaticRoot(&StringClass);
+
+    SymbolClass = lookupGlobal("Symbol");
+    addStaticRoot(&SymbolClass);
+
+    UndefinedClass = lookupGlobal("Undefined");
+    addStaticRoot(&UndefinedClass);
+
+    info("Read in %d objects.", indirtop);
+
+    return indirtop;
+}
+
+
+
+
+int fileOut_version_3(FILE *img)
+{
+    return fileOut_object_version_3(img, globalsObject);
+}
+
+
+int fileOut_object_version_3(FILE *img, struct object *globs)
+{
+    /* use the currently unused space for the indir pointers */
+    if (inSpaceOne) {
+        indirArray = (struct object * *) spaceTwo;
+    } else {
+        indirArray = (struct object * *) spaceOne;
+    }
+    indirtop = 0;
+
+    info("Writing out image version 3.");
+
+    /* write the header. */
+    put_image_version(img, IMAGE_VERSION_3);
+
+    /* write the main objects. */
+    objectWrite(img, globs);
 
     return indirtop;
 }
