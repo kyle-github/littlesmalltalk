@@ -6,6 +6,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#define BOOTSTRAP
+
 #include "../vm/err.h"
 #include "../vm/globals.h"
 #include "../vm/image.h"
@@ -25,7 +28,7 @@ static struct object *newOrderedArray(void), *newArray(int size);
 //static void sysErrorStr(const char *a, const char *b);
 
 static int parseError(char *msg);
-static struct object *gcalloc(int size);
+//static struct object *gcalloc(int size);
 static struct byteObject *binaryAlloc(int size);
 
 static void addGlobalName(char *name, struct object *value);

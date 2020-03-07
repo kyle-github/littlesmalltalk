@@ -31,9 +31,10 @@
 
 #pragma once
 
-#include <sys/types.h>
-#include <stdio.h>
+#include <limits.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <sys/types.h>
 
 /* ints must be at least 32-bit in size! */
 
@@ -78,7 +79,6 @@ struct mobject {
  * distinguishes them from all other objects, which are longword
  * aligned and are proper C memory pointers.
  */
-#include <limits.h>
 
 #define IS_SMALLINT(x) ((((intptr_t)(x)) & 0x01) != 0)
 #define FITS_SMALLINT(x) ((((intptr_t)(x)) >= INT_MIN/2) && \
@@ -153,9 +153,14 @@ extern int symstrcomp(struct object *left, const char *right);
 extern int strsymcomp(const char *left, struct object *right);
 extern int isDynamicMemory(struct object *);
 
-#define gcalloc(sz) (((intptr_t)(memoryPointer = WORDSDOWN(memoryPointer, (sz) + 2)) < \
-                      (intptr_t)memoryBase) ? gcollect(sz) : \
-                     (SET_SIZE(memoryPointer, (sz)), memoryPointer))
+#ifndef BOOTSTRAP
+
+    #define gcalloc(sz) (((intptr_t)(memoryPointer = WORDSDOWN(memoryPointer, (sz) + 2)) < \
+                          (intptr_t)memoryBase) ? gcollect(sz) : \
+                         (SET_SIZE(memoryPointer, (sz)), memoryPointer))
+
+
+#endif
 
 #ifndef gcalloc
 extern struct object *gcalloc(int);

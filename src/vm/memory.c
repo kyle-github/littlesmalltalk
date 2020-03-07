@@ -338,32 +338,11 @@ struct object *gcollect(int sz)
     that will not be subject to garbage collection
 */
 
-//struct object *staticAllocate(int sz)
-//{
-//    staticPointer = WORDSDOWN(staticPointer, sz + 2);
-//    if (staticPointer < staticBase) {
-//        sysError("insufficient static memory");
-//    }
-//    SETSIZE(staticPointer, sz);
-//    return(staticPointer);
-//}
-
-//struct object *staticIAllocate(int sz)
-//{
-//    int trueSize;
-//    struct object *result;
-//
-//    trueSize = (sz + BytesPerWord - 1) / BytesPerWord;
-//    result = staticAllocate(trueSize);
-//    SETSIZE(result, sz);
-//    result->size |= FLAG_BIN;
-//    return result;
-//}
 
 /*
     if definition is not in-lined, here  is what it should be
 */
-#ifndef gcalloc
+#if !defined(gcalloc) && !defined(BOOTSTRAP)
 struct object *gcalloc(int sz)
 {
     struct object *result;
@@ -375,7 +354,7 @@ struct object *gcalloc(int sz)
     SET_SIZE(memoryPointer, sz);
     return(memoryPointer);
 }
-# endif
+#endif
 
 struct object *gcialloc(int sz)
 {
