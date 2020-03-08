@@ -132,6 +132,12 @@ extern struct object *memoryTop;
 # define ROOTSTACKLIMIT 2000
 extern struct object *rootStack[];
 extern int rootTop;
+
+
+#define PUSH_ROOT(o) (rootStack[rootTop++] = (o))
+#define PEEK_ROOT()  (rootStack[rootTop - 1])
+#define POP_ROOT()   (rootStack[--rootTop])
+
 extern void addStaticRoot(struct object **);
 
 /* image reading/writing */

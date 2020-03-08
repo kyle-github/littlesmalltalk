@@ -396,6 +396,44 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
 
         break;
 
+    case 170: /* get argv strings as an Array of Strings. */
+        {
+            struct object *argv_array = NULL;
+
+            /* allocate enough space for the result Array. */
+            argv_array = gcalloc(prog_argc);
+            argv_array->class = ArrayClass;
+
+            /* we are going to allocate Strings and that could cause GC. */
+            PUSH_ROOT(argv_array);
+
+            for(int index = 0; index < prog_argc; index++) {
+                struct object *argv_entry = NULL;
+                const char *argv_str = prog_argv[index];
+                int str_len = (int)strlen(argv_str);
+
+                /* could cause GC */
+                argv_entry = gcialloc(str_len);
+                argv_entry->class = StringClass;
+
+                /* copy the bytes. */
+                for(int i=0; i < str_len; i++) {
+                    bytePtr(argv_entry)[i] = (uint8_t)argv_str[i];
+                }
+
+                /* get the pointer to the array again.   Could have changed due to GC. */
+                argv_array = PEEK_ROOT();
+
+                argv_array->data[index] = argv_entry;
+            }
+
+            argv_array = POP_ROOT();
+
+            returnedValue = argv_array;
+        }
+
+        break;
+
     case 200: /* this is a set of primitives for socket handling */
         subPrim = integerValue(args->data[0]);
 

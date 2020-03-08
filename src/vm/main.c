@@ -49,6 +49,9 @@ int main(int argc, char **argv)
     FILE *fp;
     char imageFileName[120], *p;
 
+    prog_argc = argc;
+    prog_argv = argv;
+
     strcpy(imageFileName, DefaultImageFile);
     staticSize = DefaultStaticSize;
     dynamicSize = DefaultDynamicSize;

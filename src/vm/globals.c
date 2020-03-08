@@ -36,6 +36,9 @@ struct object *StringClass = NULL;
 struct object *SymbolClass = NULL;
 struct object *UndefinedClass = NULL;
 
+/* storage for the program's argc and argv. */
+int prog_argc = 0;
+const char **prog_argv = NULL;
 
 
 /* Misc helpers */

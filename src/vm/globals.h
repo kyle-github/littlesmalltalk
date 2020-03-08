@@ -42,6 +42,11 @@ extern struct object *StringClass;
 extern struct object *SymbolClass;
 extern struct object *UndefinedClass;
 
+
+/* values for the current program. */
+extern int prog_argc;
+extern const char **prog_argv;
+
 /*
     The following are the objects with ``hard-wired''
     field offsets
