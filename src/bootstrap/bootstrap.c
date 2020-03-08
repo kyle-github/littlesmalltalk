@@ -258,7 +258,7 @@ int main(int argc, char **argv)
         error("file out error for file %s!", output_file);
     }
 
-    num_objs = fileOut_object_version_3(fd, globalValues);
+    num_objs = fileOut_object(fd, globalValues);
 
 
 //    printf("starting to file out\n");

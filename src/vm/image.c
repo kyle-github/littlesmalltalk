@@ -65,7 +65,8 @@ static struct object *fix_offset(struct object *old, int64_t offset);
 static struct object *object_fix_up(struct object *obj, int64_t offset);
 
 static int fileIn_version_3(FILE *fp);
-static int fileOut_version_3(FILE *fp);
+static int fileOut_object_version_3(FILE *img, struct object *globs);
+
 
 
 /* used for image pointer remapping */
@@ -124,9 +125,17 @@ int fileIn(FILE *fp)
 
 
 
-int fileOut(FILE *fp) {
-    return fileOut_version_3(fp);
+int fileOut(FILE *fp)
+{
+    return fileOut_object(fp, globalsObject);
 }
+
+
+int fileOut_object(FILE *fp, struct object *obj)
+{
+    return fileOut_object_version_3(fp, obj);
+}
+
 
 
 
@@ -319,7 +328,6 @@ int fileOut_version_1(FILE *img)
 
 int fileIn_version_3(FILE *fp)
 {
-    int i;
     struct object *specialSymbols = NULL;
 
     /* use the currently unused space for the indir pointers */
@@ -413,12 +421,6 @@ int fileIn_version_3(FILE *fp)
 }
 
 
-
-
-int fileOut_version_3(FILE *img)
-{
-    return fileOut_object_version_3(img, globalsObject);
-}
 
 
 int fileOut_object_version_3(FILE *img, struct object *globs)

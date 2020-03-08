@@ -9,7 +9,7 @@ extern uint8_t get_image_version(FILE *fp);
 extern void put_image_version(FILE *fp, uint8_t version);
 
 extern int fileOut(FILE *fp);
-extern int fileOut_object_version_3(FILE *fp, struct object *obj);
+extern int fileOut_object(FILE *fp, struct object *obj);
 
 extern int fileIn(FILE *fp);
 
