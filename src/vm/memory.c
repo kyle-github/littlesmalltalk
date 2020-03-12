@@ -296,6 +296,7 @@ void do_gc()
 
     flushCache();
 
+    /* FIXME - pointer comparisons are NOT portable. */
     gc_total_mem_copied += ((char *)memoryTop - (char *)memoryPointer);
     if(((char *)memoryTop - (char *)memoryPointer) > gc_mem_max_copied) {
         gc_mem_max_copied = ((char *)memoryTop - (char *)memoryPointer);
