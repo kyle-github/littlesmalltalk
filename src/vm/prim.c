@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <stdio.h>
+#include <inttypes.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -374,26 +375,24 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
 
         break;
 
+    /* large timestamps */
     case 160: /* print out a microsecond timestamp and message string. */
-    {
-        struct byteObject *msg = (struct byteObject *)(args->data[0]);
-        char *tmpMsg = NULL;
-        size_t tmpMsgSize = (size_t)SIZE(msg)+1;
-        int64_t ticks = time_usec();
+        {
+            struct byteObject *msg = (struct byteObject *)(args->data[0]);
+            int64_t ticks = time_usec();
 
-        tmpMsg = (char *)alloca(tmpMsgSize);
+            printf("Log: %.*s\n", SIZE(msg), bytePtr(msg));
 
-        memset(tmpMsg, 0, tmpMsgSize);
+            *failed = 0;
 
-        memcpy(tmpMsg, msg->bytes, tmpMsgSize-1);
+            returnedValue = nilObject;
+        }
 
-        printf("%ld: (%ld) %s\n", ticks, tmpMsgSize, tmpMsg);
+        break;
 
+    case 161: /* return an Integer with the microsecond timestamp. */
+        returnedValue = newLInteger(time_usec());
         *failed = 0;
-
-        returnedValue = nilObject;
-    }
-
         break;
 
     case 170: /* get argv strings as an Array of Strings. */
@@ -430,6 +429,8 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
             argv_array = POP_ROOT();
 
             returnedValue = argv_array;
+
+            *failed = 0;
         }
 
         break;
@@ -603,6 +604,75 @@ void getUnixString(char * to, int size, struct object * from)
     }
 
     to[i] = '\0';	/* put null terminator at end */
+}
+
+
+
+
+/*
+ * newLInteger()
+ *  Create new Integer (64-bit)
+ */
+struct object *newLInteger(int64_t val)
+{
+    struct object *res;
+    int64_t *tmp;
+
+    res = gcialloc(sizeof(int64_t));
+    res->class = IntegerClass;
+    tmp = (int64_t *)bytePtr(res);
+    *tmp = val;
+    return(res);
+}
+
+/*
+ * do_Integer()
+ *  Implement the appropriate 64-bit Integer operation
+ *
+ * Returns NULL on error, otherwise the resulting Integer or
+ * Boolean (for comparisons) object.
+ */
+struct object *do_Integer(int op, struct object *low, struct object *high)
+{
+    int64_t l, h;
+    int64_t *tmp;
+
+    tmp = (int64_t *)bytePtr(low);
+    l = *tmp;
+    tmp = (int64_t *)bytePtr(high);
+    h = *tmp;
+    switch (op) {
+    case 25:    /* Integer division */
+        if (h == 0LL) {
+            return(NULL);
+        }
+        return(newLInteger(l/h));
+
+    case 26:    /* Integer remainder */
+        if (h == 0LL) {
+            return(NULL);
+        }
+        return(newLInteger(l%h));
+
+    case 27:    /* Integer addition */
+        return(newLInteger(l+h));
+
+    case 28:    /* Integer multiplication */
+        return(newLInteger(l*h));
+
+    case 29:    /* Integer subtraction */
+        return(newLInteger(l-h));
+
+    case 30:    /* Integer less than */
+        return((l < h) ? trueObject : falseObject);
+
+    case 31:    /* Integer equality */
+        return((l == h) ? trueObject : falseObject);
+
+    default:
+        error("do_Integer(): Invalid primitive integer operation %d!", op);
+    }
+    return(NULL);
 }
 
 
