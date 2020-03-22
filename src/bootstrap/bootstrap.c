@@ -99,7 +99,12 @@ static void dictionaryInsert(struct object *dict, struct object *index,
 
 static void MethodCommand(void);
 static void RawClassCommand(void);
+static void ClassMethodCommand(void);
+static void InstanceMethodCommand(void);
+static void MethodCommand(void);
+static void RawClassCommand(void);
 static void ClassCommand(void);
+
 //static int getIntSize(int val);
 //static void writeTag(FILE * fp, int type, int val);
 
@@ -127,6 +132,7 @@ static void bigBang(void);
 
 static FILE *fin;
 static char inputBuffer[1500], *p, tokenBuffer[80];
+static int inputLine = 0;
 
 /* The following are roots for the file out */
 struct object *nilObject;
@@ -186,23 +192,34 @@ int main(int argc, char **argv)
     while (fgets((char *) inputBuffer, sizeof(inputBuffer), fin)) {
         p = inputBuffer;
         skipSpaces();
-        readIdentifier();
+        inputLine++;
 
-        if (strcmp(tokenBuffer, "BEGIN") == 0) {
-            bootMethod = BeginCommand();
-        } else if (strcmp(tokenBuffer, "RAWCLASS") == 0) {
-            RawClassCommand();
-        } else if (strcmp(tokenBuffer, "CLASS") == 0) {
-            ClassCommand();
-        } else if (strcmp(tokenBuffer, "COMMENT") == 0) {
-            /* nothing */ ;
-        } else if (strcmp(tokenBuffer, "METHOD") == 0) {
-            MethodCommand();
-        } else if (strcmp(tokenBuffer, "END") == 0) {
-            break;
-        } else {
-            error("unknown command %s!", tokenBuffer);
+        switch(*p) {
+            case '+': p++; ClassCommand(); break;
+            case '=': p++; ClassMethodCommand(); break;
+            case '!': p++; InstanceMethodCommand(); break;
+            case '"': /* nothing to do, get the next line. */ break;
+            default:
+                error("%c not a supported action!", *p);
+                break;
         }
+//        readIdentifier();
+//
+//        if (strcmp(tokenBuffer, "BEGIN") == 0) {
+//            bootMethod = BeginCommand();
+//        } else if (strcmp(tokenBuffer, "RAWCLASS") == 0) {
+//            RawClassCommand();
+//        } else if (strcmp(tokenBuffer, "CLASS") == 0) {
+//            ClassCommand();
+//        } else if (strcmp(tokenBuffer, "COMMENT") == 0) {
+//            /* nothing */ ;
+//        } else if (strcmp(tokenBuffer, "METHOD") == 0) {
+//            MethodCommand();
+//        } else if (strcmp(tokenBuffer, "END") == 0) {
+//            break;
+//        } else {
+//            error("unknown command %s!", tokenBuffer);
+//        }
     }
 
     fclose(fin);
@@ -1730,23 +1747,46 @@ void dictionaryInsert(struct object *dict, struct object *index,
     dict->data[1] = insert(vals, i, value);
 }
 
-static void MethodCommand(void);
-static void RawClassCommand(void);
-static void ClassCommand(void);
 //static int getIntSize(int val);
 //static void writeTag(FILE * fp, int type, int val);
+
+
+void ClassMethodCommand(void)
+{
+    /* read class name */
+    readIdentifier();
+    currentClass = lookupGlobalName(tokenBuffer, 1);
+    if (!currentClass) {
+        error("ClassMethodCommand(): unknown class in Method %s!", tokenBuffer);
+    }
+
+    /* get the superclass */
+    currentClass = currentClass->data[parentClassInClass];
+    if (!currentClass) {
+        error("ClassMethodCommand(): unknown superclass in Method %s!", tokenBuffer);
+    }
+
+    MethodCommand();
+}
+
+
+void InstanceMethodCommand(void)
+{
+    /* read class name */
+    readIdentifier();
+    currentClass = lookupGlobalName(tokenBuffer, 1);
+    if (!currentClass) {
+        error("InstanceMethodCommand(): unknown class in Method %s!", tokenBuffer);
+    }
+
+    MethodCommand();
+}
+
 
 
 void MethodCommand(void)
 {
     struct object *theMethod;
-
-    /* read class name */
-    readIdentifier();
-    currentClass = lookupGlobalName(tokenBuffer, 1);
-    if (!currentClass) {
-        error("MethodCommand(): unknown class in Method %s!", tokenBuffer);
-    }
 
     inputMethodText();
 
@@ -1769,6 +1809,41 @@ void MethodCommand(void)
                          theMethod->data[nameInMethod], theMethod);
     }
 }
+
+
+//void MethodCommand(void)
+//{
+//    struct object *theMethod;
+//
+//    /* read class name */
+//    readIdentifier();
+//    currentClass = lookupGlobalName(tokenBuffer, 1);
+//    if (!currentClass) {
+//        error("MethodCommand(): unknown class in Method %s!", tokenBuffer);
+//    }
+//
+//    inputMethodText();
+//
+//    p = inputBuffer;
+//    skipSpaces();
+//
+//    theMethod = gcalloc(methodSize);
+//    theMethod->class = lookupGlobalName("Method", 0);
+//
+//    /* fill in method class */
+//    byteTop = 0;
+//    litTop = 0;
+//    argumentTop = 1;
+//
+//    /*
+//     * If successful compile, insert into the method dictionary
+//     */
+//    if (parseMethod(theMethod)) {
+//        dictionaryInsert(currentClass->data[methodsInClass],
+//                         theMethod->data[nameInMethod], theMethod);
+//    }
+//}
+
 
 void RawClassCommand(void)
 {
@@ -1833,35 +1908,187 @@ void RawClassCommand(void)
  *
  * Doesn't support class variables, but handles most of imageSource
  * cases.
+ *
+ * Must handle lines like:
+ *
+ * +nil subclass: #Object variables: #( ) classVariables: #( )
+ *
+ * +Magnitude subclass: #Association variables: #( key value ) classVariables: #( )
+ *
+ * +Number subclass: #SmallInt variables: #( ) classVariables: #( seed )
+ *
  */
+
+struct object *ClassCommandGetSuperClass()
+{
+    const char *superclassName = NULL;
+    struct object *supClass = NULL;
+
+    /* get the superclass name */
+    readIdentifier();
+    superclassName = strdup(tokenBuffer);
+
+    /* find the superclass */
+    supClass = lookupGlobalName(superclassName, 1);
+    if (!supClass) {
+        error("Unable find superclass %s on line %d!", superclassName, inputLine);
+    }
+
+    free(superclassName);
+
+    return supClass;
+}
+
+struct object *ClassCommandGetInstClass(struct object *supClass)
+{
+    char *q = p;
+    char *className = NULL;
+    char *metaclassName = NULL;
+    struct object *instClass = NULL;
+    struct object *metaClass  = NULL;
+
+    /* search out to the class name. */
+    q = strchr(p, '#');
+    if(!q) {
+        error("Unable to find new subclass name for on line %d!", inputLine);
+    }
+
+    p = ++q;
+    readIdentifier();
+    className = strdup(tokenBuffer);
+
+    /* create the metaclass name */
+    metaclassName = malloc(strlen(className) + strlen("Meta" + 1));
+    sprintf(metaclassName, "Meta%s",className);
+
+    /* set up the class. */
+    instClass = lookupGlobalName(className, 1);
+    printf("Class %s\n", className);
+    if (!instClass) {
+        instClass = newClass(className);
+        instClass->data[nameInClass] = newSymbol(className);
+        instClass->data[parentClassInClass] = supClass;
+        addGlobalName(className, instClass);
+    } else {
+        info("WARN: Line %d attempts to redefine class %s!", className);
+    }
+
+    /* set up the metaclass, if needed */
+    printf("Meta class %s\n", metaclassName);
+    if (!instClass->class) {
+        struct object *classClass = lookupGlobalName("Class", 1);
+
+        if(!classClass) {
+            error("Class Class is not defined yet!");
+        }
+
+        metaClass = newClass(metaclassName);
+        metaClass->data[nameInClass] = newSymbol(metaclassName);
+        metaClass->data[parentClassInClass] = classClass;
+        metaClass->class = classClass;
+        instClass->class = metaClass;
+    } else {
+        info("WARN: Line %d attempts to redefine metaclass %s!", metaclassName);
+    }
+
+    free(className);
+    free(metaclassName);
+
+    return instClass;
+}
+
+void ClassCommandGetVars(struct object *aClass)
+{
+    char *q = NULL;
+    int instsize = 0;
+    struct object *supClass = aClass->data[parentClassInClass];
+
+    /* scan to the first open paren */
+    q = strchr(p, '(');
+    if(!q) {
+        error("Unable to find instance variable section on line %d!", inputLine);
+    }
+
+    p = ++q;
+
+    /* scan to the closing paren */
+    q = strchr(p, ')');
+    if(!q) {
+        error("Unable to find end of instance variable section on line %d!", inputLine);
+    }
+
+    /* start looking for instance variables. */
+    litTop = 0;
+
+    /* do we have any instance variables? */
+    if((q - p) >= 2) {
+        /* Now parse the new instance variables */
+        while (*p && *p != ')') {
+            if (!isIdentifierChar(*p)) {
+                error("looking for var %s", p);
+            }
+            readIdentifier();
+            addLiteral(newSymbol(tokenBuffer));
+        }
+    }
+
+    /* That's the total of our instance variables */
+    instsize = litTop;
+
+    /* Add on size of superclass space */
+    if (supClass != nilObject) {
+        instsize += integerValue(supClass->data[instanceSizeInClass]);
+    }
+
+    aClass->data[instanceSizeInClass] = newInteger(instsize);
+    aClass->data[variablesInClass] = buildLiteralArray();
+    /* make a dictionary for new methods */
+    aClass->data[methodsInClass] = newDictionary();
+}
+
+
 void ClassCommand(void)
 {
-    char *class, *super, *ivars;
+    const char *instVars = NULL;
+    const char *classVars = NULL;
+    struct object *supClass, *instClass, *metaClass;
+    int instsize;
 
-    /* Read the class and superclass */
-    readIdentifier();
-    class = strdup(tokenBuffer);
-    readIdentifier();
-    super = strdup(tokenBuffer);
+    supClass = ClassCommandGetSuperClass();
+    instClass = ClassCommandGetInstClass(supClass);
 
-    /* Stash away the instance variable string */
-    skipSpaces();
-    ivars = strdup(p);
-
-    /* Build the metaclass */
-    sprintf(inputBuffer, "RAWCLASS Meta%s Class Meta%s", class, super);
-    p = inputBuffer + 9;
-    RawClassCommand();
-
-    /* Now the instance class */
-    sprintf(inputBuffer, "RAWCLASS %s Meta%s %s %s", class, class,
-            super, ivars);
-    p = inputBuffer + 9;
-    RawClassCommand();
-    free(class);
-    free(super);
-    free(ivars);
+    ClassCommandGetVars(instClass);
+    ClassCommandGetVars(metaClass);
 }
+
+//void ClassCommand(void)
+//{
+//    char *class, *super, *ivars;
+//
+//    /* Read the class and superclass */
+//    readIdentifier();
+//    class = strdup(tokenBuffer);
+//    readIdentifier();
+//    super = strdup(tokenBuffer);
+//
+//    /* Stash away the instance variable string */
+//    skipSpaces();
+//    ivars = strdup(p);
+//
+//    /* Build the metaclass */
+//    sprintf(inputBuffer, "RAWCLASS Meta%s Class Meta%s", class, super);
+//    p = inputBuffer + 9;
+//    RawClassCommand();
+//
+//    /* Now the instance class */
+//    sprintf(inputBuffer, "RAWCLASS %s Meta%s %s %s", class, class,
+//            super, ivars);
+//    p = inputBuffer + 9;
+//    RawClassCommand();
+//    free(class);
+//    free(super);
+//    free(ivars);
+//}
 
 
 
