@@ -3,10 +3,13 @@
     image building utility
 */
 
+#include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+/* must do this before any of the internal includes! */
 #define BOOTSTRAP
 
 #include "../vm/err.h"
@@ -22,10 +25,7 @@
 
 static struct object *lookupGlobalName(char *name, int ok_missing);
 static int parseStatement(void), parseExpression(void), parseTerm(void);
-static struct object *newOrderedArray(void), *newArray(int size);
-//static void sysError(const char *a);
-//static void sysErrorInt(const char *a, intptr_t b);
-//static void sysErrorStr(const char *a, const char *b);
+//static struct object *newOrderedArray(void), *newArray(int size);
 
 static int parseError(char *msg);
 //static struct object *gcalloc(int size);
@@ -36,6 +36,7 @@ static struct object *lookupGlobalName(char *name, int ok_missing);
 
 static void inputMethodText();
 static void skipSpaces();
+static void trimLine();
 static int isDigit(char p);
 static int isIdentifierChar(char p);
 static int isBinary(char p);
@@ -48,7 +49,7 @@ static int symbolBareCmp(const uint8_t *left, int leftsize,
 static int symbolCmp(struct object *left, struct object *right);
 static struct object *newString(char *text);
 static struct object *newSymbol(char *text);
-static struct object *newClass(char *name);
+static struct object *newClass(char *name, int numVars);
 static struct object *newNode(struct object *v, struct object *l,
                               struct object *r);
 static struct object *newTree(void);
@@ -133,6 +134,7 @@ static void bigBang(void);
 static FILE *fin;
 static char inputBuffer[1500], *p, tokenBuffer[80];
 static int inputLine = 0;
+static int inputPosition = 0;
 
 /* The following are roots for the file out */
 struct object *nilObject;
@@ -144,6 +146,22 @@ struct object *ArrayClass;
 struct object *BlockClass;
 struct object *IntegerClass;
 struct object *SymbolClass;
+
+/* used in the Big Bang to set up other objects. */
+static struct object *ObjectClass;
+static struct object *MetaObjectClass;
+static struct object *ClassClass;
+static struct object *NilClass;
+static struct object *TrueClass;
+static struct object *FalseClass;
+static struct object *TreeClass;
+static struct object *OrderedArrayClass;
+static struct object *MetaClassClass;
+
+//static struct object *StringClass;
+//static struct object *DictionaryClass;
+//static struct object *ByteArrayClass;
+
 
 static struct object *currentClass;
 
@@ -157,7 +175,7 @@ static struct object *currentClass;
 
 int main(int argc, char **argv)
 {
-    const char *image_source = "imageSource";
+    const char *image_source = "image.st";
     const char *output_file = "lst.img";
     FILE *fd;
     struct object *bootMethod = NULL;
@@ -189,18 +207,21 @@ int main(int argc, char **argv)
     }
 
     /* then read the image source file */
+    inputLine = 0;
     while (fgets((char *) inputBuffer, sizeof(inputBuffer), fin)) {
         p = inputBuffer;
         skipSpaces();
         inputLine++;
+        inputPosition = 0;
 
         switch(*p) {
-            case '+': p++; ClassCommand(); break;
-            case '=': p++; ClassMethodCommand(); break;
-            case '!': p++; InstanceMethodCommand(); break;
+            case '+': trimLine(); p++; ClassCommand(); break;
+            case '=': trimLine(); p++; ClassMethodCommand(); break;
+            case '!': trimLine(); p++; InstanceMethodCommand(); break;
+            case 0: /* end of the line */ break;
             case '"': /* nothing to do, get the next line. */ break;
             default:
-                error("%c not a supported action!", *p);
+                error("Character %x ('%c') not a supported action!  Found in line \"%s\" (%d) of input file %s.", *p, *p, inputBuffer, inputLine, image_source);
                 break;
         }
 //        readIdentifier();
@@ -307,18 +328,6 @@ int main(int argc, char **argv)
 
 void bigBang(void)
 {
-    struct object *ObjectClass;
-    struct object *MetaObjectClass;
-    struct object *ClassClass;
-    struct object *NilClass;
-    struct object *TrueClass;
-    struct object *FalseClass;
-    struct object *StringClass;
-    struct object *TreeClass;
-    struct object *DictionaryClass;
-    struct object *OrderedArrayClass;
-    struct object *MetaClassClass;
-    struct object *ByteArrayClass;
 
     /*
      * First, make the nil (undefined) object;
@@ -327,74 +336,76 @@ void bigBang(void)
     nilObject = gcalloc(0);
 
     /*
-     * Second, make class for Symbol;
+     * Second, make classes for Symbol and Dictionary.
      * this will allow newClass to work correctly
      */
     SymbolClass = gcalloc(ClassSize + 1);
     addGlobalName("Symbol", SymbolClass);
     SymbolClass->data[nameInClass] = newSymbol("Symbol");
 
+    DictionaryClass = gcalloc(ClassSize);
+    addGlobalName("Dictionary", DictionaryClass);
+    DictionaryClass->data[nameInClass] = newSymbol("Dictionary");
+
     /* now we can fix up nil's class */
-    NilClass = newClass("Undefined");
+    NilClass = newClass("Undefined", 0);
     addGlobalName("Undefined", NilClass);
     nilObject->class = NilClass;
     addGlobalName("nil", nilObject);
 
     /* make up the object / metaobject mess */
-    ObjectClass = newClass("Object");
+    ObjectClass = newClass("Object", 0);
     addGlobalName("Object", ObjectClass);
-    MetaObjectClass = newClass("MetaObject");
+    MetaObjectClass = newClass("MetaObject", 0);
     addGlobalName("MetaObject", MetaObjectClass);
     ObjectClass->class = MetaObjectClass;
     ObjectClass->data[parentClassInClass] = nilObject;
 
     /* And the Class/MetaClass mess */
-    ClassClass = newClass("Class");
+    ClassClass = newClass("Class", 0);
     addGlobalName("Class", ClassClass);
-    MetaClassClass = newClass("MetaClass");
+    MetaClassClass = newClass("MetaClass", 0);
     addGlobalName("MetaClass", MetaClassClass);
     ClassClass->class = MetaClassClass;
 
     /* now make up a bunch of other classes */
-    BlockClass = newClass("Block");
+    BlockClass = newClass("Block", 0);
     addGlobalName("Block", BlockClass);
 
     /* SmallInt has an extra class variable, just like Symbol */
-    SmallIntClass = gcalloc(ClassSize + 1);
+    SmallIntClass = newClass("SmallInt", 1);
     addGlobalName("SmallInt", SmallIntClass);
     SmallIntClass->data[nameInClass] = newSymbol("SmallInt");
 
-    IntegerClass = newClass("Integer");
+    IntegerClass = newClass("Integer", 0);
     addGlobalName("Integer", IntegerClass);
 
-    TrueClass = newClass("True");
+    TrueClass = newClass("True", 0);
     addGlobalName("True", TrueClass);
     trueObject = gcalloc(0);
     trueObject->class = TrueClass;
     addGlobalName("true", trueObject);
 
-    FalseClass = newClass("False");
+    FalseClass = newClass("False", 0);
     addGlobalName("False", FalseClass);
     falseObject = gcalloc(0);
     falseObject->class = FalseClass;
     addGlobalName("false", falseObject);
 
-    ArrayClass = newClass("Array");
+    ArrayClass = newClass("Array", 0);
     addGlobalName("Array", ArrayClass);
-    ByteArrayClass = newClass("ByteArray");
+
+    ByteArrayClass = newClass("ByteArray", 0);
     addGlobalName("ByteArray", ByteArrayClass);
 
-    OrderedArrayClass = newClass("OrderedArray");
+    OrderedArrayClass = newClass("OrderedArray", 0);
     addGlobalName("OrderedArray", OrderedArrayClass);
 
-    StringClass = newClass("String");
+    StringClass = newClass("String", 0);
     addGlobalName("String", StringClass);
 
-    TreeClass = newClass("Tree");
+    TreeClass = newClass("Tree", 0);
     addGlobalName("Tree", TreeClass);
-
-    DictionaryClass = newClass("Dictionary");
-    addGlobalName("Dictionary", DictionaryClass);
 
     /* finally, we can fill in the fields in class Object */
     ObjectClass->data[methodsInClass] = newDictionary();
@@ -425,12 +436,23 @@ int parseError(char *msg)
 {
     char *q;
 
-    for (q = inputBuffer; q != p;)
-        printf("%c", *q++);
-    printf("\n%s\n", msg);
-    while (*q)
-        printf("%c", *q++);
-    printf("\n");
+    info("Parse Error: at line %d, position %d, %s", inputLine, inputPosition, msg);
+    info("%s", inputBuffer);
+
+    /* print a pointer to the location that we found something wrong. */
+    for(int i=0; i < (inputPosition-1); i++) {
+        fprintf(stderr, "-");
+    }
+
+    fprintf(stderr, "^\n");
+
+
+//    for (q = inputBuffer; q != p;)
+//        printf("%c", *q++);
+//    printf("\n%s\n", msg);
+//    while (*q)
+//        printf("%c", *q++);
+//    printf("\n");
     exit(1);
     return 0;
 }
@@ -542,44 +564,100 @@ struct object *lookupGlobalName(char *name, int ok_missing)
 
 /* ------------------------------------------------------------- */
 
+typedef enum {
+    METHOD_TEXT_NORMAL_CHAR,
+    METHOD_TEXT_FOUND_NL,
+    METHOD_TEXT_FOUND_EXCLAMATION
+} method_text_state_t;
+
 void inputMethodText()
 {
     int c;
+    bool foundExclamation = false;
+    int state = METHOD_TEXT_NORMAL_CHAR;
 
     p = inputBuffer;
-    while (1) {
-        while ((c = fgetc(fin)) != '\n') {
-            *p++ = (char)c;
+    inputPosition = 0;
+
+    while ((ptrdiff_t)(p - inputBuffer) < (ptrdiff_t)(sizeof(inputBuffer))) {
+        c = fgetc(fin);
+
+        if(c == EOF) {
+            error("Unexpected EOF while reading method text at line %d!", inputLine);
         }
 
-        *p++ = '\n';
-
-        if ((c = fgetc(fin)) == '!') {
-            if ((c = fgetc(fin)) == '\n') {
-                *p = '\0';
-                return;
-            }
-
-            *p++ = '!';
-            *p++ = (char)c;
+        if(c == '\n') {
+            inputPosition = 0;
+            inputLine++;
         } else {
-            *p++ = (char)c;
+            inputPosition++;
+        }
+
+        *p++ = (char)c;
+
+        /* only check if this is the first character on a line. */
+        if(foundExclamation) {
+            if(inputPosition == 0 && c == '\n') {
+                *(p-2) = (char)0;
+                return;
+            } else {
+                foundExclamation = false;
+            }
+        } else if(inputPosition == 1 && c == '!') {
+            foundExclamation = true;
         }
     }
+
+//    while (1 && (p - inputBuffer) < (sizeof(inputBuffer) - 2)) {
+//        while ((c = fgetc(fin)) != '\n') {
+//            *p++ = (char)c;
+//        }
+//
+//        *p++ = '\n';
+//        inputLine++;
+//
+//        /* terminate the method on a ! character that is the only character on the line. */
+//        if ((c = fgetc(fin)) == '!') {
+//            if ((c = fgetc(fin)) == '\n') {
+//                inputLine++;
+//                *p = '\0';
+//                return;
+//            }
+//
+//            *p++ = '!';
+//            *p++ = (char)c;
+//        } else {
+//            *p++ = (char)c;
+//        }
+//    }
 }
 
 void skipSpaces()
 {
     while ((*p == ' ') || (*p == '\t') || (*p == '\n'))
-        p++;
+        p++; inputPosition++;
     if (*p == '\"') {
-        p++;
+        p++; inputPosition++;
         while (*p && (*p != '\"'))
-            p++;
+            p++; inputPosition++;
         if (*p != '\"')
             parseError("unterminated comment");
-        p++;
+        p++; inputPosition++;
         skipSpaces();
+    }
+}
+
+/* remove whitespace at the end of the line too. */
+void trimLine()
+{
+    int index = (int)strlen(inputBuffer) - 1;
+
+    while(index > 0) {
+        if((inputBuffer[index] == ' ') || (inputBuffer[index] == '\t') || (inputBuffer[index] == '\n')) {
+            inputBuffer[index--] = 0;
+        } else {
+            break;
+        }
     }
 }
 
@@ -735,12 +813,13 @@ struct object *newSymbol(char *text)
     return (struct object *) result;
 }
 
-struct object *newClass(char *name)
+struct object *newClass(char *name, int numVars)
 {
     struct object *newC;
 
-    newC = gcalloc(ClassSize);
+    newC = gcalloc(ClassSize + numVars);
     newC->data[nameInClass] = newSymbol(name);
+    newC->data[methodsInClass] = newDictionary();
     return newC;
 }
 
@@ -1855,7 +1934,7 @@ void RawClassCommand(void)
     nClass = lookupGlobalName(tokenBuffer, 1);
     printf("Class %s\n", tokenBuffer);
     if (!nClass) {
-        nClass = newClass(tokenBuffer);
+        nClass = newClass(tokenBuffer, 0);
         nClass->data[nameInClass] = newSymbol(tokenBuffer);
         addGlobalName(tokenBuffer, nClass);
     }
@@ -1921,7 +2000,7 @@ void RawClassCommand(void)
 
 struct object *ClassCommandGetSuperClass()
 {
-    const char *superclassName = NULL;
+    char *superclassName = NULL;
     struct object *supClass = NULL;
 
     /* get the superclass name */
@@ -1933,6 +2012,8 @@ struct object *ClassCommandGetSuperClass()
     if (!supClass) {
         error("Unable find superclass %s on line %d!", superclassName, inputLine);
     }
+
+    info("Found superclass %s from line \"%s\" (%d)", superclassName, inputBuffer, inputLine);
 
     free(superclassName);
 
@@ -1950,7 +2031,7 @@ struct object *ClassCommandGetInstClass(struct object *supClass)
     /* search out to the class name. */
     q = strchr(p, '#');
     if(!q) {
-        error("Unable to find new subclass name for on line %d!", inputLine);
+        error("Unable to find new subclass name for on line \"%s\" (%d)!", inputBuffer, inputLine);
     }
 
     p = ++q;
@@ -1965,12 +2046,16 @@ struct object *ClassCommandGetInstClass(struct object *supClass)
     instClass = lookupGlobalName(className, 1);
     printf("Class %s\n", className);
     if (!instClass) {
-        instClass = newClass(className);
+        instClass = newClass(className, 0);
         instClass->data[nameInClass] = newSymbol(className);
         instClass->data[parentClassInClass] = supClass;
+
+        /* make a dictionary for new methods */
+        instClass->data[methodsInClass] = newDictionary();
+
         addGlobalName(className, instClass);
     } else {
-        info("WARN: Line %d attempts to redefine class %s!", className);
+        info("WARN: Line %d attempts to redefine class %s!", inputLine, className);
     }
 
     /* set up the metaclass, if needed */
@@ -1982,13 +2067,13 @@ struct object *ClassCommandGetInstClass(struct object *supClass)
             error("Class Class is not defined yet!");
         }
 
-        metaClass = newClass(metaclassName);
+        metaClass = newClass(metaclassName, 0);
         metaClass->data[nameInClass] = newSymbol(metaclassName);
         metaClass->data[parentClassInClass] = classClass;
         metaClass->class = classClass;
         instClass->class = metaClass;
     } else {
-        info("WARN: Line %d attempts to redefine metaclass %s!", metaclassName);
+        info("WARN: Line %d attempts to redefine metaclass %s!", inputLine, metaclassName);
     }
 
     free(className);
@@ -2024,10 +2109,14 @@ void ClassCommandGetVars(struct object *aClass)
     if((q - p) >= 2) {
         /* Now parse the new instance variables */
         while (*p && *p != ')') {
+            skipSpaces();
             if (!isIdentifierChar(*p)) {
-                error("looking for var %s", p);
+                info("WARN: looking for variable list at position %d but found character '%c' (%x) instead in line %d, \"%s\".", (int)(p - inputBuffer), *p, *p, inputLine, inputBuffer);
+                break;
             }
             readIdentifier();
+
+            info("Found instance variable %s.", tokenBuffer);
             addLiteral(newSymbol(tokenBuffer));
         }
     }
@@ -2042,23 +2131,187 @@ void ClassCommandGetVars(struct object *aClass)
 
     aClass->data[instanceSizeInClass] = newInteger(instsize);
     aClass->data[variablesInClass] = buildLiteralArray();
-    /* make a dictionary for new methods */
-    aClass->data[methodsInClass] = newDictionary();
 }
 
 
+void ParseClassVars(struct object *instClass, struct object *parentClass, struct object *metaClass, char *classVars)
+{
+    int instsize = 0;
+
+    litTop = 0;
+
+    if(strlen(classVars) > 2) {
+        /* copy the class vars string into the input buffer. */
+        strncpy(inputBuffer, classVars, sizeof(inputBuffer));
+
+        p = inputBuffer;
+
+        /* Now parse the new instance variables */
+        while (*p) {
+            skipSpaces();
+            if (!isIdentifierChar(*p)) {
+                info("WARN: looking for variable list at position %d but found character '%c' (%x) instead in line %d, \"%s\".", (int)(p - inputBuffer), *p, *p, inputLine, inputBuffer);
+                break;
+            }
+            readIdentifier();
+
+            info("Found instance variable %s.", tokenBuffer);
+            addLiteral(newSymbol(tokenBuffer));
+        }
+    }
+
+    /* That's the total of our instance variables */
+    instsize = litTop;
+
+    /* Add on size of superclass space */
+    if (parentClass != nilObject) {
+        instsize += integerValue(parentClass->data[instanceSizeInClass]);
+    }
+
+    instClass->data[instanceSizeInClass] = newInteger(instsize);
+    instClass->data[variablesInClass] = buildLiteralArray();
+    instClass->data[methodsInClass] = newDictionary();
+}
+
+
+/*
+ * SuperClass subclass: #NewClass variables: #( instVars ) classVariables: #( classVars )
+ *
+ *                                                       Object
+ *      Class                                              ^
+ *        ^                                                .
+ *        |                                                .
+ *        |    MetaNewClass                SuperClass      .
+ *        |   +-------------+            +-------------+   |
+ *        +---+-- class     |            | parentClass-+---+
+ *        |   |    name     |            +-------------+
+ *        +---+-parentClass |                        ^
+ *            |   methods   |        NewClass        |
+ *            |    size     |     +-------------+    |
+ *            |  variables  |<----+----class    |    |
+ *            +-------------+     |     name    |    |
+ *                                | parentClass-+----+
+ *                                |   methods   |
+ *                                |    size     |
+ *                                |  variables  |
+ *                                |  classVar1  |
+ *                                |  classVar2  |
+ *                                |     ...     |
+ *                                +-------------+
+ *
+ *
+ */
+
 void ClassCommand(void)
 {
-    const char *instVars = NULL;
-    const char *classVars = NULL;
-    struct object *supClass, *instClass, *metaClass;
-    int instsize;
+    char *superclassName = NULL;
+    char *instClassName = NULL;
+    char *metaclassName = NULL;
+    char *instVars = NULL;
+    char *classVars = NULL;
+    struct object *metaClass, *superClass, *instClass;
+    size_t metaclassNameSize;
+    int instClassSize = ClassSize;
+    int instsize = 0;
 
-    supClass = ClassCommandGetSuperClass();
-    instClass = ClassCommandGetInstClass(supClass);
 
-    ClassCommandGetVars(instClass);
-    ClassCommandGetVars(metaClass);
+    /* parse lines like:
+     * SuperClass subclass: #NewClass variables: #( instVars ) classVariables: #( classVars )
+     */
+    if(sscanf(inputBuffer, "%m[a-zA-Z] subclass: #%m[a-zA-Z] variables: #(%m[ a-zA-Z]) classVariables: #(%m[ a-zA-Z])",
+                            &superclassName,      &instClassName,         &instVars,                     &classVars) != 4) {
+        parseError("Unable to parse class creation line!");
+    }
+
+    /* look up the superclass */
+    superClass = lookupGlobalName(superclassName, 1);
+    if(!superClass) {
+        error("Line %d, unable to find class %s!", superclassName);
+    }
+
+    /* make the metaclass first. */
+    metaclassNameSize = strlen("Meta") + strlen(instClassName) + 1; /* one more for the zero terminator */
+    metaclassName = malloc(metaclassNameSize);
+    snprintf(metaclassName, metaclassNameSize, "Meta%s", instClassName);
+
+    metaClass = newClass(metaclassName, 0);
+    metaClass->class = ClassClass;
+    metaClass->data[parentClassInClass] = ClassClass;
+
+    /* get any class vars. */
+    litTop = 0;
+
+    if(strlen(classVars) > 2) {
+        /* copy the class vars string into the input buffer. */
+        strncpy(inputBuffer, classVars, sizeof(inputBuffer));
+
+        p = inputBuffer;
+
+        /* Now parse the new instance variables */
+        while (*p) {
+            skipSpaces();
+            if (!isIdentifierChar(*p)) {
+                info("WARN: looking for variable list at position %d but found character '%c' (%x) instead in line %d, \"%s\".", (int)(p - inputBuffer), *p, *p, inputLine, inputBuffer);
+                break;
+            }
+            readIdentifier();
+
+            info("Found variable %s.", tokenBuffer);
+            addLiteral(newSymbol(tokenBuffer));
+        }
+    }
+
+    /* That's the total of our instance variables */
+    instsize = litTop + ClassSize;
+
+    /* fix up as much as possible of the metaclass. */
+    metaClass->data[instanceSizeInClass] = newInteger(instsize);
+    metaClass->data[variablesInClass] = buildLiteralArray();
+    metaClass->data[methodsInClass] = newDictionary();
+
+    /* now make the new class. */
+    instClass = newClass(instClassName, litTop);
+
+    /* get the instance vars */
+    litTop = 0;
+
+    if(strlen(instVars) > 2) {
+        /* copy the class vars string into the input buffer. */
+        strncpy(inputBuffer, instVars, sizeof(inputBuffer));
+
+        p = inputBuffer;
+
+        /* Now parse the new instance variables */
+        while (*p) {
+            skipSpaces();
+            if (!isIdentifierChar(*p)) {
+                info("WARN: looking for variable list at position %d but found character '%c' (%x) instead in line %d, \"%s\".", (int)(p - inputBuffer), *p, *p, inputLine, inputBuffer);
+                break;
+            }
+            readIdentifier();
+
+            info("Found variable %s.", tokenBuffer);
+            addLiteral(newSymbol(tokenBuffer));
+        }
+    }
+
+    instsize = integerValue(superClass->data[instanceSizeInClass]) + litTop;
+
+    /* fix up as much as possible of the class. */
+    instClass->data[instanceSizeInClass] = newInteger(instsize);
+    instClass->data[variablesInClass] = buildLiteralArray();
+    instClass->data[methodsInClass] = newDictionary();
+    instClass->class = metaClass;
+
+    /* phwew, finally save these in the globals for later use. */
+    addGlobalName(metaclassName, metaClass);
+    addGlobalName(instClassName, instClass);
+
+    free(superclassName);
+    free(instClassName);
+    free(metaclassName);
+    free(instVars);
+    free(classVars);
 }
 
 //void ClassCommand(void)
