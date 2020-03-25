@@ -48,28 +48,14 @@ add_executable(lst "${PROJECT_SOURCE_DIR}/src/vm/main.c"
               )
 
 
-# gather the Smalltalk sources.
-#file(GLOB_RECURSE st_sources CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/src/smalltalk/system/*.st")
-
-#message("Smalltalk source files: ${st_sources}.")
-
 # set up the boot strapping target to make the image.
 
 # old bootstrap
-add_custom_target(image ALL
-    COMMAND bootstrap ${PROJECT_SOURCE_DIR}/src/bootstrap/imageSource lst.img
-    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
-    COMMENT "Bootstrapping initial image file." VERBATIM
-    SOURCES ${PROJECT_SOURCE_DIR}/src/bootstrap/imageSource
-)
-
-
-# new bootstrap
 #add_custom_target(image ALL
-#    COMMAND bootstrap ${st_sources}
+#    COMMAND bootstrap ${PROJECT_SOURCE_DIR}/src/smalltalk/system/image.st lst.img
 #    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
-#    COMMENT "Bootstrapping initial image file, lst.img." VERBATIM
-#    SOURCES ${st_sources}
+#    COMMENT "Bootstrapping initial image file." VERBATIM
+#    SOURCES ${PROJECT_SOURCE_DIR}/src/bootstrap/imageSource
 #)
 
 # old bootstrap

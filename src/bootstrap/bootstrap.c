@@ -131,8 +131,9 @@ static void bigBang(void);
 
 /* ------------------------------------------------------------- */
 
+#define MAX_BUF (4096)
 static FILE *fin;
-static char inputBuffer[1500], *p, tokenBuffer[80];
+static char inputBuffer[MAX_BUF], *p, tokenBuffer[80];
 static int inputLine = 0;
 static int inputPosition = 0;
 
@@ -193,7 +194,7 @@ int main(int argc, char **argv)
         printf("Image source file: %s\n", image_source);
     }
 
-    if (argc >= 2) {
+    if (argc > 2) {
         output_file = argv[2];
         printf("Image output file: %s\n", output_file);
     }
@@ -224,23 +225,6 @@ int main(int argc, char **argv)
                 error("Character %x ('%c') not a supported action!  Found in line \"%s\" (%d) of input file %s.", *p, *p, inputBuffer, inputLine, image_source);
                 break;
         }
-//        readIdentifier();
-//
-//        if (strcmp(tokenBuffer, "BEGIN") == 0) {
-//            bootMethod = BeginCommand();
-//        } else if (strcmp(tokenBuffer, "RAWCLASS") == 0) {
-//            RawClassCommand();
-//        } else if (strcmp(tokenBuffer, "CLASS") == 0) {
-//            ClassCommand();
-//        } else if (strcmp(tokenBuffer, "COMMENT") == 0) {
-//            /* nothing */ ;
-//        } else if (strcmp(tokenBuffer, "METHOD") == 0) {
-//            MethodCommand();
-//        } else if (strcmp(tokenBuffer, "END") == 0) {
-//            break;
-//        } else {
-//            error("unknown command %s!", tokenBuffer);
-//        }
     }
 
     fclose(fin);
@@ -277,19 +261,28 @@ int main(int argc, char **argv)
         info("false already exists!");
     }
 
-    if(!lookupGlobalName("boot", 1)) {
-        addGlobalName("boot", bootMethod);
+    if((UndefinedClass = lookupGlobalName("Undefined", 1))) {
+        struct object *boot = dictLookup(UndefinedClass->data[methodsInClass], "main");
+        addGlobalName("boot", boot);
     } else {
-        info("boot already exists!");
+        error("No Unidentified class!");
     }
+//    if(!lookupGlobalName("boot", 1)) {
+//        addGlobalName("boot", bootMethod);
+//    } else {
+//        info("boot already exists!");
+//    }
 
+    info("Fixup symbols.");
     /* then create the tree of symbols */
     SymbolClass->data[symbolsInSymbol] = fixSymbols();
 
     /* fix up globals. */
+    info("Fixup globals.");
     fixGlobals();
 
     /* see if anything was never defined in the class source */
+    info("Check globals.");
     checkGlobals();
 
     if ((fd = fopen(output_file, "w")) == NULL) {
@@ -339,6 +332,7 @@ void bigBang(void)
      * Second, make classes for Symbol and Dictionary.
      * this will allow newClass to work correctly
      */
+
     SymbolClass = gcalloc(ClassSize + 1);
     addGlobalName("Symbol", SymbolClass);
     SymbolClass->data[nameInClass] = newSymbol("Symbol");
@@ -375,7 +369,7 @@ void bigBang(void)
     /* SmallInt has an extra class variable, just like Symbol */
     SmallIntClass = newClass("SmallInt", 1);
     addGlobalName("SmallInt", SmallIntClass);
-    SmallIntClass->data[nameInClass] = newSymbol("SmallInt");
+//    SmallIntClass->data[nameInClass] = newSymbol("SmallInt");
 
     IntegerClass = newClass("Integer", 0);
     addGlobalName("Integer", IntegerClass);
@@ -491,8 +485,9 @@ int parseError(char *msg)
 struct object *gcalloc(int size)
 {
     struct object *result;
+    size_t obj_size = sizeof(struct object) + ((sizeof(struct object *) * (size_t)size));
 
-    result = malloc(sizeof(struct object) + (sizeof(struct object *) * (uint)size));
+    result = calloc(1, obj_size);
     if (!result) {
         error("gcalloc(): out of memory!");
     }
@@ -525,13 +520,21 @@ struct byteObject *binaryAlloc(int size)
 
 /* ------------------------------------------------------------- */
 
+#define MAX_GLOBALS (500)
 static int globalTop = 0;
-static char *globalNames[100];
-static struct object *globals[100];
+static char *globalNames[MAX_GLOBALS];
+static struct object *globals[MAX_GLOBALS];
 
 void addGlobalName(char *name, struct object *value)
 {
     char *newName;
+
+    /* check for duplicates. */
+    for(int i=0; i < globalTop; i++) {
+        if(strcmp(globalNames[i], name) == 0) {
+            info("Name \"%s\" already exists!", name);
+        }
+    }
 
     newName = strdup(name);
     if (!newName) {
@@ -819,7 +822,7 @@ struct object *newClass(char *name, int numVars)
 
     newC = gcalloc(ClassSize + numVars);
     newC->data[nameInClass] = newSymbol(name);
-    newC->data[methodsInClass] = newDictionary();
+
     return newC;
 }
 
@@ -1187,7 +1190,9 @@ int nameTerm(char *name)
         }
     }
 
-    return (parseError("unknown identifier"));
+    error("unknown identifier %s at line %d!", name, inputLine);
+
+    return 0;
 }
 
 static int returnOp;
@@ -1260,7 +1265,6 @@ int parseBlock(void)
 
 static int parseSymbol(void);
 static int parseChar(void);
-static int parseTerm(void);
 
 
 int parseSymbol(void)
@@ -1323,6 +1327,11 @@ int parseTerm(void)
         return parseBlock();
     if (*p == '#')
         return parseSymbol();
+
+    info("Illegal start of expression '%c' (%x) at line %d.", *p, *p, inputLine);
+    info("Parsed source:\n\"%s\"", inputBuffer);
+    error("Remaining source to parse:\n\"%s\"", p);
+
     return parseError("illegal start of expression");
 }
 
@@ -1834,13 +1843,16 @@ void ClassMethodCommand(void)
 {
     /* read class name */
     readIdentifier();
+
+    info("tokenBuffer=%s", tokenBuffer);
+
     currentClass = lookupGlobalName(tokenBuffer, 1);
     if (!currentClass) {
         error("ClassMethodCommand(): unknown class in Method %s!", tokenBuffer);
     }
 
-    /* get the superclass */
-    currentClass = currentClass->data[parentClassInClass];
+    /* get the class of the class */
+    currentClass = currentClass->class;
     if (!currentClass) {
         error("ClassMethodCommand(): unknown superclass in Method %s!", tokenBuffer);
     }
@@ -1853,6 +1865,9 @@ void InstanceMethodCommand(void)
 {
     /* read class name */
     readIdentifier();
+
+    info("tokenBuffer=%s", tokenBuffer);
+
     currentClass = lookupGlobalName(tokenBuffer, 1);
     if (!currentClass) {
         error("InstanceMethodCommand(): unknown class in Method %s!", tokenBuffer);
@@ -1884,8 +1899,7 @@ void MethodCommand(void)
      * If successful compile, insert into the method dictionary
      */
     if (parseMethod(theMethod)) {
-        dictionaryInsert(currentClass->data[methodsInClass],
-                         theMethod->data[nameInMethod], theMethod);
+        dictionaryInsert(currentClass->data[methodsInClass], theMethod->data[nameInMethod], theMethod);
     }
 }
 
@@ -2216,12 +2230,14 @@ void ClassCommand(void)
 
 
     /* parse lines like:
-     * SuperClass subclass: #NewClass variables: #( instVars ) classVariables: #( classVars )
+     * +SuperClass subclass: #NewClass variables: #( instVars ) classVariables: #( classVars )
      */
-    if(sscanf(inputBuffer, "%m[a-zA-Z] subclass: #%m[a-zA-Z] variables: #(%m[ a-zA-Z]) classVariables: #(%m[ a-zA-Z])",
+    if(sscanf(inputBuffer, "+%m[a-zA-Z] subclass: #%m[a-zA-Z] variables: #(%m[ a-zA-Z]) classVariables: #(%m[ a-zA-Z])",
                             &superclassName,      &instClassName,         &instVars,                     &classVars) != 4) {
         parseError("Unable to parse class creation line!");
     }
+
+    info("ClassCommand() found superclass=%s, instclass=%s, instvars=%s, classvars=%s", superclassName, instClassName, instVars, classVars);
 
     /* look up the superclass */
     superClass = lookupGlobalName(superclassName, 1);
@@ -2234,7 +2250,15 @@ void ClassCommand(void)
     metaclassName = malloc(metaclassNameSize);
     snprintf(metaclassName, metaclassNameSize, "Meta%s", instClassName);
 
-    metaClass = newClass(metaclassName, 0);
+    metaClass = lookupGlobalName(metaclassName, 1);
+    if(!metaClass) {
+        metaClass = newClass(metaclassName, 0);
+        addGlobalName(metaclassName, metaClass);
+    } else {
+        info("Metaclass %s already exists.", metaclassName);
+    }
+
+    /* set up the class tree, weird for metaclasses. */
     metaClass->class = ClassClass;
     metaClass->data[parentClassInClass] = ClassClass;
 
@@ -2270,7 +2294,13 @@ void ClassCommand(void)
     metaClass->data[methodsInClass] = newDictionary();
 
     /* now make the new class. */
-    instClass = newClass(instClassName, litTop);
+    instClass = lookupGlobalName(instClassName, 1);
+    if(!instClass) {
+        instClass = newClass(instClassName, litTop);
+        addGlobalName(instClassName, instClass);
+    } else {
+        info("Class %s already exists.", instClassName);
+    }
 
     /* get the instance vars */
     litTop = 0;
@@ -2295,17 +2325,19 @@ void ClassCommand(void)
         }
     }
 
-    instsize = integerValue(superClass->data[instanceSizeInClass]) + litTop;
+    instsize = litTop;
+
+    /* class Object has a superclass of nil */
+    if(superClass && superClass != nilObject) {
+        instsize += integerValue(superClass->data[instanceSizeInClass]);
+    }
 
     /* fix up as much as possible of the class. */
+    instClass->data[parentClassInClass] = superClass;
     instClass->data[instanceSizeInClass] = newInteger(instsize);
     instClass->data[variablesInClass] = buildLiteralArray();
     instClass->data[methodsInClass] = newDictionary();
     instClass->class = metaClass;
-
-    /* phwew, finally save these in the globals for later use. */
-    addGlobalName(metaclassName, metaClass);
-    addGlobalName(instClassName, instClass);
 
     free(superclassName);
     free(instClassName);
@@ -2395,6 +2427,9 @@ static void fixGlobals(void)
         if (strncmp(globalNames[i], "Meta", 4) == 0) {
             continue;
         }
+
+        info("Adding %s", globalNames[i]);
+
         dictionaryInsert(t, newSymbol(globalNames[i]), globals[i]);
     }
 

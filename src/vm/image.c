@@ -345,11 +345,6 @@ int fileIn_version_3(FILE *fp)
     addStaticRoot(&globalsObject);
 
     /* fix up everything from globals. */
-    info("Finding initial method.");
-//    initialMethod = objectRead(fp);
-    initialMethod = lookupGlobal("boot");
-    addStaticRoot(&initialMethod);
-
     info("Finding special symbols.");
     specialSymbols = lookupGlobal("specialSymbols");
 
@@ -414,6 +409,13 @@ int fileIn_version_3(FILE *fp)
 
     UndefinedClass = lookupGlobal("Undefined");
     addStaticRoot(&UndefinedClass);
+
+    info("Finding initial method.");
+    if(!(initialMethod = lookupGlobal("boot"))) {
+        info("Could not find #boot method in globals, looking for #main in Undefined.");
+        initialMethod = dictLookup(UndefinedClass->data[methodsInClass], "main");
+    }
+    addStaticRoot(&initialMethod);
 
     info("Read in %d objects.", indirtop);
 

@@ -8,55 +8,67 @@
 #include "err.h"
 #include "interp.h"
 
-//void sysError(char * a)
-//{
-//    fprintf(stderr,"unrecoverable system error: %s\n", a);
-//    exit(1);
-//}
-//
-//
-//void sysErrorInt(char * a, intptr_t b)
-//{
-//    fprintf(stderr,"unrecoverable system error: %s %ld\n", a, b);
-//    exit(1);
-//}
-//
-//
-//void sysErrorStr(char * a, char * b)
-//{
-//    fprintf(stderr,"unrecoverable system error: %s %s\n", a, b);
-//    exit(1);
-//}
 
+static void log(const char *func, int line_num, const char *templ, va_list va)
+{
+    char output[2048];
 
+    /* create the output string template */
+    snprintf(output, sizeof(output),"%s:%d %s\n", func, line_num, templ);
 
+    /* make sure it is zero terminated */
+    output[sizeof(output)-1] = 0;
 
-void error(const char *templ, ...)
+    /* print it out. */
+    vfprintf(stderr,output,va);
+}
+
+void info_impl(const char *func, int line_num, const char *templ, ...)
 {
     va_list va;
 
-    /* print it out. */
     va_start(va,templ);
-    vfprintf(stderr,templ,va);
+    log(func, line_num, templ, va);
     va_end(va);
-    fprintf(stderr,"\n");
+}
+
+void error_impl(const char *func, int line_num, const char *templ, ...)
+{
+    va_list va;
+
+    va_start(va,templ);
+    log(func, line_num, templ, va);
+    va_end(va);
 
     exit(1);
 }
 
-
-
-void info(const char *templ, ...)
-{
-    va_list va;
-
-    /* print it out. */
-    va_start(va,templ);
-    vfprintf(stderr,templ,va);
-    va_end(va);
-    fprintf(stderr,"\n");
-}
-
+//void error(const char *templ, ...)
+//{
+//    va_list va;
+//
+//    /* print it out. */
+//    va_start(va,templ);
+//    vfprintf(stderr,templ,va);
+//    va_end(va);
+//    fprintf(stderr,"\n");
+//
+//    exit(1);
+//}
+//
+//
+//
+//void info(const char *templ, ...)
+//{
+//    va_list va;
+//
+//    /* print it out. */
+//    va_start(va,templ);
+//    vfprintf(stderr,templ,va);
+//    va_end(va);
+//    fprintf(stderr,"\n");
+//}
+//
 
 
 void backTrace(struct object * aContext)
