@@ -411,11 +411,14 @@ int fileIn_version_3(FILE *fp)
     addStaticRoot(&UndefinedClass);
 
     info("Finding initial method.");
-    if(!(initialMethod = lookupGlobal("boot"))) {
-        info("Could not find #boot method in globals, looking for #main in Undefined.");
+//    if(!(initialMethod = lookupGlobal("boot"))) {
+//        info("Could not find #boot method in globals, looking for #main in Undefined.");
         initialMethod = dictLookup(UndefinedClass->data[methodsInClass], "main");
-    }
+//    }
     addStaticRoot(&initialMethod);
+
+    info("Memory top %p", memoryTop);
+    info("Memory pointer %p", memoryPointer);
 
     info("Read in %d objects.", indirtop);
 

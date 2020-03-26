@@ -20,6 +20,9 @@
     Modified by Kyle Hayes for 64-bit systems.
 */
 
+#define DEBUG
+#define TRACE
+
 #include <stdio.h>
 #include <string.h> /* For bzero() */
 #include <stdint.h>
@@ -77,6 +80,7 @@ void flushCache(void)
 /*
  * Debugging
  */
+
 #if defined(DEBUG) && defined(TRACE)
 static void indent(struct object *ctx)
 {
@@ -109,13 +113,13 @@ static void indent(struct object *ctx)
 
 
 #define PC (bytePointer-1)
-#define DBG0(msg) if (debugging) {indent(context); printf("%d: %s\n", PC, msg);}
+#define DBG0(msg) if (debugging) {indent(context); fprintf(stderr, "%d: %s\n", PC, msg);}
 #define DBG1(msg, arg) if (debugging) {indent(context); \
-        printf("%d: %s %d\n", PC, msg, arg);}
+        fprintf(stderr, "%d: %s %d\n", PC, msg, arg);}
 #define DBGS(msg, cl, sel) \
     if (debugging) { \
         indent(context); \
-        printf("%d: %s %s %s\n", PC, msg, cl, sel); }
+        fprintf(stderr, "%d: %s %.*s %.*s\n", PC, msg, SIZE(cl), (char *)bytePtr(cl), SIZE(sel), (char*)bytePtr(sel)); }
 #else
 #define DBG0(msg)
 #define DBG1(msg, arg)
@@ -163,6 +167,7 @@ static struct object *lookupMethod(struct object *selector, struct object *class
      * Scan upward through the class hierarchy
      */
     for ( ; class != nilObject; class = class->data[parentClassInClass]) {
+        info("looking up #%.*s in class %.*s.", SIZE(selector), (char*)bytePtr(selector), SIZE(class->data[nameInClass]), (char*)bytePtr(class->data[nameInClass]));
         /*
          * Consider the Dictionary of methods for this Class
          */
@@ -316,7 +321,6 @@ int execute(struct object *aProcess, int ticks)
 
     /* everything else can wait, as maybe won't be needed at all */
     temporaries = instanceVariables = arguments = literals = 0;
-
 
     for (;;) {
         /*
@@ -507,9 +511,7 @@ int execute(struct object *aProcess, int ticks)
 
 findMethodFromSymbol:
             receiverClass = CLASS(arguments->data[receiverInArguments]);
-            DBGS("SendMessage",
-                 bytePtr(receiverClass->data[nameInClass]),
-                 bytePtr(messageSelector));
+            DBGS("SendMessage", receiverClass->data[nameInClass], messageSelector);
 checkCache:
             low = (int)((((uintptr_t) messageSelector) +
                          ((uintptr_t) receiverClass)) % (uintptr_t)METHOD_CACHE_SIZE);

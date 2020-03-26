@@ -161,3 +161,96 @@ void backTrace(struct object * aContext)
     }
 }
 
+
+
+void dumpObject(struct object *obj, int indent)
+{
+    for(int i=0; i < indent; i++) {
+        fputc(' ', stderr);
+    }
+
+    if(CLASS(obj) == SmallIntClass) {
+        fprintf(stderr, "%d", integerValue(obj));
+    } else if(CLASS(obj) == UndefinedClass) {
+        fprintf(stderr, "nil");
+    } else if(CLASS(obj) == SymbolClass) {
+        fprintf(stderr, "#%.*s", SIZE(obj), (char *)bytePtr(obj));
+    } else if(CLASS(obj) == StringClass) {
+        fprintf(stderr, "'%.*s'", SIZE(obj), (char *)bytePtr(obj));
+    } else if(CLASS(obj) == ArrayClass) {
+        fprintf(stderr, "#(");
+        for(int i=0; i < (int)SIZE(obj); i++) {
+            dumpObject(obj->data[i], 1);
+        }
+        fprintf(stderr, " )");
+    } else if(IS_BINOBJ(obj)) {
+        fprintf(stderr, "%.*s #(", SIZE(obj->class->data[nameInClass]), (char *)bytePtr(obj->class->data[nameInClass]));
+        for(int i=0; i < (int)SIZE(obj); i++) {
+            fprintf(stderr," %02x", bytePtr(obj)[i]);
+        }
+        fprintf(stderr, " )");
+    } else {
+        struct object *cls = CLASS(obj);
+        struct object *name = cls->data[nameInClass];
+
+        fprintf(stderr, "%.*s", SIZE(name), (char *)bytePtr(name));
+    }
+}
+
+
+void dumpMethod(struct object *aMethod, int indent)
+{
+    if(!aMethod || aMethod == nilObject) {
+        info("passed method is nil or NULL!");
+        return;
+    }
+
+    for(int i=0; i < indent; i++) {
+        fputc(' ', stderr);
+    }
+    fprintf(stderr, "Method %.*s\n", SIZE(aMethod->data[nameInMethod]), bytePtr(aMethod->data[nameInMethod]));
+
+    /* bytecodes */
+    for(int i=0; i < indent + 4; i++) {
+        fputc(' ', stderr);
+    }
+    fprintf(stderr, "Bytecodes: ");
+    dumpObject(aMethod->data[byteCodesInMethod], 0);
+    fputc('\n', stderr);
+
+    /* literals */
+    for(int i=0; i < indent + 4; i++) {
+        fputc(' ', stderr);
+    }
+    fprintf(stderr, "Literals: ");
+    dumpObject(aMethod->data[literalsInMethod], 0);
+    fputc('\n', stderr);
+
+    /* stack size */
+    for(int i=0; i < indent + 4; i++) {
+        fputc(' ', stderr);
+    }
+    fprintf(stderr, "Stack size: ");
+    dumpObject(aMethod->data[stackSizeInMethod], 0);
+    fputc('\n', stderr);
+
+    /* temporary size */
+    for(int i=0; i < indent + 4; i++) {
+        fputc(' ', stderr);
+    }
+    fprintf(stderr, "Temporary size: ");
+    dumpObject(aMethod->data[temporarySizeInMethod], 0);
+    fputc('\n', stderr);
+
+    /* class of method */
+    for(int i=0; i < indent + 4; i++) {
+        fputc(' ', stderr);
+    }
+    fprintf(stderr, "Class of method: ");
+    dumpObject(aMethod->data[classInMethod], 0);
+    fputc('\n', stderr);
+
+    /* skip text */
+}
+
+

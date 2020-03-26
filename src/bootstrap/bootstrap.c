@@ -362,6 +362,9 @@ void bigBang(void)
     addGlobalName("MetaClass", MetaClassClass);
     ClassClass->class = MetaClassClass;
 
+    /* one more tweak. This is needed to stop lookups. */
+    MetaObjectClass->data[parentClassInClass] = ClassClass;
+
     /* now make up a bunch of other classes */
     BlockClass = newClass("Block", 0);
     addGlobalName("Block", BlockClass);
@@ -1844,7 +1847,7 @@ void ClassMethodCommand(void)
     /* read class name */
     readIdentifier();
 
-    info("tokenBuffer=%s", tokenBuffer);
+//    info("tokenBuffer=%s", tokenBuffer);
 
     currentClass = lookupGlobalName(tokenBuffer, 1);
     if (!currentClass) {
@@ -1866,7 +1869,7 @@ void InstanceMethodCommand(void)
     /* read class name */
     readIdentifier();
 
-    info("tokenBuffer=%s", tokenBuffer);
+//    info("tokenBuffer=%s", tokenBuffer);
 
     currentClass = lookupGlobalName(tokenBuffer, 1);
     if (!currentClass) {
@@ -1889,6 +1892,7 @@ void MethodCommand(void)
 
     theMethod = gcalloc(methodSize);
     theMethod->class = lookupGlobalName("Method", 0);
+//    theMethod->data[classInMethod] = currentClass;
 
     /* fill in method class */
     byteTop = 0;
@@ -1898,8 +1902,13 @@ void MethodCommand(void)
     /*
      * If successful compile, insert into the method dictionary
      */
+
+    info("parsing method for %.*s.", SIZE(currentClass->data[nameInClass]), (char *)bytePtr(currentClass->data[nameInClass]));
+
     if (parseMethod(theMethod)) {
         dictionaryInsert(currentClass->data[methodsInClass], theMethod->data[nameInMethod], theMethod);
+    } else {
+        info("parseMethod() failed!");
     }
 }
 
@@ -2191,15 +2200,16 @@ void ParseClassVars(struct object *instClass, struct object *parentClass, struct
 /*
  * SuperClass subclass: #NewClass variables: #( instVars ) classVariables: #( classVars )
  *
- *                                                       Object
- *      Class                                              ^
- *        ^                                                .
- *        |                                                .
- *        |    MetaNewClass                SuperClass      .
- *        |   +-------------+            +-------------+   |
- *        +---+-- class     |            | parentClass-+---+
- *        |   |    name     |            +-------------+
- *        +---+-parentClass |                        ^
+ *                       MetaSuperClass
+ *                       +-------------+                Object
+ *      Class            |             |                   ^
+ *        ^              +-------------+                   .
+ *        |                     ^    ^      SuperClass     .
+ *        |    MetaNewClass     |    |   +-------------+   .
+ *        |   +-------------+   |    +---+----class    |   |
+ *        +---+-- class     |   |        | parentClass-+---+
+ *            |    name     |   |        +-------------+
+ *            | parentClass-+---+                    ^
  *            |   methods   |        NewClass        |
  *            |    size     |     +-------------+    |
  *            |  variables  |<----+----class    |    |
@@ -2260,7 +2270,10 @@ void ClassCommand(void)
 
     /* set up the class tree, weird for metaclasses. */
     metaClass->class = ClassClass;
-    metaClass->data[parentClassInClass] = ClassClass;
+//    metaClass->data[parentClassInClass] = ClassClass;
+    if(!metaClass->data[parentClassInClass]) {
+        metaClass->data[parentClassInClass] = superClass->class;
+    }
 
     /* get any class vars. */
     litTop = 0;

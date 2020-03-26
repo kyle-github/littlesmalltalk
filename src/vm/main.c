@@ -49,6 +49,8 @@ int main(int argc, char **argv)
     FILE *fp;
     char imageFileName[120], *p;
 
+    printf("Little Smalltalk starting up...\n");
+
     prog_argc = argc;
     prog_argv = argv;
 
@@ -75,6 +77,7 @@ int main(int argc, char **argv)
         } else if (strcmp(argv[i], "-d") == 0) {
             dynamicSize = atoi(argv[++i]);
         } else if (strcmp(argv[i], "-g") == 0) {
+            info("Turning on debugging.");
             debugging = 1;
         } else {
             strcpy(imageFileName, argv[i]);
@@ -85,7 +88,11 @@ int main(int argc, char **argv)
     tempFile = fopen("/usr/tmp/counts", "w");
 # endif
 
+    printf("\tInitializing GC memory pool.\n");
+
     gcinit(staticSize, dynamicSize);
+
+    printf("\tReading in image from file %s.\n", imageFileName);
 
     /* read in the method from the image file */
     fp = fopen(imageFileName, "rb");
@@ -94,14 +101,13 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    printf("%d objs/cells in image\n", fileIn(fp));
+    printf("\t%d objs/cells in image\n", fileIn(fp));
     fclose(fp);
 
-    /* build a context around it */
-
-//    aProcess = staticAllocate(3);
-
     /* build the root process with a context, make sure it is GC-proof */
+
+    printf("\tSetting up root process.\n");
+
     aProcess = gcalloc(processSize);
     aProcess->class = lookupGlobal("Process");
     for(int i=0; i< processSize; i++) {
@@ -109,13 +115,14 @@ int main(int argc, char **argv)
     }
     addStaticRoot(&aProcess);
 
+    printf("\tSetting up root context.\n");
+
     /* context should be dynamic */
     aContext = gcalloc(contextSize);
     aContext->class = ContextClass;
     for(int i=0; i< contextSize; i++) {
         aContext->data[i] = nilObject;
     }
-//    addStaticRoot(&aContext);
 
     /* add the context to the process. */
     aProcess->data[contextInProcess] = aContext;
@@ -132,7 +139,8 @@ int main(int argc, char **argv)
     aContext->data[argumentsInContext] = nilObject;
 
     /* set up temporary array. */
-    aContext->data[temporariesInContext] = gcalloc(19);
+    size = 19;  /* where is this number from? */
+    aContext->data[temporariesInContext] = gcalloc(size);
     aContext->data[temporariesInContext]->class = ArrayClass;
     for(int i=0; i < size; i++) {
         aContext->data[temporariesInContext]->data[i] = nilObject;
@@ -149,6 +157,11 @@ int main(int argc, char **argv)
 #if defined(PROFILE)
     take_samples(1);
 #endif
+
+    printf("\tStarting execution.\n");
+
+    dumpMethod(initialMethod, 0);
+
     switch(execute(aProcess, 0)) {
     case 2:
         printf("User defined return\n");
