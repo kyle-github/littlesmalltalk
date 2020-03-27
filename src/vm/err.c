@@ -27,6 +27,11 @@ void info_impl(const char *func, int line_num, const char *templ, ...)
 {
     va_list va;
 
+    /* do not output anything if we are not debugging. */
+    if(!debugging) {
+        return;
+    }
+
     va_start(va,templ);
     log(func, line_num, templ, va);
     va_end(va);
@@ -42,33 +47,6 @@ void error_impl(const char *func, int line_num, const char *templ, ...)
 
     exit(1);
 }
-
-//void error(const char *templ, ...)
-//{
-//    va_list va;
-//
-//    /* print it out. */
-//    va_start(va,templ);
-//    vfprintf(stderr,templ,va);
-//    va_end(va);
-//    fprintf(stderr,"\n");
-//
-//    exit(1);
-//}
-//
-//
-//
-//void info(const char *templ, ...)
-//{
-//    va_list va;
-//
-//    /* print it out. */
-//    va_start(va,templ);
-//    vfprintf(stderr,templ,va);
-//    va_end(va);
-//    fprintf(stderr,"\n");
-//}
-//
 
 
 void backTrace(struct object * aContext)

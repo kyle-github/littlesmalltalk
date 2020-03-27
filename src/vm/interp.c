@@ -20,9 +20,6 @@
     Modified by Kyle Hayes for 64-bit systems.
 */
 
-#define DEBUG
-#define TRACE
-
 #include <stdio.h>
 #include <string.h> /* For bzero() */
 #include <stdint.h>
@@ -81,7 +78,7 @@ void flushCache(void)
  * Debugging
  */
 
-#if defined(DEBUG) && defined(TRACE)
+#ifdef TRACE
 static void indent(struct object *ctx)
 {
     static int oldlev = 0;

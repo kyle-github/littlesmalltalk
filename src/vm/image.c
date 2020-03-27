@@ -50,7 +50,7 @@ The bytes per word or size is usually stored in the lower bits */
 
 static int fileIn_version_0(FILE *fp);
 static int fileIn_version_1(FILE *fp);
-static int fileOut_version_1(FILE *fp);
+//static int fileOut_version_1(FILE *fp);
 static int getIntSize(int val);
 static void objectWrite(FILE * fp, struct object *obj);
 static void writeTag(FILE * fp, int type, int val);
@@ -59,7 +59,7 @@ static struct object *objectRead(FILE *fp);
 static void readTag(FILE *fp, int *type, int *val);
 static int get_byte(FILE *fp);
 
-static int fileOut_version_2(FILE *fp);
+//static int fileOut_version_2(FILE *fp);
 static int fileIn_version_2(FILE *fp);
 static struct object *fix_offset(struct object *old, int64_t offset);
 static struct object *object_fix_up(struct object *obj, int64_t offset);
@@ -296,31 +296,31 @@ int fileIn_version_1(FILE *fp)
 
 
 
-int fileOut_version_1(FILE *img)
-{
-    /* use the currently unused space for the indir pointers */
-    if (inSpaceOne) {
-        indirArray = (struct object * *) spaceTwo;
-    } else {
-        indirArray = (struct object * *) spaceOne;
-    }
-    indirtop = 0;
-
-    info("Writing out image version 1.");
-
-    /* write the header. */
-    put_image_version(img, IMAGE_VERSION_1);
-
-    /* write the main objects. */
-    objectWrite(img, globalsObject);
-    objectWrite(img, initialMethod);
-    objectWrite(img, binaryMessages[0]);
-    objectWrite(img, binaryMessages[1]);
-    objectWrite(img, binaryMessages[2]);
-    objectWrite(img, badMethodSym);
-
-    return indirtop;
-}
+//int fileOut_version_1(FILE *img)
+//{
+//    /* use the currently unused space for the indir pointers */
+//    if (inSpaceOne) {
+//        indirArray = (struct object * *) spaceTwo;
+//    } else {
+//        indirArray = (struct object * *) spaceOne;
+//    }
+//    indirtop = 0;
+//
+//    info("Writing out image version 1.");
+//
+//    /* write the header. */
+//    put_image_version(img, IMAGE_VERSION_1);
+//
+//    /* write the main objects. */
+//    objectWrite(img, globalsObject);
+//    objectWrite(img, initialMethod);
+//    objectWrite(img, binaryMessages[0]);
+//    objectWrite(img, binaryMessages[1]);
+//    objectWrite(img, binaryMessages[2]);
+//    objectWrite(img, badMethodSym);
+//
+//    return indirtop;
+//}
 
 
 
@@ -360,17 +360,7 @@ int fileIn_version_3(FILE *fp)
     badMethodSym = specialSymbols->data[3];
     addStaticRoot(&badMethodSym);
 
-
-//    fprintf(stderr, "reading binary message objects.\n");
-//    for (i = 0; i < 3; i++) {
-//        binaryMessages[i] = objectRead(fp);
-//        addStaticRoot(&binaryMessages[i]);
-//    }
-//
-//    fprintf(stderr, "reading bad method symbol.\n");
-//    badMethodSym = objectRead(fp);
-//    addStaticRoot(&badMethodSym);
-
+    /* look up the rest in the globals object. */
     nilObject = lookupGlobal("nil");
     addStaticRoot(&nilObject);
 
@@ -411,10 +401,10 @@ int fileIn_version_3(FILE *fp)
     addStaticRoot(&UndefinedClass);
 
     info("Finding initial method.");
-//    if(!(initialMethod = lookupGlobal("boot"))) {
-//        info("Could not find #boot method in globals, looking for #main in Undefined.");
+    if(!(initialMethod = lookupGlobal("start"))) {
+        info("Could not find #start method in globals, looking for #main in Undefined.");
         initialMethod = dictLookup(UndefinedClass->data[methodsInClass], "main");
-//    }
+    }
     addStaticRoot(&initialMethod);
 
     info("Memory top %p", memoryTop);
@@ -758,66 +748,66 @@ static void readTag(FILE *fp, int *type, int *val)
 
 
 
-int fileOut_version_2(FILE *fp)
-{
-    int i;
-    struct image_header header;
-    int64_t totalCells = 0;
-
-    printf("starting to file out\n");
-
-    memset(&header, 0, sizeof(header));
-
-    /* force a GC to clean up the image */
-    do_gc();
-
-    /* output header. */
-    header.magic[0] = 'l';
-    header.magic[1] = 's';
-    header.magic[2] = 't';
-    header.magic[3] = '!';
-    header.version = IMAGE_VERSION_2;
-
-    fwrite(&header, sizeof header, 1, fp);
-
-    /* how much to write? */
-    totalCells = ((intptr_t)memoryTop - (intptr_t)memoryPointer)/(int)BytesPerWord;
-
-    /* write out image bounds */
-    fprintf(stderr, "writing out memoryBase=%p\n", (void *)memoryBase);
-    fwrite(&memoryBase, sizeof memoryBase, 1, fp);
-
-    fprintf(stderr, "writing out memoryPointer=%p\n", (void *)memoryPointer);
-    fwrite(&memoryPointer, sizeof memoryPointer, 1, fp);
-
-    fprintf(stderr, "writing out memoryTop=%p\n", (void *)memoryTop);
-    fwrite(&memoryTop, sizeof memoryTop, 1, fp);
-
-
-    /* write out core objects. */
-    fprintf(stderr, "writing out globals object=%p\n", (void *)globalsObject);
-    fwrite(&globalsObject, sizeof globalsObject, 1, fp);
-
-    fprintf(stderr, "writing out initial method=%p\n", (void *)initialMethod);
-    fwrite(&initialMethod, sizeof initialMethod, 1, fp);
-
-    fprintf(stderr, "writing binary message objects.\n");
-    for (i = 0; i < 3; i++) {
-        fprintf(stderr, "    writing out binary object[%d]=%p\n", i, (void *)binaryMessages[i]);
-        fwrite(&(binaryMessages[i]), sizeof (binaryMessages[i]), 1, fp);
-    }
-
-    fprintf(stderr, "writing out doesNotUnderstand: symbol=%p\n", (void *)badMethodSym);
-    fwrite(&badMethodSym, sizeof badMethodSym, 1, fp);
-
-
-    /* write out raw image data. */
-    fprintf(stderr, "writing out %ld cells of image data.\n", totalCells);
-    fwrite(memoryPointer, BytesPerWord, (size_t)totalCells, fp);
-
-    return (int)totalCells;
-}
-
+//int fileOut_version_2(FILE *fp)
+//{
+//    int i;
+//    struct image_header header;
+//    int64_t totalCells = 0;
+//
+//    printf("starting to file out\n");
+//
+//    memset(&header, 0, sizeof(header));
+//
+//    /* force a GC to clean up the image */
+//    do_gc();
+//
+//    /* output header. */
+//    header.magic[0] = 'l';
+//    header.magic[1] = 's';
+//    header.magic[2] = 't';
+//    header.magic[3] = '!';
+//    header.version = IMAGE_VERSION_2;
+//
+//    fwrite(&header, sizeof header, 1, fp);
+//
+//    /* how much to write? */
+//    totalCells = ((intptr_t)memoryTop - (intptr_t)memoryPointer)/(int)BytesPerWord;
+//
+//    /* write out image bounds */
+//    fprintf(stderr, "writing out memoryBase=%p\n", (void *)memoryBase);
+//    fwrite(&memoryBase, sizeof memoryBase, 1, fp);
+//
+//    fprintf(stderr, "writing out memoryPointer=%p\n", (void *)memoryPointer);
+//    fwrite(&memoryPointer, sizeof memoryPointer, 1, fp);
+//
+//    fprintf(stderr, "writing out memoryTop=%p\n", (void *)memoryTop);
+//    fwrite(&memoryTop, sizeof memoryTop, 1, fp);
+//
+//
+//    /* write out core objects. */
+//    fprintf(stderr, "writing out globals object=%p\n", (void *)globalsObject);
+//    fwrite(&globalsObject, sizeof globalsObject, 1, fp);
+//
+//    fprintf(stderr, "writing out initial method=%p\n", (void *)initialMethod);
+//    fwrite(&initialMethod, sizeof initialMethod, 1, fp);
+//
+//    fprintf(stderr, "writing binary message objects.\n");
+//    for (i = 0; i < 3; i++) {
+//        fprintf(stderr, "    writing out binary object[%d]=%p\n", i, (void *)binaryMessages[i]);
+//        fwrite(&(binaryMessages[i]), sizeof (binaryMessages[i]), 1, fp);
+//    }
+//
+//    fprintf(stderr, "writing out doesNotUnderstand: symbol=%p\n", (void *)badMethodSym);
+//    fwrite(&badMethodSym, sizeof badMethodSym, 1, fp);
+//
+//
+//    /* write out raw image data. */
+//    fprintf(stderr, "writing out %ld cells of image data.\n", totalCells);
+//    fwrite(memoryPointer, BytesPerWord, (size_t)totalCells, fp);
+//
+//    return (int)totalCells;
+//}
+//
 
 
 

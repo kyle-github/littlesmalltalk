@@ -193,9 +193,50 @@ writeCharValue: n
 
 !
 !File
+writeClassDefFor: cls | src subclasses |
+    " write the class definition header. "
+    src <- cls classDefSource.
+    self write: (src) size: (src size).
+
+    " recurse down into the subclasses. "
+    subclasses <- cls subclasses.
+    (subclasses notNil) ifTrue: [
+        subclasses do: [ :subCls |
+            self writeClassDefFor: subCls.
+        ]
+    ].
+
+!
+!File
 writeImage
         " save the current image in a file "
     fileID notNil
         ifTrue: [ <104 fileID> ]
+
+!
+!File
+writeImageSource
+    " write out the entire image as a set of sources ordered by parent/child with all the class defs first. "
+
+    " write all the class definition headers. "
+    self writeClassDefFor: Object.
+
+    " write all the methods. "
+    self writeMethodsFor: Object.
+
+!
+!File
+writeMethodsFor: cls | src subclasses |
+    " write the class definition header. "
+    src <- cls methodDefSource.
+    self write: (src) size: (src size).
+
+    " recurse down into the subclasses. "
+    subclasses <- cls subclasses.
+    (subclasses notNil) ifTrue: [
+        subclasses do: [ :subCls |
+            self writeMethodsFor: subCls.
+        ]
+    ].
 
 !

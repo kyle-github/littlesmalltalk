@@ -21,17 +21,6 @@ add_executable(bootstrap   "${PROJECT_SOURCE_DIR}/src/bootstrap/bootstrap.c"
               )
 
 
-# new bootstrap
-#add_executable(bootstrap "${PROJECT_SOURCE_DIR}/src/vm/bootstrap.c"
-#                   "${PROJECT_SOURCE_DIR}/src/vm/err.c"
-#                   "${PROJECT_SOURCE_DIR}/src/vm/err.h"
-#                   "${PROJECT_SOURCE_DIR}/src/vm/globals.c"
-#                   "${PROJECT_SOURCE_DIR}/src/vm/globals.h"
-#                   "${PROJECT_SOURCE_DIR}/src/vm/memory.c"
-#                   "${PROJECT_SOURCE_DIR}/src/vm/memory.h"
-#              )
-
-
 add_executable(lst "${PROJECT_SOURCE_DIR}/src/vm/main.c"
                    "${PROJECT_SOURCE_DIR}/src/vm/err.c"
                    "${PROJECT_SOURCE_DIR}/src/vm/err.h"
@@ -51,17 +40,10 @@ add_executable(lst "${PROJECT_SOURCE_DIR}/src/vm/main.c"
 # set up the boot strapping target to make the image.
 
 # old bootstrap
-#add_custom_target(image ALL
-#    COMMAND bootstrap ${PROJECT_SOURCE_DIR}/src/smalltalk/system/image.st lst.img
-#    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
-#    COMMENT "Bootstrapping initial image file." VERBATIM
-#    SOURCES ${PROJECT_SOURCE_DIR}/src/bootstrap/imageSource
-#)
-
-# old bootstrap
-#add_custom_command(
-#    OUTPUT  lst.img
-#    COMMAND bootstrap ${PROJECT_SOURCE_DIR}/src/bootstrap/imageSource lst.img
-#    DEPENDS bootstrap ${PROJECT_SOURCE_DIR}/src/bootstrap/imageSource
-#)
+add_custom_target(image ALL
+    COMMAND bootstrap ${PROJECT_SOURCE_DIR}/src/smalltalk/system/lst.st lst.img
+    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+    COMMENT "Bootstrapping initial image file." VERBATIM
+    SOURCES ${PROJECT_SOURCE_DIR}/src/bootstrap/imageSource
+)
 

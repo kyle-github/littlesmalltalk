@@ -379,7 +379,6 @@ struct object *primitive(int primitiveNumber, struct object *args, int *failed)
     case 160: /* print out a microsecond timestamp and message string. */
         {
             struct byteObject *msg = (struct byteObject *)(args->data[0]);
-            int64_t ticks = time_usec();
 
             printf("Log: %.*s\n", SIZE(msg), bytePtr(msg));
 

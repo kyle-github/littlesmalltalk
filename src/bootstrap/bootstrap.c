@@ -92,18 +92,15 @@ static int parseMethodHeader(struct object *theMethod);
 static int parseTemporaries(void);
 static int parseMethod(struct object *theMethod);
 
-static struct object *BeginCommand(void);
 static struct object *insert(struct object *array, int index,
                              struct object *val);
 static void dictionaryInsert(struct object *dict, struct object *index,
                              struct object *value);
 
 static void MethodCommand(void);
-static void RawClassCommand(void);
 static void ClassMethodCommand(void);
 static void InstanceMethodCommand(void);
 static void MethodCommand(void);
-static void RawClassCommand(void);
 static void ClassCommand(void);
 
 //static int getIntSize(int val);
@@ -169,25 +166,22 @@ static struct object *currentClass;
 
 
 /* ------------------------------------------------------------- */
-
-/*	main program   */
-
+/*	main program                                                 */
 /* ------------------------------------------------------------- */
 
 int main(int argc, char **argv)
 {
-    const char *image_source = "image.st";
+    const char *image_source = "lst.st";
     const char *output_file = "lst.img";
     FILE *fd;
-    struct object *bootMethod = NULL;
     struct object *specialSymbols = NULL;
-    int i;
+    struct object *REPLClass = NULL;
     int num_objs = 0;
 
-    printf("%d arguments\n", argc);
-    for (i = 0; i < argc; i++) {
-        printf("argv[%d]=\"%s\"\n", i, argv[i]);
-    }
+//    printf("%d arguments\n", argc);
+//    for (int i = 0; i < argc; i++) {
+//        printf("argv[%d]=\"%s\"\n", i, argv[i]);
+//    }
 
     if (argc > 1) {
         image_source = argv[1];
@@ -201,6 +195,7 @@ int main(int argc, char **argv)
 
     /* big bang -- create the first classes */
     bigBang();
+
     addArgument("self");
 
     if ((fin = fopen(image_source, "r")) == NULL) {
@@ -261,17 +256,12 @@ int main(int argc, char **argv)
         info("false already exists!");
     }
 
-    if((UndefinedClass = lookupGlobalName("Undefined", 1))) {
-        struct object *boot = dictLookup(UndefinedClass->data[methodsInClass], "main");
-        addGlobalName("boot", boot);
+    if((REPLClass = lookupGlobalName("REPL", 1))) {
+        struct object *startMethod = dictLookup(REPLClass->data[methodsInClass], "start");
+        addGlobalName("start", startMethod);
     } else {
-        error("No Unidentified class!");
+        error("No REPL class!");
     }
-//    if(!lookupGlobalName("boot", 1)) {
-//        addGlobalName("boot", bootMethod);
-//    } else {
-//        info("boot already exists!");
-//    }
 
     info("Fixup symbols.");
     /* then create the tree of symbols */
@@ -291,17 +281,6 @@ int main(int argc, char **argv)
 
     num_objs = fileOut_object(fd, globalValues);
 
-
-//    printf("starting to file out\n");
-//    put_image_version(fd, IMAGE_VERSION_3);
-//
-//    objectWrite(fd, globalValues);
-//    objectWrite(fd, bootMethod);
-//    objectWrite(fd, newSymbol("<"));
-//    objectWrite(fd, newSymbol("<="));
-//    objectWrite(fd, newSymbol("+"));
-//    objectWrite(fd, newSymbol("doesNotUnderstand:"));
-
     fclose(fd);
 
     info("%d objects written\n", num_objs);
@@ -314,9 +293,7 @@ int main(int argc, char **argv)
 
 
 /* ------------------------------------------------------------- */
-
 /*	big bang                                                     */
-
 /* ------------------------------------------------------------- */
 
 void bigBang(void)
@@ -372,7 +349,6 @@ void bigBang(void)
     /* SmallInt has an extra class variable, just like Symbol */
     SmallIntClass = newClass("SmallInt", 1);
     addGlobalName("SmallInt", SmallIntClass);
-//    SmallIntClass->data[nameInClass] = newSymbol("SmallInt");
 
     IntegerClass = newClass("Integer", 0);
     addGlobalName("Integer", IntegerClass);
@@ -414,25 +390,11 @@ void bigBang(void)
     addGlobalName("globals", globalValues);
 }
 
-
-
-
-
-
-
-
-
-
-
 /* ------------------------------------------------------------- */
-
 /*	Errors                                                       */
-
 /* ------------------------------------------------------------- */
 int parseError(char *msg)
 {
-    char *q;
-
     info("Parse Error: at line %d, position %d, %s", inputLine, inputPosition, msg);
     info("%s", inputBuffer);
 
@@ -443,42 +405,14 @@ int parseError(char *msg)
 
     fprintf(stderr, "^\n");
 
-
-//    for (q = inputBuffer; q != p;)
-//        printf("%c", *q++);
-//    printf("\n%s\n", msg);
-//    while (*q)
-//        printf("%c", *q++);
-//    printf("\n");
     exit(1);
     return 0;
 }
 
-//void sysError(const char *a)
-//{
-//    fprintf(stderr, "unrecoverable system error: %s\n", a);
-//    exit(1);
-//}
 
-
-//void sysErrorInt(const char *a, intptr_t b)
-//{
-//    fprintf(stderr, "unrecoverable system error: %s %ld\n", a, b);
-//    exit(1);
-//}
-
-
-//void sysErrorStr(const char *a, const char *b)
-//{
-//    fprintf(stderr, "unrecoverable system error: %s %s\n", a, b);
-//    exit(1);
-//}
-//
 
 /* ------------------------------------------------------------- */
-
 /*	Memory                                                       */
-
 /* ------------------------------------------------------------- */
 
 #ifdef gcalloc
@@ -518,9 +452,7 @@ struct byteObject *binaryAlloc(int size)
 
 
 /* ------------------------------------------------------------- */
-
 /*	Names                                                        */
-
 /* ------------------------------------------------------------- */
 
 #define MAX_GLOBALS (500)
@@ -565,22 +497,13 @@ struct object *lookupGlobalName(char *name, int ok_missing)
 }
 
 /* ------------------------------------------------------------- */
-
 /*	Lexical Analysis  */
-
 /* ------------------------------------------------------------- */
-
-typedef enum {
-    METHOD_TEXT_NORMAL_CHAR,
-    METHOD_TEXT_FOUND_NL,
-    METHOD_TEXT_FOUND_EXCLAMATION
-} method_text_state_t;
 
 void inputMethodText()
 {
     int c;
     bool foundExclamation = false;
-    int state = METHOD_TEXT_NORMAL_CHAR;
 
     p = inputBuffer;
     inputPosition = 0;
@@ -613,29 +536,6 @@ void inputMethodText()
             foundExclamation = true;
         }
     }
-
-//    while (1 && (p - inputBuffer) < (sizeof(inputBuffer) - 2)) {
-//        while ((c = fgetc(fin)) != '\n') {
-//            *p++ = (char)c;
-//        }
-//
-//        *p++ = '\n';
-//        inputLine++;
-//
-//        /* terminate the method on a ! character that is the only character on the line. */
-//        if ((c = fgetc(fin)) == '!') {
-//            if ((c = fgetc(fin)) == '\n') {
-//                inputLine++;
-//                *p = '\0';
-//                return;
-//            }
-//
-//            *p++ = '!';
-//            *p++ = (char)c;
-//        } else {
-//            *p++ = (char)c;
-//        }
-//    }
 }
 
 void skipSpaces()
@@ -751,9 +651,7 @@ int readInteger()
 }
 
 /* ------------------------------------------------------------- */
-
 /*	new instances of standard things                             */
-
 /* ------------------------------------------------------------- */
 
 static int symbolTop = 0;
@@ -1726,39 +1624,36 @@ int parseMethod(struct object *theMethod)
 
 
 /* ------------------------------------------------------------- */
-
 /*	Input Processing   */
-
 /* ------------------------------------------------------------- */
 
 
-
-/*	read the expression beyond the begin statement */
-struct object *BeginCommand(void)
-{
-    struct object *bootMethod = NULL;
-
-    byteTop = 0;
-    litTop = 0;
-    argumentTop = 0;
-    currentClass = 0;
-    tempTop = 0;
-    maxTemp = 0;
-
-    if (parseBody()) {
-        printf("parsed begin command ok\n");
-        bootMethod = gcalloc(methodSize);
-        bootMethod->class = lookupGlobalName("Method", 0);
-        bootMethod->data[nameInMethod] = newSymbol("boot");
-        bootMethod->data[literalsInMethod] = buildLiteralArray();
-        bootMethod->data[byteCodesInMethod] = buildByteArray();
-        bootMethod->data[stackSizeInMethod] = newInteger(12);
-    } else {
-        parseError("building begin method");
-    }
-
-    return bootMethod;
-}
+///*	read the expression beyond the begin statement */
+//struct object *BeginCommand(void)
+//{
+//    struct object *bootMethod = NULL;
+//
+//    byteTop = 0;
+//    litTop = 0;
+//    argumentTop = 0;
+//    currentClass = 0;
+//    tempTop = 0;
+//    maxTemp = 0;
+//
+//    if (parseBody()) {
+//        printf("parsed begin command ok\n");
+//        bootMethod = gcalloc(methodSize);
+//        bootMethod->class = lookupGlobalName("Method", 0);
+//        bootMethod->data[nameInMethod] = newSymbol("boot");
+//        bootMethod->data[literalsInMethod] = buildLiteralArray();
+//        bootMethod->data[byteCodesInMethod] = buildByteArray();
+//        bootMethod->data[stackSizeInMethod] = newInteger(12);
+//    } else {
+//        parseError("building begin method");
+//    }
+//
+//    return bootMethod;
+//}
 
 /*
  * insert()
@@ -1805,6 +1700,7 @@ struct object *insert(struct object *array, int index, struct object *val)
  * dictionaryInsert()
  *	Insert a key/value pair into the Dictionary
  */
+
 void dictionaryInsert(struct object *dict, struct object *index,
                       struct object *value)
 {
@@ -1838,16 +1734,11 @@ void dictionaryInsert(struct object *dict, struct object *index,
     dict->data[1] = insert(vals, i, value);
 }
 
-//static int getIntSize(int val);
-//static void writeTag(FILE * fp, int type, int val);
-
 
 void ClassMethodCommand(void)
 {
     /* read class name */
     readIdentifier();
-
-//    info("tokenBuffer=%s", tokenBuffer);
 
     currentClass = lookupGlobalName(tokenBuffer, 1);
     if (!currentClass) {
@@ -1868,8 +1759,6 @@ void InstanceMethodCommand(void)
 {
     /* read class name */
     readIdentifier();
-
-//    info("tokenBuffer=%s", tokenBuffer);
 
     currentClass = lookupGlobalName(tokenBuffer, 1);
     if (!currentClass) {
@@ -1892,7 +1781,6 @@ void MethodCommand(void)
 
     theMethod = gcalloc(methodSize);
     theMethod->class = lookupGlobalName("Method", 0);
-//    theMethod->data[classInMethod] = currentClass;
 
     /* fill in method class */
     byteTop = 0;
@@ -1913,97 +1801,6 @@ void MethodCommand(void)
 }
 
 
-//void MethodCommand(void)
-//{
-//    struct object *theMethod;
-//
-//    /* read class name */
-//    readIdentifier();
-//    currentClass = lookupGlobalName(tokenBuffer, 1);
-//    if (!currentClass) {
-//        error("MethodCommand(): unknown class in Method %s!", tokenBuffer);
-//    }
-//
-//    inputMethodText();
-//
-//    p = inputBuffer;
-//    skipSpaces();
-//
-//    theMethod = gcalloc(methodSize);
-//    theMethod->class = lookupGlobalName("Method", 0);
-//
-//    /* fill in method class */
-//    byteTop = 0;
-//    litTop = 0;
-//    argumentTop = 1;
-//
-//    /*
-//     * If successful compile, insert into the method dictionary
-//     */
-//    if (parseMethod(theMethod)) {
-//        dictionaryInsert(currentClass->data[methodsInClass],
-//                         theMethod->data[nameInMethod], theMethod);
-//    }
-//}
-
-
-void RawClassCommand(void)
-{
-    struct object *nClass, *supClass, *instClass;
-    int instsize;
-
-    /* read the class */
-    readIdentifier();
-    nClass = lookupGlobalName(tokenBuffer, 1);
-    printf("Class %s\n", tokenBuffer);
-    if (!nClass) {
-        nClass = newClass(tokenBuffer, 0);
-        nClass->data[nameInClass] = newSymbol(tokenBuffer);
-        addGlobalName(tokenBuffer, nClass);
-    }
-
-    /* now read the instance class */
-    readIdentifier();
-    instClass = lookupGlobalName(tokenBuffer, 1);
-    if (!instClass) {
-        error("can't find instance class %s!", tokenBuffer);
-    }
-    nClass->class = instClass;
-
-    /* now read the super class */
-    readIdentifier();
-    supClass = lookupGlobalName(tokenBuffer, 1);
-    if (!supClass) {
-        error("can't find super class %s!", tokenBuffer);
-    }
-    nClass->data[parentClassInClass] = supClass;
-
-    /* rest are instance variables */
-    litTop = 0;
-
-    /* Now parse the new instance variables */
-    while (*p) {
-        if (!isIdentifierChar(*p)) {
-            error("looking for var %s", p);
-        }
-        readIdentifier();
-        addLiteral(newSymbol(tokenBuffer));
-    }
-
-    /* That's the total of our instance variables */
-    instsize = litTop;
-
-    /* Add on size of superclass space */
-    if (supClass != nilObject) {
-        instsize += integerValue(supClass->data[instanceSizeInClass]);
-    }
-
-    nClass->data[instanceSizeInClass] = newInteger(instsize);
-    nClass->data[variablesInClass] = buildLiteralArray();
-    /* make a tree for new methods */
-    nClass->data[methodsInClass] = newDictionary();
-}
-
 /*
  * ClassCommand()
  *	Build the base and meta classes automatically
@@ -2019,185 +1816,8 @@ void RawClassCommand(void)
  *
  * +Number subclass: #SmallInt variables: #( ) classVariables: #( seed )
  *
- */
-
-struct object *ClassCommandGetSuperClass()
-{
-    char *superclassName = NULL;
-    struct object *supClass = NULL;
-
-    /* get the superclass name */
-    readIdentifier();
-    superclassName = strdup(tokenBuffer);
-
-    /* find the superclass */
-    supClass = lookupGlobalName(superclassName, 1);
-    if (!supClass) {
-        error("Unable find superclass %s on line %d!", superclassName, inputLine);
-    }
-
-    info("Found superclass %s from line \"%s\" (%d)", superclassName, inputBuffer, inputLine);
-
-    free(superclassName);
-
-    return supClass;
-}
-
-struct object *ClassCommandGetInstClass(struct object *supClass)
-{
-    char *q = p;
-    char *className = NULL;
-    char *metaclassName = NULL;
-    struct object *instClass = NULL;
-    struct object *metaClass  = NULL;
-
-    /* search out to the class name. */
-    q = strchr(p, '#');
-    if(!q) {
-        error("Unable to find new subclass name for on line \"%s\" (%d)!", inputBuffer, inputLine);
-    }
-
-    p = ++q;
-    readIdentifier();
-    className = strdup(tokenBuffer);
-
-    /* create the metaclass name */
-    metaclassName = malloc(strlen(className) + strlen("Meta" + 1));
-    sprintf(metaclassName, "Meta%s",className);
-
-    /* set up the class. */
-    instClass = lookupGlobalName(className, 1);
-    printf("Class %s\n", className);
-    if (!instClass) {
-        instClass = newClass(className, 0);
-        instClass->data[nameInClass] = newSymbol(className);
-        instClass->data[parentClassInClass] = supClass;
-
-        /* make a dictionary for new methods */
-        instClass->data[methodsInClass] = newDictionary();
-
-        addGlobalName(className, instClass);
-    } else {
-        info("WARN: Line %d attempts to redefine class %s!", inputLine, className);
-    }
-
-    /* set up the metaclass, if needed */
-    printf("Meta class %s\n", metaclassName);
-    if (!instClass->class) {
-        struct object *classClass = lookupGlobalName("Class", 1);
-
-        if(!classClass) {
-            error("Class Class is not defined yet!");
-        }
-
-        metaClass = newClass(metaclassName, 0);
-        metaClass->data[nameInClass] = newSymbol(metaclassName);
-        metaClass->data[parentClassInClass] = classClass;
-        metaClass->class = classClass;
-        instClass->class = metaClass;
-    } else {
-        info("WARN: Line %d attempts to redefine metaclass %s!", inputLine, metaclassName);
-    }
-
-    free(className);
-    free(metaclassName);
-
-    return instClass;
-}
-
-void ClassCommandGetVars(struct object *aClass)
-{
-    char *q = NULL;
-    int instsize = 0;
-    struct object *supClass = aClass->data[parentClassInClass];
-
-    /* scan to the first open paren */
-    q = strchr(p, '(');
-    if(!q) {
-        error("Unable to find instance variable section on line %d!", inputLine);
-    }
-
-    p = ++q;
-
-    /* scan to the closing paren */
-    q = strchr(p, ')');
-    if(!q) {
-        error("Unable to find end of instance variable section on line %d!", inputLine);
-    }
-
-    /* start looking for instance variables. */
-    litTop = 0;
-
-    /* do we have any instance variables? */
-    if((q - p) >= 2) {
-        /* Now parse the new instance variables */
-        while (*p && *p != ')') {
-            skipSpaces();
-            if (!isIdentifierChar(*p)) {
-                info("WARN: looking for variable list at position %d but found character '%c' (%x) instead in line %d, \"%s\".", (int)(p - inputBuffer), *p, *p, inputLine, inputBuffer);
-                break;
-            }
-            readIdentifier();
-
-            info("Found instance variable %s.", tokenBuffer);
-            addLiteral(newSymbol(tokenBuffer));
-        }
-    }
-
-    /* That's the total of our instance variables */
-    instsize = litTop;
-
-    /* Add on size of superclass space */
-    if (supClass != nilObject) {
-        instsize += integerValue(supClass->data[instanceSizeInClass]);
-    }
-
-    aClass->data[instanceSizeInClass] = newInteger(instsize);
-    aClass->data[variablesInClass] = buildLiteralArray();
-}
-
-
-void ParseClassVars(struct object *instClass, struct object *parentClass, struct object *metaClass, char *classVars)
-{
-    int instsize = 0;
-
-    litTop = 0;
-
-    if(strlen(classVars) > 2) {
-        /* copy the class vars string into the input buffer. */
-        strncpy(inputBuffer, classVars, sizeof(inputBuffer));
-
-        p = inputBuffer;
-
-        /* Now parse the new instance variables */
-        while (*p) {
-            skipSpaces();
-            if (!isIdentifierChar(*p)) {
-                info("WARN: looking for variable list at position %d but found character '%c' (%x) instead in line %d, \"%s\".", (int)(p - inputBuffer), *p, *p, inputLine, inputBuffer);
-                break;
-            }
-            readIdentifier();
-
-            info("Found instance variable %s.", tokenBuffer);
-            addLiteral(newSymbol(tokenBuffer));
-        }
-    }
-
-    /* That's the total of our instance variables */
-    instsize = litTop;
-
-    /* Add on size of superclass space */
-    if (parentClass != nilObject) {
-        instsize += integerValue(parentClass->data[instanceSizeInClass]);
-    }
-
-    instClass->data[instanceSizeInClass] = newInteger(instsize);
-    instClass->data[variablesInClass] = buildLiteralArray();
-    instClass->data[methodsInClass] = newDictionary();
-}
-
-
-/*
+ * A line like below generates the diagram below.
+ *
  * SuperClass subclass: #NewClass variables: #( instVars ) classVariables: #( classVars )
  *
  *                       MetaSuperClass
@@ -2235,7 +1855,6 @@ void ClassCommand(void)
     char *classVars = NULL;
     struct object *metaClass, *superClass, *instClass;
     size_t metaclassNameSize;
-    int instClassSize = ClassSize;
     int instsize = 0;
 
 
@@ -2270,9 +1889,12 @@ void ClassCommand(void)
 
     /* set up the class tree, weird for metaclasses. */
     metaClass->class = ClassClass;
-//    metaClass->data[parentClassInClass] = ClassClass;
-    if(!metaClass->data[parentClassInClass]) {
+    if(metaClass != MetaObjectClass) {
+        info("setting class %s parent class to %.*s", metaclassName, SIZE(superClass->class->data[nameInClass]), (char *)bytePtr(superClass->class->data[nameInClass]));
         metaClass->data[parentClassInClass] = superClass->class;
+    } else {
+        info("setting class %s parent class to Class", metaclassName);
+        metaClass->data[parentClassInClass] = ClassClass;
     }
 
     /* get any class vars. */
@@ -2359,41 +1981,9 @@ void ClassCommand(void)
     free(classVars);
 }
 
-//void ClassCommand(void)
-//{
-//    char *class, *super, *ivars;
-//
-//    /* Read the class and superclass */
-//    readIdentifier();
-//    class = strdup(tokenBuffer);
-//    readIdentifier();
-//    super = strdup(tokenBuffer);
-//
-//    /* Stash away the instance variable string */
-//    skipSpaces();
-//    ivars = strdup(p);
-//
-//    /* Build the metaclass */
-//    sprintf(inputBuffer, "RAWCLASS Meta%s Class Meta%s", class, super);
-//    p = inputBuffer + 9;
-//    RawClassCommand();
-//
-//    /* Now the instance class */
-//    sprintf(inputBuffer, "RAWCLASS %s Meta%s %s %s", class, class,
-//            super, ivars);
-//    p = inputBuffer + 9;
-//    RawClassCommand();
-//    free(class);
-//    free(super);
-//    free(ivars);
-//}
-
-
 
 /* ------------------------------------------------------------- */
-
-/*	fix up symbol tables   */
-
+/*	fix up symbol tables                                         */
 /* ------------------------------------------------------------- */
 
 struct object *symbolTreeInsert(struct object *base, struct object *symNode)
@@ -2409,6 +1999,7 @@ struct object *symbolTreeInsert(struct object *base, struct object *symNode)
     return base;
 }
 
+
 static struct object *fixSymbols(void)
 {
     struct object *t;
@@ -2421,6 +2012,7 @@ static struct object *fixSymbols(void)
                                               nilObject));
     return t;
 }
+
 
 static void fixGlobals(void)
 {
@@ -2441,8 +2033,6 @@ static void fixGlobals(void)
             continue;
         }
 
-        info("Adding %s", globalNames[i]);
-
         dictionaryInsert(t, newSymbol(globalNames[i]), globals[i]);
     }
 
@@ -2453,10 +2043,9 @@ static void fixGlobals(void)
 }
 
 /* ------------------------------------------------------------- */
-
-/*	checkGlobals   */
-
+/*	checkGlobals                                                 */
 /* ------------------------------------------------------------- */
+
 static void checkGlobals(void)
 {
     int i;

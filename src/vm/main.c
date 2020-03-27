@@ -52,7 +52,7 @@ int main(int argc, char **argv)
     printf("Little Smalltalk starting up...\n");
 
     prog_argc = argc;
-    prog_argv = argv;
+    prog_argv = (const char **)argv;
 
     strcpy(imageFileName, DefaultImageFile);
     staticSize = DefaultStaticSize;
