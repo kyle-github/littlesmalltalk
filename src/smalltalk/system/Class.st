@@ -1,5 +1,5 @@
 " class definition for Class "
-+Object subclass: #Class variables: #( name parentClass methods size variables ) classVariables: #( )
+"+Object subclass: #Class variables: #( name parentClass methods size variables ) classVariables: #( )"
 " class methods for Class "
 " instance methods for Class "
 !Class
@@ -21,12 +21,12 @@ addMethod: text | meth |
 
 !
 !Class
-allMethods | allMethods |
+allMethods | methDict |
     parentClass isNil
-        ifTrue: [ allMethods <- Dictionary new ]
-        ifFalse: [ allMethods <- parentClass allMethods ].
-    methods binaryDo: [ :n :m | allMethods at: n put: m ].
-    ^ allMethods
+        ifTrue: [ methDict <- Dictionary new ]
+        ifFalse: [ methDict <- parentClass allMethods ].
+    methods binaryDo: [ :n :m | methDict at: n put: m ].
+    ^ methDict
 
 !
 !Class
@@ -47,33 +47,20 @@ basicNew
 
 !
 !Class
-editMethod: nm	| meth text |
-    meth <- methods at: nm
-        ifAbsent: [ ^ self error: 'no such method'].
-    text <- meth text edit.
-    (self question: 'compile method?')
-        ifTrue: [ ^ self addMethod: text ]
-
-!
-!Class
-fileOutSource | nl outFile outBuf instVars instMethods metaClass classVars classMethods |
-
+classDefSource | nl outBuf instVars metaClass classVars |
     nl <- (Char new: 10) asString.
     outBuf <- StringBuffer new.
 
     " instance information. "
     instVars <- self variables.
-    instMethods <- self methods.
 
     " class information "
     metaClass <- self class.
     classVars <- metaClass variables.
-    classMethods <- metaClass methods.
 
     " cover strange Class is the meta class of Class case. "
     (self = metaClass) ifTrue: [
         classVars <- Array new: 0.
-        classMethods <- Dictionary new.
     ].
 
     " output header comment. "
@@ -81,7 +68,6 @@ fileOutSource | nl outFile outBuf instVars instMethods metaClass classVars class
     outBuf addLast: (self name printString).
     outBuf addLast: ' "'.
     outBuf addLast: nl.
-
 
     " output the class creation code. "
     outBuf addLast: '+'.
@@ -95,46 +81,36 @@ fileOutSource | nl outFile outBuf instVars instMethods metaClass classVars class
     outBuf addLast: ')'.
     outBuf addLast: nl.
 
-    " output class methods. "
-    outBuf addLast: '" class methods for '.
-    outBuf addLast: (self name printString).
-    outBuf addLast: ' "'.
-    outBuf addLast: nl.
-    (classMethods notNil) ifTrue: [ 
-        classMethods binaryDo: [ :methName :method |
-            outBuf addLast: '='.
-            outBuf addLast: (self name printString).
-            outBuf addLast: nl.
-            outBuf addLast: (method text).
-            outBuf addLast: nl.
-            outBuf addLast: '!'.
-            outBuf addLast: nl.
-        ].
-    ].
+    ^ outBuf asString
 
-    " output instance methods. "
-    outBuf addLast: '" instance methods for '.
-    outBuf addLast: (self name printString).
-    outBuf addLast: ' "'.
-    outBuf addLast: nl.
-    (instMethods notNil) ifTrue: [ 
-        instMethods binaryDo: [ :methName :method |
-            outBuf addLast: '!'.
-            outBuf addLast: (self name printString).
-            outBuf addLast: nl.
-            outBuf addLast: (method text).
-            outBuf addLast: nl.
-            outBuf addLast: '!'.
-            outBuf addLast: nl.
-        ].
-    ].
+!
+!Class
+editMethod: nm	| meth text |
+    meth <- methods at: nm
+        ifAbsent: [ ^ self error: 'no such method'].
+    text <- meth text edit.
+    (self question: 'compile method?')
+        ifTrue: [ ^ self addMethod: text ]
+
+!
+!Class
+fileOutSource | nl outFile classDef methodDefs |
+    " get the class definition header. "
+    classDef <- self classDefSource.
+
+    " get the method definitions. "
+    methodDefs <- self methodDefSource.
 
     " output class source. "
     outFile <- File openWrite: ( (self name printString) + '.st').
-    outFile write: (outBuf printString) size: (outBuf size).
+    outFile write: (classDef printString) size: (classDef size).
+    outFile write: (methodDefs printString) size: (methodDefs size).
     outFile close.
 
     ^ self.
+
+
+
 
 !
 !Class
@@ -164,6 +140,65 @@ listAllMethods
 listMethods
     methods keysDo:
         [ :name | name printNl ]
+
+!
+!Class
+methodDefSource | nl outFile outBuf instMethods metaClass classMethods |
+    nl <- (Char new: 10) asString.
+    outBuf <- StringBuffer new.
+
+    " instance information. "
+    instMethods <- self methods.
+
+    " class information "
+    metaClass <- self class.
+    classMethods <- metaClass methods.
+
+    " cover strange Class is the meta class of Class case. "
+    (self = metaClass) ifTrue: [
+        classMethods <- Dictionary new.
+    ].
+
+    " output class methods. "
+    outBuf addLast: '" class methods for '.
+    outBuf addLast: (self name printString).
+    outBuf addLast: ' "'.
+    outBuf addLast: nl.
+    (classMethods notNil) ifTrue: [
+        classMethods binaryDo: [ :methName :method |
+            outBuf addLast: '='.
+            outBuf addLast: (self name printString).
+            outBuf addLast: nl.
+            outBuf addLast: (method text).
+            outBuf addLast: nl.
+            outBuf addLast: '!'.
+            outBuf addLast: nl.
+        ].
+    ].
+
+    " output instance methods. "
+    outBuf addLast: '" instance methods for '.
+    outBuf addLast: (self name printString).
+    outBuf addLast: ' "'.
+    outBuf addLast: nl.
+    (instMethods notNil) ifTrue: [
+        instMethods binaryDo: [ :methName :method |
+            outBuf addLast: '!'.
+            outBuf addLast: (self name printString).
+            outBuf addLast: nl.
+            outBuf addLast: (method text).
+            outBuf addLast: nl.
+            outBuf addLast: '!'.
+            outBuf addLast: nl.
+        ].
+    ].
+
+    ^ outBuf asString
+
+
+
+
+
 
 !
 !Class
@@ -237,7 +272,7 @@ subclass: nm variables: v classVariables: cv | meta metaName |
 !
 !Class
 subclasses
-    self subclasses: 0
+    ^ (globals select: [ :o | (o isKindOf: Class) and: [ (o superclass) = self ] ])
 
 !
 !Class
@@ -262,7 +297,7 @@ variables
 !
 !Class
 view: methodName
-        " print the text of the given method "
+    " print the text of the given method "
     (methods at: methodName
         ifAbsent: [ ^ self error: 'no such method'])
             text print
