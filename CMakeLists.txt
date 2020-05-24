@@ -39,11 +39,11 @@ add_executable(lst "${PROJECT_SOURCE_DIR}/src/vm/main.c"
 
 # set up the boot strapping target to make the image.
 
-# old bootstrap
+# bootstrap the image
 add_custom_target(image ALL
     COMMAND bootstrap ${PROJECT_SOURCE_DIR}/src/smalltalk/system/lst.st lst.img
     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
     COMMENT "Bootstrapping initial image file." VERBATIM
-    SOURCES ${PROJECT_SOURCE_DIR}/src/bootstrap/imageSource
+    SOURCES ${PROJECT_SOURCE_DIR}/src/smalltalk/system/lst.st
 )
 
