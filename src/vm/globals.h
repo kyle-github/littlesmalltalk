@@ -15,7 +15,7 @@ extern int64_t time_usec();
 /* used all over for looking up classes and other globals */
 extern struct object *dictLookup(struct object *dict, char *name);
 extern struct object *lookupGlobal(char *name);
-
+extern void dumpDictKeys(struct object *dict);
 
 /* global debugging flag */
 extern unsigned int debugging;

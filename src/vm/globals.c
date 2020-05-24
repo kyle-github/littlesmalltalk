@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <sys/time.h>
+#include "err.h"
 #include "memory.h"
 #include "globals.h"
 
@@ -62,6 +63,10 @@ struct object *dictLookup(struct object *dict, char *name)
     int low,high,mid;
     int result;
 
+    if(!dict) {
+        error("Called with NULL dictionary oop!");
+    }
+
     keys = dict->data[keysInDictionary];
     low = 0;
     high = SIZE(keys);
@@ -100,6 +105,35 @@ struct object *dictLookup(struct object *dict, char *name)
 struct object *lookupGlobal(char *name)
 {
     return dictLookup(globalsObject, name);
+}
+
+
+void dumpDictKeys(struct object *dict)
+{
+    struct object *keys;
+    struct object *key;
+    int numKeys = 0;
+
+    if(!dict) {
+        info("Null dictionary oop passed!");
+        return;
+    }
+
+    keys = dict->data[keysInDictionary];
+    if(!keys) {
+        info("Dictionary does not have any keys!");
+        return;
+    }
+
+    numKeys = SIZE(keys);
+
+    for(int i=0; i<numKeys; i++) {
+        struct byteObject *key = (struct bytePointer *)keys->data[i];
+
+        if(key) {
+            printf("%.*s ", SIZE(key), bytePtr(key));
+        }
+    }
 }
 
 
