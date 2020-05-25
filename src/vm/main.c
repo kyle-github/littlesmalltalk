@@ -42,6 +42,9 @@ extern int errno;
 FILE *tempFile;
 # endif
 
+
+static void find_initial_method(void);
+
 int main(int argc, char **argv)
 {
     struct object *aProcess, *aContext, *o;
@@ -104,6 +107,15 @@ int main(int argc, char **argv)
     printf("\t%d objs/cells in image\n", fileIn(fp));
     fclose(fp);
 
+    /* find the initial method. */
+    find_initial_method();
+    addStaticRoot(&initialMethod);
+
+    if(debugging) {
+        /* dump startup method */
+        dumpMethod(initialMethod, 0);
+    }
+
     /* build the root process with a context, make sure it is GC-proof */
 
     printf("\tSetting up root process.\n");
@@ -160,8 +172,6 @@ int main(int argc, char **argv)
 
     printf("\tStarting execution.\n");
 
-    dumpMethod(initialMethod, 0);
-
     switch(execute(aProcess, 0)) {
     case 2:
         printf("User defined return\n");
@@ -203,9 +213,42 @@ int main(int argc, char **argv)
     return(0);
 }
 
-/*
-These static character strings are used for URL conversion
-*/
 
-//static char *badURLChars = ";/?:@&=+!*'(),$-_.<>#%\"\t\n\r";
-//static char *hexDigits = "0123456789ABCDEF";
+void find_initial_method(void) 
+{
+    struct object *startupClass = NULL;
+
+    info("Finding initial method.");
+
+    info("Checking for web IDE.");
+    startupClass = lookupGlobal("WebIDE");
+    if(startupClass) {
+        initialMethod = dictLookup(startupClass->data[methodsInClass], "start");
+
+        if(!initialMethod) {
+            error("Unable to find method #start in WebIDE class!");
+        }
+
+        info("Found #start method in WebIDE class.");
+
+        return;
+    }
+
+    info("Checking for commandline REPL.");
+    startupClass = lookupGlobal("REPL");
+    if(startupClass) {
+        initialMethod = dictLookup(startupClass->data[methodsInClass], "start");
+
+        if(!initialMethod) {
+            error("Unable to find method #start in REPL class!");
+        }
+
+        info("Found #start method in REPL class.");
+
+        return;
+    }
+
+    error("Unable to find start up class!");  
+}
+
+

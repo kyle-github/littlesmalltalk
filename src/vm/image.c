@@ -323,12 +323,10 @@ int fileIn_version_1(FILE *fp)
 //}
 
 
-
-
-
 int fileIn_version_3(FILE *fp)
 {
     struct object *specialSymbols = NULL;
+    struct object *startupClass = NULL;
 
     /* use the currently unused space for the indir pointers */
     if (inSpaceOne) {
@@ -343,6 +341,12 @@ int fileIn_version_3(FILE *fp)
     info("reading globals object.");
     globalsObject = objectRead(fp);
     addStaticRoot(&globalsObject);
+
+    if(debugging) {
+        printf("Globals: ");
+        dumpDictKeys(globalsObject);
+        printf("\n");
+    }
 
     /* fix up everything from globals. */
     info("Finding special symbols.");
@@ -400,13 +404,6 @@ int fileIn_version_3(FILE *fp)
     UndefinedClass = lookupGlobal("Undefined");
     addStaticRoot(&UndefinedClass);
 
-    info("Finding initial method.");
-    if(!(initialMethod = lookupGlobal("start"))) {
-        info("Could not find #start method in globals, looking for #main in Undefined.");
-        initialMethod = dictLookup(UndefinedClass->data[methodsInClass], "main");
-    }
-    addStaticRoot(&initialMethod);
-
     info("Memory top %p", memoryTop);
     info("Memory pointer %p", memoryPointer);
 
@@ -414,6 +411,7 @@ int fileIn_version_3(FILE *fp)
 
     return indirtop;
 }
+
 
 
 
@@ -708,7 +706,7 @@ static void readTag(FILE *fp, int *type, int *val)
     *type = (int)(inByte & LST_TAG_TYPE_MASK);
 
     if(tempSize & LST_LARGE_TAG_FLAG) {
-        uint tmp = 0;
+        uint32_t tmp = 0;
 
         /* large size, actual value is in succeeding
         bytes (tempSize bytes). The value is not sign
@@ -729,10 +727,10 @@ static void readTag(FILE *fp, int *type, int *val)
                 error("readTag(): Unexpected EOF reading image file!");
             }
 
-            tmp = tmp  | (((uint)inByte & (uint)0xFF) << ((uint)8*(uint)i));
+            tmp = tmp  | (((uint32_t)inByte & (uint32_t)0xFF) << ((uint32_t)8*(uint32_t)i));
         }
 
-        *val = (int)tmp;
+        *val = (int)(unsigned int)tmp;
     } else {
         *val = tempSize;
     }
