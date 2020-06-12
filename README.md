@@ -42,11 +42,14 @@ v4.7.0 - released 20200612 - By Kyle Hayes. Many changes:
 
 - Changed image format to work on 32 and 64-bit systems.
 - Simplified the garbage collector to a pure Baker-style two-space GC.  It takes a little longer for GC passes, but all garbage is collected.
-- Attempts at platform-neutral image.   Minimal testing on Debian on MIPS (big endian).
+- Attempts at platform-neutral image format.   Minimal testing on Debian on MIPS (big endian).
 - Fixed latent bug with constant too large for SmallInt in original source.
 - Redid the bootstrap program to input the same source format as output by source file out for classes.
 - Redid the web IDE build process to build the image automatically.
 - Changed how the initial method is found to have multiple fall-backs for older images.
+- Redid how the image is saved (saves a single object now).
+- Many, many changes to the web IDE interface.
+- Made the web interface work with FireFox and Chrome (it did not work on modern versions of FireFox).
 
 v4.6.1 - released 20181207 - by Kyle Hayes.  Made into CMake project.
 
