@@ -20,29 +20,65 @@
     Modified by Kyle Hayes for 64-bit systems.
 */
 
-#include "memory.h"
-#include "interp.h"
-#include "prim.h"
-#include "globs.h"
 #include <stdio.h>
 #include <string.h> /* For bzero() */
 #include <stdint.h>
+#include "globals.h"
+#include "image.h"
+#include "interp.h"
+#include "memory.h"
+#include "prim.h"
+#include "err.h"
 
-extern int debugging;
+
+
+
+/* method cache */
+
+typedef struct {
+    struct object *name;
+    struct object *class;
+    struct object *method;
+} method_cache_entry;
+
+#define METHOD_CACHE_SIZE (703)
+
+extern method_cache_entry cache[METHOD_CACHE_SIZE];
+
+
+
 
 /*
-    The following are roots for the file out
+    method cache for speeding method lookup
 */
 
-struct object *nilObject, *trueObject, *falseObject,
-        *SmallIntClass, *ArrayClass, *BlockClass, *ContextClass,
-        *globalsObject, *initialMethod, *binaryMessages[3],
-        *IntegerClass, *badMethodSym;
+method_cache_entry cache[METHOD_CACHE_SIZE];
+
+int64_t cache_hit = 0;
+int64_t cache_miss = 0;
+
+
+
+
+/* flush dynamic methods when GC occurs */
+void flushCache(void)
+{
+    int i;
+
+    for (i = 0; i < METHOD_CACHE_SIZE; i++) {
+        cache[i].name = 0;  /* force refill */
+    }
+}
+
+
+
+
 
 /*
  * Debugging
  */
-#if defined(DEBUG) && defined(TRACE)
+
+#ifdef TRACE
 static void indent(struct object *ctx)
 {
     static int oldlev = 0;
@@ -70,14 +106,17 @@ static void indent(struct object *ctx)
 
     oldlev = lev;
 }
+
+
+
 #define PC (bytePointer-1)
-#define DBG0(msg) if (debugging) {indent(context); printf("%d: %s\n", PC, msg);}
+#define DBG0(msg) if (debugging) {indent(context); fprintf(stderr, "%d: %s\n", PC, msg);}
 #define DBG1(msg, arg) if (debugging) {indent(context); \
-        printf("%d: %s %d\n", PC, msg, arg);}
+        fprintf(stderr, "%d: %s %d\n", PC, msg, arg);}
 #define DBGS(msg, cl, sel) \
     if (debugging) { \
         indent(context); \
-        printf("%d: %s %s %s\n", PC, msg, cl, sel); }
+        fprintf(stderr, "%d: %s %.*s %.*s\n", PC, msg, SIZE(cl), (char *)bytePtr(cl), SIZE(sel), (char*)bytePtr(sel)); }
 #else
 #define DBG0(msg)
 #define DBG1(msg, arg)
@@ -93,7 +132,7 @@ static int symbolcomp(struct object *left, struct object *right)
     int leftsize = SIZE(left);
     int rightsize = SIZE(right);
     int minsize = leftsize;
-    register int i;
+    int i;
 
     if (rightsize < minsize) {
         minsize = rightsize;
@@ -109,12 +148,23 @@ static int symbolcomp(struct object *left, struct object *right)
 static struct object *lookupMethod(struct object *selector, struct object *class)
 {
     struct object *dict, *keys, *vals, *val;
-    uint low, high, mid;
+    int low, high, mid;
+
+    if(!selector || selector == nilObject) {
+        info("lookupMethod(): selector is NULL or nil!");
+        return NULL;
+    }
+
+    if(!class || class == nilObject) {
+        info("lookupMethod(): lookup called with selector %.*s on NULL/nil class object!", SIZE(selector), bytePtr(selector));
+        return NULL;
+    }
 
     /*
      * Scan upward through the class hierarchy
      */
     for ( ; class != nilObject; class = class->data[parentClassInClass]) {
+        info("looking up #%.*s in class %.*s.", SIZE(selector), (char*)bytePtr(selector), SIZE(class->data[nameInClass]), (char*)bytePtr(class->data[nameInClass]));
         /*
          * Consider the Dictionary of methods for this Class
          */
@@ -154,155 +204,9 @@ static struct object *lookupMethod(struct object *selector, struct object *class
     /*
      * Sorry, couldn't find a method
      */
-    return(NULL);
+    return NULL;
 }
 
-
-
-/* look up a global entry by name */
-
-struct object *lookupGlobal(char *name)
-{
-    struct object *dict;
-    struct object *keys;
-    struct object *key;
-    struct object *vals;
-    int low,high,mid;
-    int result;
-
-    dict = globalsObject;
-    keys = dict->data[0];
-    low = 0;
-    high = SIZE(keys);
-
-    /*
-    * Do a binary search through its keys, which are
-    * Symbol's.
-    */
-    while (low < high) {
-        mid = (low + high) / 2;
-        key = keys->data[mid];
-
-        /*
-        * If we find the key, return the
-        * object.
-        */
-
-        result = strsymcomp(name,key);
-
-        if (result == 0) {
-            vals = dict->data[1];
-            return vals->data[mid];
-        } else {
-            if (result < 0) {
-                high = mid;
-            } else {
-                low = mid+1;
-            }
-        }
-    }
-
-    return 0;
-}
-
-
-
-
-
-
-/*
-    method cache for speeding method lookup
-*/
-
-# define cacheSize 703
-
-static struct {
-    struct object *name;
-    struct object *class;
-    struct object *method;
-} cache[cacheSize];
-
-int64_t cache_hit = 0;
-int64_t cache_miss = 0;
-
-
-
-
-/* flush dynamic methods when GC occurs */
-void flushCache(void)
-{
-    int i;
-
-    for (i = 0; i < cacheSize; i++) {
-        cache[i].name = 0;  /* force refill */
-    }
-}
-
-/*
- * newLInteger()
- *  Create new Integer (64-bit)
- */
-static struct object *newLInteger(int64_t val)
-{
-    struct object *res;
-    int64_t *tmp;
-
-    res = gcialloc(sizeof(int64_t));
-    res->class = IntegerClass;
-    tmp = (int64_t *)bytePtr(res);
-    *tmp = val;
-    return(res);
-}
-
-/*
- * do_Integer()
- *  Implement the appropriate 64-bit Integer operation
- *
- * Returns NULL on error, otherwise the resulting Integer or
- * Boolean (for comparisons) object.
- */
-static struct object *do_Integer(int op, struct object *low, struct object *high)
-{
-    int64_t l, h;
-    int64_t *tmp;
-
-    tmp = (int64_t *)bytePtr(low);
-    l = *tmp;
-    tmp = (int64_t *)bytePtr(high);
-    h = *tmp;
-    switch (op) {
-    case 25:    /* Integer division */
-        if (h == 0LL) {
-            return(NULL);
-        }
-        return(newLInteger(l/h));
-
-    case 26:    /* Integer remainder */
-        if (h == 0LL) {
-            return(NULL);
-        }
-        return(newLInteger(l%h));
-
-    case 27:    /* Integer addition */
-        return(newLInteger(l+h));
-
-    case 28:    /* Integer multiplication */
-        return(newLInteger(l*h));
-
-    case 29:    /* Integer subtraction */
-        return(newLInteger(l-h));
-
-    case 30:    /* Integer less than */
-        return((l < h) ? trueObject : falseObject);
-
-    case 31:    /* Integer equality */
-        return((l == h) ? trueObject : falseObject);
-
-    default:
-        sysErrorInt("Invalid op table jump", op);
-    }
-    return(NULL);
-}
 
 /*
  * bulkReplace()
@@ -337,35 +241,32 @@ static int bulkReplace(struct object *dest, struct object *start,
     /*
      * Defend against goofy negative indices.
      */
-    if ((irepStart < 0) || (istart < 0) || (istop < 0) ||
-        (count < 1)) {
+    if ((irepStart < 0) || (istart < 0) || (istop < 0) || (count < 1)) {
         return(1);
     }
 
     /*
      * Range check
      */
-    if ((SIZE(dest) < istop) ||
-        (SIZE(src) < (irepStart + count))) {
+    if ((SIZE(dest) < (uint32_t)istop) || (SIZE(src) < (uint32_t)(irepStart + count))) {
         return(1);
     }
 
     /*
      * If both source and dest are binary, do a bcopy()
      */
-    if ((src->size & FLAG_BIN) && (dest->size & FLAG_BIN)) {
+    if (IS_BINOBJ(src) && IS_BINOBJ(dest)) {
         /*
          * Do it.
          */
-        bcopy(bytePtr(src) + irepStart, bytePtr(dest) + istart,
-              count);
+        bcopy(bytePtr(src) + irepStart, bytePtr(dest) + istart, (size_t)count);
         return(0);
     }
 
     /*
      * If not both regular storage, fail
      */
-    if ((src->size & FLAG_BIN) || (dest->size & FLAG_BIN)) {
+    if (IS_BINOBJ(src) || IS_BINOBJ(dest)) {
         return(1);
     }
 
@@ -380,8 +281,7 @@ static int bulkReplace(struct object *dest, struct object *start,
     /*
      * Copy object pointer fields
      */
-    bcopy(&src->data[irepStart], &dest->data[istart],
-          BytesPerWord * count);
+    bcopy(&src->data[irepStart], &dest->data[istart], (size_t)(BytesPerWord * count));
     return(0);
 }
 
@@ -418,7 +318,6 @@ int execute(struct object *aProcess, int ticks)
 
     /* everything else can wait, as maybe won't be needed at all */
     temporaries = instanceVariables = arguments = literals = 0;
-
 
     for (;;) {
         /*
@@ -505,7 +404,7 @@ int execute(struct object *aProcess, int ticks)
                 stack->data[stackTop++] = falseObject;
                 break;
             default:
-                sysErrorInt("unknown push constant", low);
+                error("unknown push constant %d", low);
             }
             break;
 
@@ -519,7 +418,7 @@ int execute(struct object *aProcess, int ticks)
             rootStack[rootTop++] = context;
             op = rootStack[rootTop++] = gcalloc(x = integerValue(method->data[stackSizeInMethod]));
             op->class = ArrayClass;
-            bzero(bytePtr(op), x * BytesPerWord);
+            bzero(bytePtr(op), (size_t)(x * BytesPerWord));
             returnedValue = gcalloc(blockSize);
             returnedValue->class = BlockClass;
             returnedValue->data[bytePointerInContext] =
@@ -609,12 +508,10 @@ int execute(struct object *aProcess, int ticks)
 
 findMethodFromSymbol:
             receiverClass = CLASS(arguments->data[receiverInArguments]);
-            DBGS("SendMessage",
-                 bytePtr(receiverClass->data[nameInClass]),
-                 bytePtr(messageSelector));
+            DBGS("SendMessage", receiverClass->data[nameInClass], messageSelector);
 checkCache:
-            low = (int)((((intptr_t) messageSelector) +
-                         ((intptr_t) receiverClass)) % cacheSize);
+            low = (int)((((uintptr_t) messageSelector) +
+                         ((uintptr_t) receiverClass)) % (uintptr_t)METHOD_CACHE_SIZE);
             if ((cache[low].name == messageSelector) &&
                 (cache[low].class == receiverClass)) {
                 method = cache[low].method;
@@ -624,12 +521,12 @@ checkCache:
                 method = lookupMethod(messageSelector, receiverClass);
                 if (!method) {
                     if (messageSelector == badMethodSym) {
-                        sysError("doesNotUnderstand: missing");
+                        backTrace(context);
+                        error("doesNotUnderstand: missing");
                     }
                     op = gcalloc(2);
                     op->class = ArrayClass;
-                    op->data[receiverInArguments] =
-                        arguments->data[receiverInArguments];
+                    op->data[receiverInArguments] = arguments->data[receiverInArguments];
                     op->data[1] = messageSelector;
                     arguments = op;
                     messageSelector = badMethodSym;
@@ -658,7 +555,7 @@ checkCache:
             op = rootStack[rootTop++] =
                      gcalloc(x = integerValue(method->data[stackSizeInMethod]));
             op->class = ArrayClass;
-            bzero(bytePtr(op), x * BytesPerWord);
+            bzero(bytePtr(op), (size_t)(x * BytesPerWord));
             if (low > 0) {
                 int i;
 
@@ -678,8 +575,7 @@ checkCache:
             /* now go off and build the new context */
             context = gcalloc(contextSize);
             context->class = ContextClass;
-            temporaries = context->data[temporariesInContext]
-                          = rootStack[--rootTop];
+            temporaries = context->data[temporariesInContext] = rootStack[--rootTop];
             stack = context->data[stackInContext] = rootStack[--rootTop];
             stack->class = ArrayClass;
             context->data[stackTopInContext] = newInteger(0);
@@ -724,7 +620,7 @@ checkCache:
                 }
                 break;
             default:
-                sysErrorInt("unimplemented SendUnary", low);
+                error("unimplemented SendUnary %d", low);
             }
             stack->data[stackTop++] = returnedValue;
             break;
@@ -844,23 +740,19 @@ checkCache:
                 low = integerValue(op)-1;
                 returnedValue = stack->data[--stackTop];
                 /* Bounds check */
-                if ((low < 0) ||
-                    (low >= SIZE(returnedValue))) {
+                if ((low < 0) || (low >= (int)SIZE(returnedValue))) {
                     stackTop -= 1;
                     goto failPrimitive;
                 }
-                returnedValue->data[low]
-                    = stack->data[--stackTop];
+
+                returnedValue->data[low]= stack->data[--stackTop];
                 /*
                  * If putting a non-static pointer
                  * into an array in static memory,
                  * register it for GC.
                  */
-                if (!isDynamicMemory(returnedValue)
-                    && isDynamicMemory(
-                        stack->data[stackTop])) {
-                    addStaticRoot(
-                        &returnedValue->data[low]);
+                if (!isDynamicMemory(returnedValue) && isDynamicMemory(stack->data[stackTop])) {
+                    addStaticRoot(&returnedValue->data[low]);
                 }
                 break;
 
@@ -887,12 +779,10 @@ checkCache:
                 /* low holds number of arguments */
                 returnedValue = stack->data[--stackTop];
                 /* put arguments in place */
-                high = integerValue(returnedValue->data[
-                                        argumentLocationInBlock]);
+                high = integerValue(returnedValue->data[argumentLocationInBlock]);
                 temporaries = returnedValue->data[temporariesInBlock];
                 low -= 2;
-                x = (temporaries ?
-                     (SIZE(temporaries) - high) : 0);
+                x = (temporaries ? ((int)SIZE(temporaries) - high) : 0);
                 if (low >= x) {
                     stackTop -= (low+1);
                     goto failPrimitive;
@@ -1025,14 +915,13 @@ checkCache:
                 rootStack[rootTop++] = stack->data[--stackTop];
                 returnedValue = gcialloc(low);
                 returnedValue->class = rootStack[--rootTop];
-                bzero(bytePtr(returnedValue), low);
+                bzero(bytePtr(returnedValue), (size_t)low);
                 break;
 
             case 21:    /* string at */
                 low = integerValue(stack->data[--stackTop])-1;
                 returnedValue = stack->data[--stackTop];
-                if ((low < 0) ||
-                    (low >= SIZE(returnedValue))) {
+                if ((low < 0) || (low >= (int)SIZE(returnedValue))) {
                     goto failPrimitive;
                 }
                 low = bytePtr(returnedValue)[low];
@@ -1042,13 +931,11 @@ checkCache:
             case 22:    /* string at put */
                 low = integerValue(stack->data[--stackTop])-1;
                 returnedValue = stack->data[--stackTop];
-                if ((low < 0) ||
-                    (low >= SIZE(returnedValue))) {
+                if ((low < 0) || (low >= (int)SIZE(returnedValue))) {
                     stackTop -= 1;
                     goto failPrimitive;
                 }
-                bytePtr(returnedValue)[low] =
-                    integerValue(stack->data[--stackTop]);
+                bytePtr(returnedValue)[low] = (uint8_t)(uint32_t)integerValue(stack->data[--stackTop]);
                 break;
 
             case 23:    /* string clone */
@@ -1067,8 +954,7 @@ checkCache:
             case 24:    /* array at */
                 low = integerValue(stack->data[--stackTop])-1;
                 returnedValue = stack->data[--stackTop];
-                if ((low < 0) ||
-                    (low >= SIZE(returnedValue))) {
+                if ((low < 0) || (low >= (int)SIZE(returnedValue))) {
                     goto failPrimitive;
                 }
                 returnedValue = returnedValue->data[low];
@@ -1110,7 +996,7 @@ checkCache:
                 op = stack->data[--stackTop];
                 i64p = (int64_t *)bytePtr(op);
                 l = *i64p;
-                x = l;
+                x = (int)l;
                 if (!FITS_SMALLINT(x)) {
                     goto failPrimitive;
                 }
@@ -1222,7 +1108,7 @@ checkCache:
                 op = stack->data[--stackTop];
                 i64p = (int64_t *)bytePtr(op);
                 l = *i64p;
-                x = l;
+                x = (int)l;
                 returnedValue = newInteger(x);
                 break;
 
@@ -1379,13 +1265,13 @@ doReturn2:
                 return(ReturnBreak);
 
             default:
-                sysErrorInt("invalid doSpecial", low);
+                error("invalid doSpecial %d!", low);
                 break;
             }
             break;
 
         default:
-            sysErrorInt("invalid bytecode", high);
+            error("invalid bytecode %d!", high);
             break;
         }
     }

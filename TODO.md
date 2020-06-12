@@ -1,19 +1,11 @@
-To Do
+# To Do
 
-- change the parser so that parser errors are returned to the compile frame.
-
-- hide meta classes in class list, but show methods as class methods in
-method list.
-
-- add toggle to display classes alphabetically or by hierarchy.
-
-- button for new method.
-
-- button for new class
-
-- button for new subclass.
-
-- button to save image to named file.
-
-- button to file out a class/method.
-
+- Build a StringTemplate class that uses something like a subset of Mustache.
+  - Must include looping constructs, #do: on collections.
+  - Must include conditional constructs.
+  - Build with #new: taking a String.
+  - Render with #render: taking a Dictionary?
+- Refactor all HTML building classes to use StringTemplate.
+- UI improvements
+  - Add toggle to display classes alphabetically or by hierarchy.
+  

@@ -1,0 +1,13 @@
+#pragma once
+
+/*
+ * Common defines for version information.
+ */
+
+
+#define VERSION_STRING "@VERSION@"
+#define VERSION_MAJOR (@VERSION_MAJOR@)
+#define VERSION_MINOR (@VERSION_MINOR@)
+#define VERSION_PATCH (@VERSION_PATCH@)
+
+

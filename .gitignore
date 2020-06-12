@@ -5,3 +5,7 @@ cmake-build-*
 .codelite
 *.o
 *~
+build/*
+src/vm/version.h
+.vscode/launch.json
+.vscode/tasks.json

@@ -9,11 +9,15 @@
 
 #include <stdint.h>
 
+//extern int64_t cache_hit;
+//extern int64_t cache_miss;
+
+extern int execute(struct object *aProcess, int ticks);
+extern void flushCache(void);
+
 extern int64_t cache_hit;
 extern int64_t cache_miss;
 
-extern int execute(struct object *aProcess, int ticks);
-extern struct object *lookupGlobal(char *name);
 
 /*
     symbolic definitions for the bytecodes
@@ -62,101 +66,3 @@ extern struct object *lookupGlobal(char *name);
 #define ReturnTimeExpired 5 /* Time quantum exhausted */
 #define ReturnBreak 6       /* Breakpoint instruction */
 
-/*
-    The following are the objects with ``hard-wired''
-    field offsets
-*/
-/*
-    A Process has two fields
-        * a current context
-        * status of process (running, waiting, etc)
-*/
-
-# define contextInProcess 0
-# define statusInProcess 1
-# define resultInProcess 2
-
-/*
-    A Context has:
-        * method (which has bytecode pointer)
-        * bytecode offset (an integer)
-        * arguments
-        * temporaries and stack
-        * stack pointer
-*/
-
-# define contextSize 7
-# define methodInContext 0
-# define argumentsInContext 1
-# define temporariesInContext 2
-# define stackInContext 3
-# define bytePointerInContext 4
-# define stackTopInContext 5
-# define previousContextInContext 6
-
-/*
-    A Block is subclassed from Context
-    shares fields with creator, plus a couple new ones
-*/
-
-# define blockSize 10
-# define methodInBlock methodInContext
-# define argumentsInBlock argumentsInContext
-# define temporariesInBlock temporariesInContext
-# define stackInBlock stackInContext
-# define stackTopInBlock stackTopInContext
-# define previousContextInBlock previousContextInContext
-# define argumentLocationInBlock 7
-# define creatingContextInBlock 8
-/* the following are saved in different place so they don't get clobbered*/
-# define bytePointerInBlock 9
-
-/*
-    A Method has:
-        * name (a Symbol)
-        * bytecodes
-        * literals
-        * stack size
-        * temp size
-*/
-
-# define methodSize 7
-# define nameInMethod 0
-# define byteCodesInMethod 1
-# define literalsInMethod 2
-# define stackSizeInMethod 3
-# define temporarySizeInMethod 4
-# define classInMethod 5
-# define textInMethod 6
-
-/*
-    A Class has:
-        * pointer to parent class
-        * pointer to tree of methods
-*/
-
-# define ClassSize 5
-# define nameInClass 0
-# define parentClassInClass 1
-# define methodsInClass 2
-# define instanceSizeInClass 3
-# define variablesInClass 4
-
-/*
-    A node in a tree has
-        * value field
-        * left subtree
-        * right subtree
-*/
-
-# define valueInNode 0
-# define leftInNode 1
-# define rightInNode 2
-
-/*
-    misc defines
-*/
-
-# define rootInTree 0
-# define receiverInArguments 0
-# define symbolsInSymbol 5
