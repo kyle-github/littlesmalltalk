@@ -170,11 +170,13 @@ in: object at: index put: value
     <5 value object index>
 
 
+
 !
 " instance methods for Object "
 !Object
 = arg
     ^ self == arg
+
 
 
 !
@@ -183,15 +185,18 @@ in: object at: index put: value
     <1 self arg>
 
 
+
 !
 !Object
 asString
     ^ (self printString)
 
+
 !
 !Object
 basicDo: aBlock
     ^ self do: aBlock
+
 
 
 !
@@ -201,11 +206,13 @@ basicSize
     self primitiveFailed
 
 
+
 !
 !Object
 become: other
     " Exchange identity with another object "
     (Array with: self) elementsExchangeIdentityWith: (Array with: other)
+
 
 
 !
@@ -214,10 +221,12 @@ class
     <2 self>
 
 
+
 !
 !Object
 debug
     <18>
+
 
 
 !
@@ -226,6 +235,7 @@ doesNotUnderstand: aSel
     self error: (self printString + ' (class '+
         (self class printString) +
         '): does not understand ' + aSel printString)
+
 
 
 !
@@ -237,11 +247,13 @@ error: str
     <19>
 
 
+
 !
 !Object
 hash
     " Most objects should generate something based on their value "
     ^ self class printString hash
+
 
 
 !
@@ -250,6 +262,7 @@ in: object at: index
     " browse instance variable via debugger "
     <24 object index>.
     self primitiveFailed
+
 
 
 !
@@ -262,10 +275,12 @@ isKindOf: aClass	| clas |
     ^ false
 
 
+
 !
 !Object
 isMemberOf: aClass
     ^ self class == aClass
+
 
 
 !
@@ -274,16 +289,19 @@ isNil
     ^ false
 
 
+
 !
 !Object
 notNil
     ^ true
 
 
+
 !
 !Object
 primitiveFailed
     self error: 'Primitive failed'
+
 
 
 !
@@ -294,16 +312,19 @@ print | aStr |
     aStr do: [ :c | c print ]
 
 
+
 !
 !Object
 printNl
     self print. Char newline print
 
 
+
 !
 !Object
 printString
     ^ self class printString
+
 
 
 !
@@ -316,10 +337,12 @@ question: text	| answer |
     ^ answer = $y or: [ answer = $Y]
 
 
+
 !
 !Object
 respondsTo: aMessage
     ^ self class allMethods includes: aMessage
+
 
 
 !
@@ -329,10 +352,12 @@ species
     ^ self class
 
 
+
 !
 !Object
 subclassResponsibility
     self error: 'Subclass responsibility'
+
 
 
 !
@@ -341,10 +366,12 @@ subclassResponsibility
     ^ (self = arg) not
 
 
+
 !
 !Object
 ~~ arg
     ^ (self == arg) not
+
 
 
 !
@@ -354,6 +381,7 @@ subclassResponsibility
 args
     " get the command line args as an Array of Strings. "
     ^ <170>
+
 
 !
 " class methods for REPL "
@@ -367,13 +395,16 @@ start	| command |
             ifFalse: [ command doIt printNl ] ]
 
 
+
 !
 " class methods for WebIDE "
 " instance methods for WebIDE "
 !WebIDE
 start	| command |
     " Start HTTP-based class browser. "
+    'Starting class browser/IDE on http://localhost:6789.' printNl.
     HTTPClassBrowser start.
+
 
 
 !
@@ -386,10 +417,12 @@ and: aBlock
         ifFalse: [ false ]
 
 
+
 !
 !Boolean
 ifFalse: aBlock
     ^ self ifTrue: [ nil ] ifFalse: [ aBlock value ]
+
 
 
 !
@@ -398,10 +431,12 @@ ifFalse: falseBlock ifTrue: trueBlock
     ^ self ifTrue: [ trueBlock  value ] ifFalse: [ falseBlock value ]
 
 
+
 !
 !Boolean
 ifTrue: aBlock
     ^ self ifTrue: [ aBlock value ] ifFalse: [ nil ]
+
 
 
 !
@@ -412,12 +447,14 @@ not
         ifFalse: [ true ]
 
 
+
 !
 !Boolean
 or: aBlock
     ^ self
         ifTrue: [ true ]
         ifFalse: [ aBlock value ]
+
 
 
 !
@@ -428,11 +465,13 @@ new
     ^ false
 
 
+
 !
 " instance methods for False "
 !False
 and: aBlock
     ^ false
+
 
 
 !
@@ -441,10 +480,12 @@ ifTrue: trueBlock ifFalse: falseBlock
     ^ falseBlock value
 
 
+
 !
 !False
 not
     ^ true
+
 
 
 !
@@ -453,10 +494,12 @@ or: aBlock
     ^ aBlock value
 
 
+
 !
 !False
 printString
     ^ 'false'
+
 
 
 !
@@ -467,11 +510,13 @@ new
     ^ true
 
 
+
 !
 " instance methods for True "
 !True
 and: aBlock
     ^ aBlock value
+
 
 
 !
@@ -480,10 +525,12 @@ ifTrue: trueBlock ifFalse: falseBlock
     ^ trueBlock value
 
 
+
 !
 !True
 not
     ^ false
+
 
 
 !
@@ -492,10 +539,12 @@ or: aBlock
     ^ true
 
 
+
 !
 !True
 printString
     ^ 'true'
+
 
 
 !
@@ -506,6 +555,7 @@ addMethod	| text |
     text <- ' ' edit.
     (self question: 'compile method?')
         ifTrue: [ ^ self addMethod: text ]
+
 
 
 !
@@ -520,6 +570,7 @@ addMethod: text | meth |
         ]
 
 
+
 !
 !Class
 allMethods | allMethods |
@@ -528,6 +579,7 @@ allMethods | allMethods |
         ifFalse: [ allMethods <- parentClass allMethods ].
     methods binaryDo: [ :n :m | allMethods at: n put: m ].
     ^ allMethods
+
 
 
 !
@@ -542,11 +594,13 @@ allVariables	| names |
     ^ names
 
 
+
 !
 !Class
 basicNew
     " Like new "
     <7 self size>
+
 
 
 !
@@ -588,6 +642,7 @@ classDefSource | nl outBuf instVars metaClass classVars |
     ^ outBuf asString
 
 
+
 !
 !Class
 editMethod: nm	| meth text |
@@ -596,6 +651,7 @@ editMethod: nm	| meth text |
     text <- meth text edit.
     (self question: 'compile method?')
         ifTrue: [ ^ self addMethod: text ]
+
 
 
 !
@@ -619,12 +675,14 @@ fileOutSource | nl outFile classDef methodDefs |
 
 
 
+
 !
 !Class
 fileOutSource: fileName | nl outFile outBuf instVars instMethods metaClass classVars classMethods |
     " remove"
 
     ^ nil.
+
 
 
 !
@@ -639,10 +697,12 @@ instanceVariables	| names |
     ^ names
 
 
+
 !
 !Class
 listAllMethods
     self allMethods keysDo: [:n| n printNl ]
+
 
 
 !
@@ -650,6 +710,7 @@ listAllMethods
 listMethods
     methods keysDo:
         [ :name | name printNl ]
+
 
 
 !
@@ -712,6 +773,7 @@ methodDefSource | nl outFile outBuf instMethods metaClass classMethods |
 
 
 
+
 !
 !Class
 methods
@@ -719,10 +781,12 @@ methods
     ^ methods
 
 
+
 !
 !Class
 name
     ^ name.
+
 
 !
 !Class
@@ -735,11 +799,13 @@ name: n parent: c variables: v
     variables <- v
 
 
+
 !
 !Class
 new
     " return a new instance of ourselves "
     <7 self size>
+
 
 
 !
@@ -749,11 +815,13 @@ parseMethod: text
         text: text instanceVars: self instanceVariables) parse: self
 
 
+
 !
 !Class
 printString
     " just return our name "
     ^ name printString
+
 
 
 !
@@ -762,16 +830,19 @@ size
     ^ size
 
 
+
 !
 !Class
 subclass: nm
     ^ self subclass: nm variables: (Array new: 0) classVariables: (Array new: 0)
 
 
+
 !
 !Class
 subclass: nm variables: v
     ^ self subclass: nm variables: v classVariables: (Array new: 0)
+
 
 
 !
@@ -791,10 +862,12 @@ subclass: nm variables: v classVariables: cv | meta metaName |
     ^ 'subclass created: ' + nm printString
 
 
+
 !
 !Class
 subclasses
     ^ (globals select: [ :o | (o isKindOf: Class) and: [ (o superclass) = self ] ])
+
 
 
 !
@@ -808,16 +881,19 @@ subclasses: indent
                 obj subclasses: indent + 4 ] ]
 
 
+
 !
 !Class
 superclass
     ^ parentClass
 
 
+
 !
 !Class
 variables
     ^ variables
+
 
 
 !
@@ -829,6 +905,7 @@ view: methodName
             text print
 
 
+
 !
 !Class
 viewMethod: nm  | meth |
@@ -838,12 +915,14 @@ viewMethod: nm  | meth |
     ^ ''
 
 
+
 !
 " class methods for Context "
 " instance methods for Context "
 !Context
 arguments
     ^ arguments
+
 
 
 !
@@ -855,6 +934,7 @@ backtrace | buf |
     self backtraceOn: buf.
 
     buf printString printNl.
+
 
 
 !
@@ -876,10 +956,12 @@ backtraceOn: aStream | narg |
         ifTrue: [ previousContext backtraceOn: aStream ]
 
 
+
 !
 !Context
 method
     ^ method
+
 
 
 !
@@ -891,10 +973,12 @@ perform: aMethod withArguments: a | proc |
     ^ proc execute
 
 
+
 !
 !Context
 previousContext
     ^ previousContext
+
 
 
 !
@@ -908,12 +992,14 @@ setup: aMethod withArguments: a
     temporaries <- Array new: method temporarySize.
 
 
+
 !
 " class methods for Block "
 " instance methods for Block "
 !Block
 argCount
     self error: 'Incorrect argument passing to Block'
+
 
 
 !
@@ -933,12 +1019,14 @@ backtrace | narg |
         ifTrue: [ self previousContext backtrace ]
 
 
+
 !
 !Block
 value
     " start block execution "
     <8 self>
     (self argCount)
+
 
 
 !
@@ -949,6 +1037,7 @@ value: a
     (self argCount)
 
 
+
 !
 !Block
 value: a value: b
@@ -957,16 +1046,19 @@ value: a value: b
     (self argCount)
 
 
+
 !
 !Block
 whileFalse: aBlock
     self value ifFalse: [ aBlock value. ^ self whileFalse: aBlock ]
 
 
+
 !
 !Block
 whileTrue: aBlock
     self value ifTrue: [ aBlock value. ^ self whileTrue: aBlock ]
+
 
 
 !
@@ -984,6 +1076,7 @@ new | anElem |
     ^ anElem
 
 
+
 !
 " instance methods for DOMElement "
 !DOMElement
@@ -995,6 +1088,7 @@ addChild: anElem
     ].
 
     ^ self
+
 
 
 
@@ -1011,10 +1105,12 @@ addSibling: anElem
 
 
 
+
 !
 !DOMElement
 attrAt: aKey
     ^ self attrAt: aKey ifAbsent: [ nil ].
+
 
 
 
@@ -1024,6 +1120,7 @@ attrAt: aKey ifAbsent: aBlock
     attribs isNil ifTrue: [ ^ (aBlock value) ].
 
     ^ attribs at: aKey ifAbsent: aBlock.
+
 
 
 !
@@ -1037,12 +1134,14 @@ attrAt: aKey put: aVal
 
 
 
+
 !
 !DOMElement
 endTag: aStr
     endTag <- aStr.
 
     ^ self
+
 
 
 
@@ -1093,6 +1192,7 @@ renderOn: aStream | total |
     ^ aStream
 
 
+
 !
 !DOMElement
 size | total |
@@ -1123,6 +1223,7 @@ size | total |
             
             
 
+
 !
 !DOMElement
 startTag: aStr
@@ -1131,12 +1232,14 @@ startTag: aStr
     ^ self
 
 
+
 !
 !DOMElement
 style: aStr
     self attrAt: #style put: aStr.
 
     ^ self
+
 
 
 
@@ -1153,6 +1256,7 @@ new | aBody |
 
 
 
+
 !
 " instance methods for DOMBody "
 " class methods for DOMBold "
@@ -1166,6 +1270,7 @@ new | aB |
     ^ aB
 
 
+
 !
 =DOMBold
 new: someText | aB |
@@ -1174,6 +1279,7 @@ new: someText | aB |
     aB addChild: someText.
 
     ^ aB
+
 
 
 !
@@ -1186,6 +1292,7 @@ new | aBr |
     aBr startTag: 'br'.
 
     ^ aBr
+
 
 
 
@@ -1203,6 +1310,7 @@ new | aDiv |
 
 
 
+
 !
 =DOMDiv
 new: aChild | aDiv |
@@ -1211,6 +1319,7 @@ new: aChild | aDiv |
     aDiv addChild: aChild.
 
     ^ aDiv
+
 
 
 
@@ -1227,6 +1336,7 @@ action: anUrl | aForm |
 
 
 
+
 !
 =DOMForm
 action: anUrl method: aHTTPMethod | aForm |
@@ -1236,6 +1346,7 @@ action: anUrl method: aHTTPMethod | aForm |
     aForm method: aHTTPMethod.
 
     ^ aForm
+
 
 
 
@@ -1251,6 +1362,7 @@ new | aForm |
 
 
 
+
 !
 " instance methods for DOMForm "
 !DOMForm
@@ -1260,12 +1372,14 @@ action: anUrl
     ^ self
 
 
+
 !
 !DOMForm
 method: mthd
     self attrAt: #method put: mthd.
 
     ^ self
+
 
 
 
@@ -1279,6 +1393,7 @@ new | aHead |
     aHead endTag: 'head'.
 
     ^ aHead
+
 
 
 
@@ -1296,6 +1411,7 @@ new | anI |
 
 
 
+
 !
 =DOMItalic
 new: someText | anI |
@@ -1304,6 +1420,7 @@ new: someText | anI |
     anI addChild: someText.
 
     ^ anI
+
 
 
 
@@ -1330,6 +1447,7 @@ new | aPage head body |
 
 
 
+
 !
 " instance methods for DOMPage "
 !DOMPage
@@ -1338,10 +1456,12 @@ body
 
 
 
+
 !
 !DOMPage
 head
     ^ head
+
 
 
 
@@ -1358,6 +1478,7 @@ new | aSpan |
 
 
 
+
 !
 =DOMSpan
 new: aChild | aSpan |
@@ -1366,6 +1487,7 @@ new: aChild | aSpan |
     aSpan addChild: aChild.
 
     ^ aSpan
+
 
 
 
@@ -1383,6 +1505,7 @@ name: nm value: val  | aButton |
 
 
 
+
 !
 =DOMSubmitButton
 new | aButton |
@@ -1392,6 +1515,7 @@ new | aButton |
     aButton attrAt: #type put: 'submit'.
 
     ^ aButton
+
 
 
 
@@ -1405,12 +1529,14 @@ name: nm
     ^ self
 
 
+
 !
 !DOMSubmitButton
 value: val
     self attrAt: #value put: val.
 
     ^ self
+
 
 
 
@@ -1426,6 +1552,7 @@ name: nm   | anInput |
 
 
 
+
 !
 =DOMTextInput
 name: nm value: val  | anInput |
@@ -1435,6 +1562,7 @@ name: nm value: val  | anInput |
     anInput value: val.
 
     ^ anInput
+
 
 
 
@@ -1450,6 +1578,7 @@ new | anInput |
 
 
 
+
 !
 " instance methods for DOMTextInput "
 !DOMTextInput
@@ -1460,12 +1589,14 @@ name: nm
     ^ self
 
 
+
 !
 !DOMTextInput
 value: val
     self attrAt: #value put: val.
 
     ^ self
+
 
 
 
@@ -1478,10 +1609,12 @@ backUp
     index <- index - 1
 
 
+
 !
 !Encoder
 currentLocation
     ^ index
+
 
 
 !
@@ -1491,6 +1624,7 @@ expandByteCodes	| newarray size |
     newarray <- ByteArray new: size + 8.
     1 to: size do: [:i | newarray at: i put: (byteCodes at: i)].
     byteCodes <- newarray
+
 
 
 !
@@ -1503,12 +1637,14 @@ genCode: byte
     ^ index
 
 
+
 !
 !Encoder
 genHigh: high low: low
     (low >= 16)
         ifTrue: [ self genHigh: 0 low: high. self genCode: low ]
         ifFalse: [ self genCode: high * 16 + low ]
+
 
 
 !
@@ -1520,6 +1656,7 @@ genLiteral: aValue | idx |
     ^ literals size - 1
 
 
+
 !
 !Encoder
 genVal: byte
@@ -1528,10 +1665,12 @@ genVal: byte
     ^ index-1
 
 
+
 !
 !Encoder
 lineNum: l
     " Don't care, except in DebugEncoder subclass "
+
 
 
 !
@@ -1540,6 +1679,7 @@ method: maxTemps class: c text: text
     ^ Method name: name byteCodes: byteCodes literals: literals
         stackSize: maxStack temporarySize: maxTemps class: c
         text: text
+
 
 
 !
@@ -1553,6 +1693,7 @@ name: n
     maxStack <- 1.
 
 
+
 !
 !Encoder
 patch: loc
@@ -1561,10 +1702,12 @@ patch: loc
     byteCodes at: (loc + 1) put: (index quo: 256)
 
 
+
 !
 !Encoder
 popArgs: n
     stackSize <- stackSize - n.
+
 
 
 !
@@ -1574,11 +1717,13 @@ pushArgs: n
     maxStack <- stackSize max: maxStack
 
 
+
 !
 " class methods for File "
 =File
 doOpen: nm mode: mode
     <100 nm mode>
+
 
 
 !
@@ -1591,6 +1736,7 @@ fileIn: nm | file |
     ^ 'file in completed'
 
 
+
 !
 =File
 image: nm | file |
@@ -1601,11 +1747,13 @@ image: nm | file |
     file close
 
 
+
 !
 =File
 openRead: nm
         " open new file for reading "
     ^ self in: (self new) at: 1 put: (self doOpen: nm mode: 'r')
+
 
 
 !
@@ -1615,11 +1763,13 @@ openUpdate: nm
     ^ self in: (self new) at: 1 put: (self doOpen: nm mode: 'r+')
 
 
+
 !
 =File
 openWrite: nm
         " open new file for writing "
     ^ self in: (self new) at: 1 put: (self doOpen: nm mode: 'w')
+
 
 
 !
@@ -1630,12 +1780,14 @@ at: idx
     self primitiveFailed
 
 
+
 !
 !File
 at: idx get: buf | size |
     self at: idx.
     size <- buf size.
     <106 fileID buf size>
+
 
 
 !
@@ -1645,6 +1797,7 @@ at: idx put: buf
     self write: buf size: buf size
 
 
+
 !
 !File
 at: idx size: count | buf res |
@@ -1652,6 +1805,7 @@ at: idx size: count | buf res |
     res <- self at: idx get: buf.
     (res < count) ifTrue: [ buf <- buf from: 1 to: res ].
     ^ buf
+
 
 
 !
@@ -1664,10 +1818,12 @@ close
     ]
 
 
+
 !
 !File
 close: id
     <103 id>
+
 
 
 !
@@ -1678,12 +1834,14 @@ doRead
     self primitiveFailed
 
 
+
 !
 !File
 fileIn		| cmd |
     [ cmd <- self readChar. cmd notNil ] whileTrue: [
         self fileInDispatch: cmd
     ]
+
 
 
 !
@@ -1719,6 +1877,7 @@ fileInDispatch: cmd | c |
     self readLine
 
 
+
 !
 !File
 methodCommand: classCmd | name aClass text line |
@@ -1737,16 +1896,19 @@ methodCommand: classCmd | name aClass text line |
         ifFalse: [ (aClass class addMethod: text) printNl ]
 
 
+
 !
 !File
 notOpened
     self error: 'file is not open'
 
 
+
 !
 !File
 opened
     ^ fileID notNil
+
 
 
 !
@@ -1756,6 +1918,7 @@ readChar	| c |
     c <- self doRead.
     c notNil ifTrue: [ ^ Char new: c ].
     ^ c
+
 
 
 !
@@ -1773,11 +1936,13 @@ readLine	| value  c nl |
     ^ value
 
 
+
 !
 !File
 write: buf size: count
     <107 fileID buf count>.
     self primitiveFailed
+
 
 
 !
@@ -1786,6 +1951,7 @@ writeCharValue: n
     <102 fileID n>.
     fileID isNil ifTrue: [ self notOpened ].
     self primitiveFailed
+
 
 
 !
@@ -1804,12 +1970,14 @@ writeClassDefFor: cls | src subclasses |
     ].
 
 
+
 !
 !File
 writeImage
         " save the current image in a file "
     fileID notNil
         ifTrue: [ <104 fileID> ]
+
 
 
 !
@@ -1822,6 +1990,7 @@ writeImageSource
 
     " write all the methods. "
     self writeMethodsFor: Object.
+
 
 
 !
@@ -1840,6 +2009,7 @@ writeMethodsFor: cls | src subclasses |
     ].
 
 
+
 !
 " class methods for HTMLElement "
 =HTMLElement
@@ -1856,6 +2026,7 @@ new  | tag offset |
     ^ tag
 
 
+
 !
 " instance methods for HTMLElement "
 !HTMLElement
@@ -1869,10 +2040,12 @@ asHTML | buf |
 
 
 
+
 !
 !HTMLElement
 asHTMLOn: aStringBuffer
     ^ self subclassResponsibility
+
 
 
 !
@@ -1882,11 +2055,13 @@ atAttr: aSymbol
     ^ (self atAttr: aSymbol ifAbsent: [ nil ]).
 
 
+
 !
 !HTMLElement
 atAttr: aSymbol ifAbsent: aBlock
     " get the value from the attributes dictionary and run aBock if it is missing. "
     ^ (attributes at: aSymbol ifAbsent: aBlock).
+
 
 
 !
@@ -1907,11 +2082,13 @@ attrSize | total |
     ^ total
 
 
+
 !
 !HTMLElement
 attributes
     " return the current attributes. "
     ^ attributes
+
 
 
 !
@@ -1937,6 +2114,7 @@ encodeAttrsOn: aString at: anIndex | i kStr vStr |
     ].
 
     ^ i
+
 
 
 !
@@ -1984,6 +2162,7 @@ encodeHTML: anHTMLString | transStr lt gt newSize targIndex |
     ^ transStr
 
 
+
 !
 !HTMLElement
 fromUrl: aString
@@ -1991,6 +2170,7 @@ fromUrl: aString
     <152 aString>.
 
     self primitiveFailed
+
 
 
 !
@@ -2001,6 +2181,7 @@ size
 
 
 
+
 !
 !HTMLElement
 toUrl: aString
@@ -2008,6 +2189,7 @@ toUrl: aString
     <151 aString>.
 
     self primitiveFailed
+
 
 
 !
@@ -2026,6 +2208,7 @@ new | body offset |
     ^ body
 
 
+
 !
 " instance methods for HTMLBody "
 !HTMLBody
@@ -2033,6 +2216,7 @@ add: aTag
    content addLast: aTag.
 
    ^ self
+
 
 
 !
@@ -2043,10 +2227,12 @@ asHTMLOn: buf
     buf addLast: '</body>'.
 
 
+
 !
 !HTMLBody
 content
     ^ content
+
 
 
 !
@@ -2061,6 +2247,7 @@ size | total |
     ^ total
 
 
+
 !
 " class methods for HTMLBreak "
 " instance methods for HTMLBreak "
@@ -2069,10 +2256,12 @@ asHTMLOn: aList
     aList addLast: '<br>'.
 
 
+
 !
 !HTMLBreak
 size
     ^ ('<br>' size)
+
 
 
 !
@@ -2091,6 +2280,7 @@ new | div offset |
     ^ div
 
 
+
 !
 " instance methods for HTMLDiv "
 !HTMLDiv
@@ -2098,6 +2288,7 @@ add: aTag
    content addLast: aTag.
 
    ^ self
+
 
 !
 !HTMLDiv
@@ -2107,10 +2298,12 @@ asHTMLOn: buf
     buf addLast: '</div>'.
 
 
+
 !
 !HTMLDiv
 content
     ^ content
+
 
 
 !
@@ -2123,6 +2316,7 @@ size | total |
     total <- total + ('</div>' size).
 
     ^ total
+
 
 
 !
@@ -2140,16 +2334,19 @@ new: aStr | elem offset |
 
     ^ elem
 
+
 !
 " instance methods for HTMLText "
 !HTMLText
 asHTMLOn: buf
     content notNil ifTrue: [ buf addLast: content ].
 
+
 !
 !HTMLText
 content
     ^ content
+
 
 !
 !HTMLText
@@ -2158,10 +2355,12 @@ content: aStr
 
     ^ self
 
+
 !
 !HTMLText
 size
    ^ (content notNil ifTrue: [content size] ifFalse: [ 0 ])
+
 
 !
 " class methods for HTMLTag "
@@ -2183,6 +2382,7 @@ new  | tag |
 
 
 
+
 !
 " instance methods for HTMLTag "
 !HTMLTag
@@ -2191,6 +2391,7 @@ add: aTag
     content addLast: aTag.
 
     ^ self
+
 
 
 
@@ -2206,10 +2407,12 @@ asHTML | buf |
 
 
 
+
 !
 !HTMLTag
 asHTMLOn: aStringBuffer
     ^ self subclassResponsibility
+
 
 
 !
@@ -2219,11 +2422,13 @@ atAttr: aSymbol
     ^ (self atAttr: aSymbol ifAbsent: [ nil ]).
 
 
+
 !
 !HTMLTag
 atAttr: aSymbol ifAbsent: aBlock
     " get the value from the attributes dictionary and run aBock if it is missing. "
     ^ (attributes at: aSymbol ifAbsent: aBlock).
+
 
 !
 !HTMLTag
@@ -2243,17 +2448,20 @@ attrSize | total |
     ^ total
 
 
+
 !
 !HTMLTag
 attributes
     " return the current attributes. "
     ^ attributes
 
+
 !
 !HTMLTag
 content
     " return the current content. "
     ^ content
+
 
 
 !
@@ -2283,6 +2491,7 @@ encodeAttrsOn: aString at: anIndex | i kStr vStr |
 
 
 
+
 !
 !HTMLTag
 encodeHTML: anHTMLString | transStr lt gt newSize targIndex |
@@ -2330,6 +2539,7 @@ encodeHTML: anHTMLString | transStr lt gt newSize targIndex |
 
 
 
+
 !
 !HTMLTag
 fromUrl: aString
@@ -2339,6 +2549,7 @@ fromUrl: aString
     self primitiveFailed
 
 
+
 !
 !HTMLTag
 outputOn: aString at: anIndex
@@ -2346,11 +2557,13 @@ outputOn: aString at: anIndex
     self subclassResponsibility
 
 
+
 !
 !HTMLTag
 size 
     " subclasses need to implement this. "
     self subclassResponsibility
+
 
 
 
@@ -2363,6 +2576,7 @@ toUrl: aString
     self primitiveFailed
 
 
+
 !
 " class methods for HTMLAnchor "
 =HTMLAnchor
@@ -2373,6 +2587,7 @@ new | a |
     ^ a
     
 
+
 !
 =HTMLAnchor
 new: hStr content: cStr | a |
@@ -2381,6 +2596,7 @@ new: hStr content: cStr | a |
 
     ^ a
     
+
 
 !
 =HTMLAnchor
@@ -2409,6 +2625,7 @@ new: hStr target: tStr content: cStr | a offset |
     ^ a
     
 
+
 !
 " instance methods for HTMLAnchor "
 !HTMLAnchor
@@ -2434,10 +2651,12 @@ asHTMLOn: aBuf
 
    
 
+
 !
 !HTMLAnchor
 content
     ^ content
+
 
 
 !
@@ -2448,10 +2667,12 @@ content: aStr
     ^ self
 
 
+
 !
 !HTMLAnchor
 href
     ^ href
+
 
 !
 !HTMLAnchor
@@ -2459,6 +2680,7 @@ href: aUrlStr
     href <- aUrlStr
 
     ^ self
+
 
 !
 !HTMLAnchor
@@ -2487,10 +2709,12 @@ size | total |
 
    
 
+
 !
 !HTMLAnchor
 target
     ^ target
+
 
 !
 !HTMLAnchor
@@ -2498,6 +2722,7 @@ target: aStr
     target <- aStr
 
     ^ self
+
 
 
 !
@@ -2516,6 +2741,7 @@ new | head offset |
     ^ head
 
 
+
 !
 " instance methods for HTMLHead "
 !HTMLHead
@@ -2523,6 +2749,7 @@ add: aTag
    content addLast: aTag.
 
    ^ self
+
 
 
 !
@@ -2533,10 +2760,12 @@ asHTMLOn: buf
     buf addLast: '</head>'.
 
 
+
 !
 !HTMLHead
 content
     ^ content
+
 
 
 !
@@ -2546,6 +2775,7 @@ content: aList
     content <- aList
 
     ^ self
+
 
 !
 !HTMLHead
@@ -2561,6 +2791,7 @@ size | total |
     ^ total
 
     
+
 
 !
 " class methods for HTMLPage "
@@ -2578,6 +2809,7 @@ new | page offset |
 
     ^ page
 
+
 !
 " instance methods for HTMLPage "
 !HTMLPage
@@ -2588,10 +2820,12 @@ asHTMLOn: buf
     buf addLast: '</html>'.
 
 
+
 !
 !HTMLPage
 body
     ^ body
+
 
 !
 !HTMLPage
@@ -2602,10 +2836,12 @@ body: aBody
 
 
 
+
 !
 !HTMLPage
 head
     ^ head
+
 
 !
 !HTMLPage
@@ -2613,6 +2849,7 @@ head: aHead
     head <- aHead
 
     ^ self
+
 
 
 !
@@ -2631,6 +2868,7 @@ size | total |
 
     
 
+
 !
 " class methods for HTTPClassBrowser "
 =HTTPClassBrowser
@@ -2644,6 +2882,7 @@ new | browser sock |
     ^ browser startOn: sock
 
 
+
 !
 =HTTPClassBrowser
 start | browser sock |
@@ -2654,6 +2893,7 @@ start | browser sock |
     sock bindTo: '127.0.0.1' onPort: 6789.
 
     ^ browser startOn: sock
+
 
 
 !
@@ -2747,10 +2987,12 @@ class: aReq | errorPage page superLink methodTmpl variableTmpl cls |
     " render the page. "
     ^ aReq response: (page render: cls)
 
+
 !
 !HTTPClassBrowser
 classPage: aReq | page classList |
     ^ 'not supported'
+
 
 !
 !HTTPClassBrowser
@@ -2778,6 +3020,7 @@ classes: aReq | page classItem |
     page values at: #classes put: [ :c | classItem renderObjs: ((Array new: 1) at: 1 put: c) ].
 
     ^aReq response: (page render: Object)
+
 
 !
 !HTTPClassBrowser
@@ -2877,6 +3120,7 @@ compileMethodOn: aReq | outBuf classStr class methSrc action meth isMeta |
     ^ aReq response: outBuf.
 
 
+
 !
 !HTTPClassBrowser
 doIt: aReq	| page doItStr meth result outBuf txt doItDiv resultDiv |
@@ -2915,6 +3159,7 @@ doIt: aReq	| page doItStr meth result outBuf txt doItDiv resultDiv |
 
 
     
+
 
 !
 !HTTPClassBrowser
@@ -3001,10 +3246,12 @@ editMethodOn: aReq | outBuf classStr class methStr method methodText isMeta |
     ^ aReq response: outBuf.
 
 
+
 !
 !HTTPClassBrowser
 generateClassTree: cls | anchor subclasses subclassList |
     ^ ' not supported. '
+
 
 !
 !HTTPClassBrowser
@@ -3042,6 +3289,7 @@ listClassesOn: aReq | outBuf objName thePage theBody theList theUrl a |
     " (thePage asHTML) printNl. "
 
     ^ aReq response: outBuf.
+
 
 
 !
@@ -3102,6 +3350,7 @@ listMethodsOn: aReq | outBuf classStr class variables |
     ^ aReq response: outBuf.
 
 
+
 !
 !HTTPClassBrowser
 showBaseFrameOn: aReq | outBuf |
@@ -3113,6 +3362,7 @@ showBaseFrameOn: aReq | outBuf |
     outBuf addLast: '</FRAMESET></HTML>'.
 
     ^ aReq response: outBuf.
+
 
 
 !
@@ -3292,6 +3542,7 @@ showClassOn: aReq | outBuf classStr class variables metaName metaClass classVars
     ^ aReq response: outBuf.
 
 
+
 !
 !HTTPClassBrowser
 showControlFrameOn: aReq | outBuf imageName imageFile aPage mainDiv aForm aDiv saveStatus|
@@ -3355,6 +3606,7 @@ showControlFrameOn: aReq | outBuf imageName imageFile aPage mainDiv aForm aDiv s
     ^ aReq response: outBuf.
 
 
+
 !
 !HTTPClassBrowser
 showControlListFrameOn: aReq | outBuf |
@@ -3366,6 +3618,7 @@ showControlListFrameOn: aReq | outBuf |
     outBuf addLast: '</FRAMESET></HTML>'.
 
     ^ aReq response: outBuf.
+
 
 
 !
@@ -3386,6 +3639,7 @@ showErrorOn: aReq | outBuf |
     ^ aReq responseErr: 404 withMessage: ('Unknown path ' + (aReq path) + '!') .
 
 
+
 !
 !HTTPClassBrowser
 showListFrameOn: aReq | outBuf |
@@ -3399,6 +3653,7 @@ showListFrameOn: aReq | outBuf |
     ^ aReq response: outBuf.
 
 
+
 !
 !HTTPClassBrowser
 start | sock acceptSock |
@@ -3407,6 +3662,7 @@ start | sock acceptSock |
     sock bindTo: '127.0.0.1' onPort: 6789.
 
     ^ self startOn: sock
+
 
 
 !
@@ -3452,6 +3708,7 @@ startOn: aSock | dispatcher |
     ^ nil.
 
 
+
 !
 " class methods for HTTPDispatcher "
 " instance methods for HTTPDispatcher "
@@ -3463,11 +3720,13 @@ register: aBlock at: aPath
     ^ self.
 
 
+
 !
 !HTTPDispatcher
 registerErrorHandler: anObj
     errorHandler <- anObj.
     ^ self.
+
 
 
 !
@@ -3494,10 +3753,12 @@ startOn: aSock | tmpRequest aBlock clientSock |
     ].
 
 
+
 !
 !HTTPDispatcher
 stop
     runFlag <- false.
+
 
 
 !
@@ -3526,6 +3787,7 @@ action
     " reqAction printString printNl. "
 
     ^ reqAction.
+
 
 
 !
@@ -3588,10 +3850,12 @@ args	| i pathArgField argsData keyValList key val argList|
 
 
 
+
 !
 !HTTPRequest
 at: aSymbol
     ^ (self args) at: aSymbol ifAbsent: [ nil ].
+
 
 
 !
@@ -3615,6 +3879,7 @@ path	| i pathArgField |
     ^ reqPath.
 
 
+
 !
 !HTTPRequest
 pathAndArgs	| i lines firstLine fields pathArgField |
@@ -3635,6 +3900,7 @@ pathAndArgs	| i lines firstLine fields pathArgField |
     reqPathAndArgs <- fields first.
 
     ^ reqPathAndArgs.
+
 
 
 !
@@ -3729,6 +3995,7 @@ rawData		| i termStringCR termStringNL doubleTermCR doubleTermNL tempData conten
     ^ reqRawData.
 
 
+
 !
 !HTTPRequest
 read: aSock  | data |
@@ -3737,6 +4004,7 @@ read: aSock  | data |
     data <- self rawData.
 
     (data isNil) ifTrue: [ ^ false ] ifFalse: [ ^ true ].
+
 
 
 !
@@ -3771,6 +4039,7 @@ response: aResp  | responseSize tmpResponse lineTerm index |
     ^ self.
 
 
+
 !
 !HTTPRequest
 responseErr: aCode withMessage: aResp  | responseSize tmpResponse lineTerm index |
@@ -3803,6 +4072,7 @@ responseErr: aCode withMessage: aResp  | responseSize tmpResponse lineTerm index
     ^ self.
 
 
+
 !
 " class methods for Link "
 =Link
@@ -3810,6 +4080,7 @@ value: v
         " return a new link with given value field "
         " and empty link field "
     ^ self in: self new at: 1 put: v
+
 
 
 !
@@ -3822,6 +4093,7 @@ value: v next: n	| new |
     ^ new
 
 
+
 !
 " instance methods for Link "
 !Link
@@ -3831,6 +4103,7 @@ addLast: anElement
         ifFalse: [ next <- Link value: anElement ]
 
 
+
 !
 !Link
 do: aBlock
@@ -3838,10 +4111,12 @@ do: aBlock
     next notNil ifTrue: [ ^ next do: aBlock ]
 
 
+
 !
 !Link
 next
     ^ next
+
 
 
 !
@@ -3855,11 +4130,13 @@ remove: anElement ifAbsent: exceptionBlock
             ifFalse: [ ^ exceptionBlock value ] ]
 
 
+
 !
 !Link
 reverseDo: aBlock
     next notNil ifTrue: [ next reverseDo: aBlock ].
     aBlock value: value
+
 
 
 !
@@ -3868,10 +4145,12 @@ value
     ^ value
 
 
+
 !
 !Link
 value: val
     value <- val
+
 
 
 !
@@ -3885,6 +4164,7 @@ detail: msg
     (level = #spew) ifTrue: [ Transcript put: msg. self log: msg].
 
 
+
 !
 =Log
 error: msg
@@ -3893,6 +4173,7 @@ error: msg
     (level = #info) ifTrue: [ Transcript put: msg. self log: msg].
     (level = #detail) ifTrue: [ Transcript put: msg. self log: msg].
     (level = #spew) ifTrue: [ Transcript put: msg. self log: msg].
+
 
 
 !
@@ -3905,10 +4186,12 @@ info: msg
     (level = #spew) ifTrue: [ Transcript put: msg. self log: msg].
 
 
+
 !
 =Log
 level
     ^ level
+
 
 !
 =Log
@@ -3916,10 +4199,12 @@ level: lvl
    level <- lvl
    ^ self
 
+
 !
 =Log
 log: msg
    <160 msg>
+
 
 
 !
@@ -3932,6 +4217,7 @@ spew: msg
     (level = #spew) ifTrue: [ Transcript put: msg. self log: msg].
 
 
+
 !
 =Log
 warn: msg
@@ -3940,6 +4226,7 @@ warn: msg
     (level = #info) ifTrue: [ Transcript put: msg. self log: msg].
     (level = #detail) ifTrue: [ Transcript put: msg. self log: msg].
     (level = #spew) ifTrue: [ Transcript put: msg. self log: msg].
+
 
 
 !
@@ -3951,10 +4238,12 @@ warn: msg
     ^ self < arg or: [ self = arg ]
 
 
+
 !
 !Magnitude
 > arg
     ^ arg < self
+
 
 
 !
@@ -3963,10 +4252,12 @@ warn: msg
     ^ (self > arg) or: [ self = arg ]
 
 
+
 !
 !Magnitude
 between: low and: high
     ^ low <= self and: [ self <= high ]
+
 
 
 !
@@ -3975,10 +4266,12 @@ max: arg
     ^ self < arg ifTrue: [ arg ] ifFalse: [ self ]
 
 
+
 !
 !Magnitude
 min: arg
     ^ self < arg ifTrue: [ self ] ifFalse: [ arg ]
+
 
 
 !
@@ -3987,6 +4280,7 @@ min: arg
 key: k
         "key is set once, value is resettable"
     ^ self in: self new at: 1 put: k
+
 
 
 !
@@ -3999,6 +4293,7 @@ key: k value: v | ret |
     ^ ret
 
 
+
 !
 " instance methods for Association "
 !Association
@@ -4007,6 +4302,7 @@ key: k value: v | ret |
     (k class == Association)
         ifTrue: [ ^ key < k key ]
         ifFalse: [ ^ key < k ]
+
 
 
 !
@@ -4018,10 +4314,12 @@ key: k value: v | ret |
         ifFalse: [ ^ key = k ]
 
 
+
 !
 !Association
 hash
     ^ key hash
+
 
 
 !
@@ -4030,10 +4328,12 @@ key
     ^ key
 
 
+
 !
 !Association
 printString
     ^ '(' + key printString + ' -> ' + value printString + ')'
+
 
 
 !
@@ -4042,10 +4342,12 @@ value
     ^ value
 
 
+
 !
 !Association
 value: v
     value <- v
+
 
 
 !
@@ -4055,11 +4357,13 @@ doInput
     <9>
 
 
+
 !
 =Char
 eof
         " return an EOF indication--not a true Char, but polymorphic "
     ^ self new: 256
+
 
 
 !
@@ -4072,11 +4376,13 @@ input	| c |
         ifFalse: [ ^nil ]
 
 
+
 !
 =Char
 new: value
     " create and initialize a new char "
     ^ self in: self new at: 1 put: value
+
 
 
 !
@@ -4086,11 +4392,13 @@ newline
     ^ self new: 10
 
 
+
 !
 =Char
 tab
         " return tab character "
     ^ self new: 9
+
 
 
 !
@@ -4100,10 +4408,12 @@ tab
     ^ value < aChar value
 
 
+
 !
 !Char
 = aChar
     ^ value = aChar value
+
 
 
 !
@@ -4113,10 +4423,12 @@ asString
     ^ String new: 1; at: 1 put: self
 
 
+
 !
 !Char
 hash
     ^ value
+
 
 
 !
@@ -4125,11 +4437,13 @@ isAlphabetic
     ^ self isLowerCase or: [ self isUpperCase ]
 
 
+
 !
 !Char
 isAlphanumeric
         " are we a letter or a digit? "
     ^ self isAlphabetic or: [ self isDigit ]
+
 
 
 !
@@ -4145,10 +4459,12 @@ isBlank
     ^ false.
 
 
+
 !
 !Char
 isDigit
     ^ self between: $0 and: $9
+
 
 
 !
@@ -4157,16 +4473,19 @@ isEOF
     ^ value = 256
 
 
+
 !
 !Char
 isLowerCase
     ^ self between: $a and: $z
 
 
+
 !
 !Char
 isUpperCase
     ^ self between: $A and: $Z
+
 
 
 !
@@ -4176,16 +4495,19 @@ lowerCase
         ifTrue: [ ^ Char new: (value - 65) + 97 ]
 
 
+
 !
 !Char
 print
     <3 value>
 
 
+
 !
 !Char
 printString
     ^ String new: 2; at: 1 put: $$ ; at: 2 put: self
+
 
 
 !
@@ -4195,11 +4517,13 @@ upperCase
         ifTrue: [ ^ Char new: (value - 97) + 65 ]
 
 
+
 !
 !Char
 value
         " return our ascii value as an integer "
     ^ value
+
 
 
 !
@@ -4212,10 +4536,12 @@ value
     ^ true
 
 
+
 !
 !Collection
 = aCollection
     ^ self < aCollection and: [ aCollection < self ]
+
 
 
 !
@@ -4223,6 +4549,7 @@ value
 anyOne
     self do: [:it| ^ it].
     self emptyCollection
+
 
 
 !
@@ -4235,10 +4562,12 @@ asArray		| newArray index |
     ^ newArray
 
 
+
 !
 !Collection
 asList
     ^ List new addAll: self
+
 
 
 !
@@ -4251,10 +4580,12 @@ asString	| newString index |
     ^ newString
 
 
+
 !
 !Collection
 at: value
     ^ self at: value ifAbsent: [ self noElement ]
+
 
 
 !
@@ -4269,6 +4600,7 @@ at: value ifAbsent: exceptionBlock
     ^ exceptionBlock value
 
 
+
 !
 !Collection
 collect: transformBlock	| newList |
@@ -4277,16 +4609,19 @@ collect: transformBlock	| newList |
     ^ newList
 
 
+
 !
 !Collection
 do: aBlock
     self subclassResponsibility
 
 
+
 !
 !Collection
 emptyCollection
     self error: (self class printString + ' is empty')
+
 
 
 !
@@ -4309,11 +4644,13 @@ from: argLow to: argHigh | ret idx size base low high |
     ^ ret
 
 
+
 !
 !Collection
 includes: value
     self at: value ifAbsent: [ ^ false ].
     ^ true
+
 
 
 !
@@ -4323,10 +4660,12 @@ isEmpty
     ^ self size = 0
 
 
+
 !
 !Collection
 noElement
     self error: 'Element not present'
+
 
 
 !
@@ -4335,6 +4674,7 @@ occurencesOf: obj | count |
     count <- 0.
     self do: [:o| (o = obj) ifTrue: [ count <- count + 1]].
     ^ count
+
 
 
 !
@@ -4353,11 +4693,13 @@ printString | count res |
     ^ res + ')'
 
 
+
 !
 !Collection
 reject: testBlock
         " select the things that do not match predicate "
     ^ self select: [:x | (testBlock value: x) not ]
+
 
 
 !
@@ -4368,12 +4710,14 @@ select: testBlock	| newList |
     ^ newList
 
 
+
 !
 !Collection
 size	| tally |
     tally <- 0.
     self do: [:i | tally <- tally + 1].
     ^ tally
+
 
 
 !
@@ -4383,16 +4727,19 @@ new
     ^ self new: 0
 
 
+
 !
 =Array
 new: sz
     <7 self sz>
 
 
+
 !
 =Array
 with: elemA
     ^ self in: (self new: 1) at: 1 put: elemA
+
 
 
 !
@@ -4404,6 +4751,7 @@ with: elemA with: elemB | ret |
     ^ ret
 
 
+
 !
 =Array
 with: elemA with: elemB with: elemC | ret |
@@ -4412,6 +4760,7 @@ with: elemA with: elemB with: elemC | ret |
     self in: ret at: 2 put: elemB.
     self in: ret at: 3 put: elemC.
     ^ ret
+
 
 
 !
@@ -4428,6 +4777,7 @@ with: elemA with: elemB with: elemC | ret |
     ^ newValue
 
 
+
 !
 !Array
 < arg		| selfsize argsize |
@@ -4436,6 +4786,7 @@ with: elemA with: elemB with: elemC | ret |
         do: [:i | (self at: i) ~= (arg at: i)
             ifTrue: [ ^ (self at: i) < (arg at: i) ]].
     ^ selfsize < argsize
+
 
 
 !
@@ -4449,6 +4800,7 @@ with: elemA with: elemB with: elemC | ret |
     ^ true
 
 
+
 !
 !Array
 at: index
@@ -4457,11 +4809,13 @@ at: index
     self primitiveFailed
 
 
+
 !
 !Array
 at: index ifAbsent: exceptionBlock
     <24 self index>
     exceptionBlock value
+
 
 
 !
@@ -4472,10 +4826,12 @@ at: index put: value
     self primitiveFailed
 
 
+
 !
 !Array
 badIndex
     self error: 'array indexing error'
+
 
 
 !
@@ -4484,10 +4840,12 @@ copy
     ^ self asArray
 
 
+
 !
 !Array
 do: aBlock
     1 to: self size do: [:i | aBlock value: (self at: i)]
+
 
 
 !
@@ -4497,10 +4855,12 @@ elementsExchangeIdentityWith: otherArray
     self primitiveFailed
 
 
+
 !
 !Array
 first
     ^self at: 1
+
 
 
 !
@@ -4516,6 +4876,7 @@ from: low to: high | start stop size obj |
     ^ obj
 
 
+
 !
 !Array
 hash | sz |
@@ -4525,6 +4886,7 @@ hash | sz |
         ^ 0
     ].
     ^ (self at: 1) hash + (self at: sz) hash
+
 
 
 !
@@ -4540,10 +4902,12 @@ includes: aValue
     ^ false
 
 
+
 !
 !Array
 includesKey: index
     ^ index between: 1 and: self size
+
 
 
 !
@@ -4555,6 +4919,7 @@ indexOf: aValue
     ^ nil
 
 
+
 !
 !Array
 indexOfVal: aValue
@@ -4562,6 +4927,7 @@ indexOfVal: aValue
         ((self at: idx) = aValue) ifTrue: [ ^ idx ]
     ].
     ^ nil
+
 
 
 !
@@ -4576,6 +4942,7 @@ insert: value at: position | newArray newSize |
     ^ newArray
 
 
+
 !
 !Array
 removeIndex: position  | newArray newSize |
@@ -4587,10 +4954,12 @@ removeIndex: position  | newArray newSize |
     ^ newArray
 
 
+
 !
 !Array
 replaceFrom: start to: stop with: replacement
     ^ self replaceFrom: start to: stop with: replacement startingAt: 1
+
 
 
 !
@@ -4604,11 +4973,13 @@ replaceFrom: start to: stop with: replacement startingAt: repStart | base |
     ]
 
 
+
 !
 !Array
 size
     " compute number of elements "
     <4 self>
+
 
 
 !
@@ -4626,6 +4997,7 @@ startsWith: prefix
 
    
 
+
 !
 !Array
 with: newItem	| newArray size |
@@ -4636,11 +5008,13 @@ with: newItem	| newArray size |
     ^ newArray
 
 
+
 !
 " class methods for ByteArray "
 =ByteArray
 new: size
     <20 self size>
+
 
 
 !
@@ -4653,6 +5027,7 @@ asString | str sz |
     ^ str
 
 
+
 !
 !ByteArray
 at: index
@@ -4661,11 +5036,13 @@ at: index
     self primitiveFailed
 
 
+
 !
 !ByteArray
 at: index ifAbsent: exceptionBlock
     <21 self index>
     exceptionBlock value
+
 
 
 !
@@ -4676,11 +5053,13 @@ at: index put: aValue
     self primitiveFailed
 
 
+
 !
 !ByteArray
 basicAt: index
     <21 self index>
     ^nil
+
 
 
 !
@@ -4691,11 +5070,13 @@ add: value
     ^ self insert: value at: (self location: value)
 
 
+
 !
 !OrderedArray
 includes: value | position |
     position <- self location: value.
     ^ (position <= self size) and: [ value = (self at: position)]
+
 
 
 !
@@ -4711,6 +5092,7 @@ location: value | low high mid |
     ^ low
 
 
+
 !
 " class methods for String "
 =String
@@ -4723,10 +5105,12 @@ input	| value c nl |
     ^ value
 
 
+
 !
 =String
 new: size
     <20 self size>
+
 
 
 !
@@ -4742,10 +5126,12 @@ asNumber | val |
     ^val
 
 
+
 !
 !String
 asString " for symmetry with Symbol. "
     ^ self
+
 
 
 !
@@ -4754,10 +5140,12 @@ asSymbol
     ^ Symbol new: self
 
 
+
 !
 !String
 at: index
     ^self at: index ifAbsent: [ self badIndex ]
+
 
 
 !
@@ -4769,12 +5157,14 @@ at: index ifAbsent: exceptionBlock | c |
          ifFalse: [ ^ Char new: c ]
 
 
+
 !
 !String
 at: index put: aValue
     (self basicAt: index put: aValue value) isNil ifTrue: [
         self badIndex
     ]
+
 
 
 !
@@ -4784,11 +5174,13 @@ basicAt: index
     ^nil
 
 
+
 !
 !String
 basicAt: index put: value
     <22 value self index>
     ^nil
+
 
 
 !
@@ -4823,10 +5215,12 @@ break: separators  | wordStart wordEnd words word |
     ^ words
 
 
+
 !
 !String
 collect: transformationBlock
     ^ (super collect: transformationBlock) asString
+
 
 
 !
@@ -4834,6 +5228,7 @@ collect: transformationBlock
 copy
     " make a clone of ourself "
     <23 self String>
+
 
 
 !
@@ -4852,6 +5247,7 @@ copyInto: aString at: anIndex | i |
 
 
 
+
 !
 !String
 doIt	| meth |
@@ -4861,6 +5257,7 @@ doIt	| meth |
               perform: meth withArguments: (Array new: 1) ]
 
 
+
 !
 !String
 doIt: aReq	
@@ -4868,10 +5265,12 @@ doIt: aReq
     ^ nil
 
 
+
 !
 !String
 edit
     <105 self>
+
 
 
 !
@@ -4934,6 +5333,7 @@ encodeHTML | transStr lt gt newSize targIndex |
 
 
 
+
 !
 !String
 from: low to: high | start stop size newString |
@@ -4947,6 +5347,7 @@ from: low to: high | start stop size newString |
     ^ newString
 
 
+
 !
 !String
 fromUrl
@@ -4954,6 +5355,7 @@ fromUrl
     <152 self>.
 
     self primitiveFailed
+
 
 
 !
@@ -4967,6 +5369,7 @@ hash | sz |
     ^ (self at: 1) value + (self at: sz) value
 
 
+
 !
 !String
 position: aString
@@ -4977,10 +5380,12 @@ position: aString
     self primitiveFailed
 
 
+
 !
 !String
 printString
     ^ self
+
 
 
 !
@@ -4999,16 +5404,19 @@ printWidth: width | ret |
     ^ret
 
 
+
 !
 !String
 reverse
     ^ self asList reverse asString
 
 
+
 !
 !String
 select: testBlock
     ^ (super select: testBlock) asString
+
 
 
 !
@@ -5018,6 +5426,7 @@ toUrl
     <151 self>.
 
     self primitiveFailed
+
 
 
 !
@@ -5030,11 +5439,13 @@ new | newDict |
     ^ newDict
 
 
+
 !
 " instance methods for Dictionary "
 !Dictionary
 at: key
     ^ self at: key ifAbsent: [ self noKey: key ]
+
 
 
 !
@@ -5044,6 +5455,7 @@ at: key ifAbsent: exceptionBlock | position |
     ((position <= keys size) and: [ key = (keys at: position)])
         ifTrue: [ ^ values at: position ]
         ifFalse: [ ^ exceptionBlock value ]
+
 
 
 !
@@ -5057,11 +5469,13 @@ at: key put: value | position |
     ^ value
 
 
+
 !
 !Dictionary
 binaryDo: aBlock
     1 to: keys size do:
         [:i | aBlock value: (keys at: i) value: (values at: i) ]
+
 
 
 !
@@ -5070,10 +5484,12 @@ do: aBlock
     values do: aBlock
 
 
+
 !
 !Dictionary
 isEmpty
     ^ keys isEmpty
+
 
 
 !
@@ -5084,16 +5500,19 @@ keysAsArray | i ret |
     ^ ret
 
 
+
 !
 !Dictionary
 keysDo: aBlock
     1 to: keys size do: [:i| aBlock value: (keys at: i)]
 
 
+
 !
 !Dictionary
 noKey: key
     self error: ('key #' + (key asString) + ' not found in dictionary!')
+
 
 
 !
@@ -5110,10 +5529,12 @@ printString | count res |
     ^ res + ')'
 
 
+
 !
 !Dictionary
 removeKey: key
     ^ self removeKey: key ifAbsent: [ self noKey: key ]
+
 
 
 !
@@ -5126,6 +5547,7 @@ removeKey: key ifAbsent: exceptionBlock | position |
         ifFalse: [ ^ exceptionBlock value ]
 
 
+
 !
 " class methods for Interval "
 =Interval
@@ -5136,6 +5558,7 @@ from: l to: h step: s | newInterval |
     ^ newInterval
 
 
+
 !
 " instance methods for Interval "
 !Interval
@@ -5143,6 +5566,7 @@ atRandom | ret |
     " Return a random element from our sequence "
     ret <- (SmallInt atRandom) rem: ((high - low + 1) quo: step).
     ^ low + (ret * step)
+
 
 
 !
@@ -5160,16 +5584,19 @@ do: aBlock	| current |
                 current <- current + step ] ]
 
 
+
 !
 !Interval
 high
     ^ high
 
 
+
 !
 !Interval
 high: h
     high <- h
+
 
 
 !
@@ -5181,16 +5608,19 @@ includes: val
     ^ ((val - low) rem: step) = 0
 
 
+
 !
 !Interval
 low
     ^ low
 
 
+
 !
 !Interval
 low: l
     low <- l
+
 
 
 !
@@ -5202,6 +5632,7 @@ printString | s |
     ^ s + '>'
 
 
+
 !
 " class methods for List "
 =List
@@ -5209,6 +5640,7 @@ with: firstElement	| newList |
     newList <- self new.
     newList add: firstElement.
     ^ newList
+
 
 
 !
@@ -5219,10 +5651,12 @@ add: anElement
     ^ anElement
 
 
+
 !
 !List
 addAll: aCollection
     aCollection do: [ :element | self addLast: element ]
+
 
 
 !
@@ -5234,11 +5668,13 @@ addLast: anElement
     ^ anElement
 
 
+
 !
 !List
 at: index | link |
     link <- self findLink: index ifAbsent: [ self badIndex ].
     ^ link value
+
 
 
 !
@@ -5249,11 +5685,13 @@ at: index ifAbsent: aBlock | link |
     ^ link value
 
 
+
 !
 !List
 at: index put: value | link |
     link <- self findLink: index.
     link value: value
+
 
 
 !
@@ -5262,16 +5700,19 @@ badIndex
     self error: 'Invalid List index'
 
 
+
 !
 !List
 copy
     ^ self asList
 
 
+
 !
 !List
 do: aBlock
     ^ elements notNil ifTrue: [ elements do: aBlock ]
+
 
 
 !
@@ -5288,10 +5729,12 @@ findLink: index ifAbsent: aBlock | idx link |
     ^ aBlock value
 
 
+
 !
 !List
 first
     ^ self at: 1
+
 
 
 !
@@ -5300,11 +5743,13 @@ isEmpty
     ^ elements isNil
 
 
+
 !
 !List
 remove: anElement
     self remove: anElement
         ifAbsent: [ self emptyCollection ]
+
 
 
 !
@@ -5315,12 +5760,14 @@ remove: anElement ifAbsent: exceptionBlock
         ifFalse: [ elements remove: anElement ifAbsent: exceptionBlock ]
 
 
+
 !
 !List
 removeFirst
     elements isNil
         ifTrue: [ self emptyCollection ]
         ifFalse: [ elements <- elements next ]
+
 
 
 !
@@ -5331,10 +5778,12 @@ reverse | newList |
     ^ newList
 
 
+
 !
 !List
 reverseDo: aBlock
     ^ elements notNil ifTrue: [ elements reverseDo: aBlock ]
+
 
 
 !
@@ -5346,6 +5795,7 @@ select: testBlock | newList |
     ^ newList
 
 
+
 !
 " class methods for StringBuffer "
 " instance methods for StringBuffer "
@@ -5354,10 +5804,12 @@ add: anObj
     ^ super add: (anObj printString).
 
 
+
 !
 !StringBuffer
 addLast: anObj
     ^ super addLast: (anObj printString).
+
 
 
 !
@@ -5374,11 +5826,13 @@ asString | size index result |
     ^ result.
 
 
+
 !
 !StringBuffer
 printString
     ^ (self asString)
     
+
 
 !
 !StringBuffer
@@ -5389,12 +5843,14 @@ size | tempSize |
     ^ tempSize
 
 
+
 !
 !StringBuffer
 write: anObj
     self addLast: anObj.
 
     ^ self
+
 
 
 !
@@ -5404,6 +5860,7 @@ new
     ^ self new: 10
 
 
+
 !
 =Set
 new: size | ret |
@@ -5411,6 +5868,7 @@ new: size | ret |
     self in: ret at: 1 put: (Array new: size).
     self in: ret at: 2 put: size.
     ^ ret
+
 
 
 !
@@ -5431,6 +5889,7 @@ add: elem | pos |
     ^ elem
 
 
+
 !
 !Set
 at: value ifAbsent: aBlock | pos |
@@ -5441,16 +5900,19 @@ at: value ifAbsent: aBlock | pos |
     ^ value
 
 
+
 !
 !Set
 compare: t and: e
     ^ t = e
 
 
+
 !
 !Set
 do: aBlock
     members do: [:elem| elem notNil ifTrue: [ aBlock value: elem ]]
+
 
 
 !
@@ -5464,10 +5926,12 @@ grow | bigger old oldsize |
     old do: [:elem| self add: elem]
 
 
+
 !
 !Set
 indexOf: value
     ^ self at: value ifAbsent: [ nil ]
+
 
 
 !
@@ -5493,6 +5957,7 @@ location: elem | pos start t |
     ]
 
 
+
 !
 !Set
 rehash: start | pos elem |
@@ -5514,10 +5979,12 @@ rehash: start | pos elem |
     ]
 
 
+
 !
 !Set
 remove: elem
     ^ self remove: elem ifAbsent: [self noElement ]
+
 
 
 !
@@ -5538,6 +6005,7 @@ remove: elem ifAbsent: aBlock | pos |
     ^ elem
 
 
+
 !
 !Set
 size | tally |
@@ -5546,12 +6014,14 @@ size | tally |
     ^ tally
 
 
+
 !
 " class methods for IdentitySet "
 " instance methods for IdentitySet "
 !IdentitySet
 compare: t and: e
     ^ t == e
+
 
 
 !
@@ -5565,10 +6035,12 @@ add: anElement
     ^anElement
 
 
+
 !
 !Tree
 addAll: aCollection
     aCollection do: [:element| self add: element ]
+
 
 
 !
@@ -5579,6 +6051,7 @@ at: key ifAbsent: exceptionBlock
         ifFalse: [ ^ root at: key ifAbsent: exceptionBlock ]
 
 
+
 !
 !Tree
 collect: transformBlock | newTree |
@@ -5587,16 +6060,19 @@ collect: transformBlock | newTree |
     ^newTree
 
 
+
 !
 !Tree
 copy
     ^Tree new addAll: self
 
 
+
 !
 !Tree
 do: aBlock
     root notNil ifTrue: [ root do: aBlock ]
+
 
 
 !
@@ -5607,10 +6083,12 @@ first
         ifFalse: [ self emptyCollection ]
 
 
+
 !
 !Tree
 isEmpty
     ^ root isNil
+
 
 
 !
@@ -5621,6 +6099,7 @@ remove: key ifAbsent: exceptionBlock
         ifFalse: [ root <- root remove: key ifAbsent: exceptionBlock ]
 
 
+
 !
 !Tree
 removeFirst
@@ -5628,10 +6107,12 @@ removeFirst
     root <- root removeFirst
 
 
+
 !
 !Tree
 reverseDo: aBlock
     root notNil ifTrue: [ root reverseDo: aBlock ]
+
 
 
 !
@@ -5645,12 +6126,14 @@ select: testBlock | newTree |
     ^newTree
 
 
+
 !
 " class methods for Number "
 =Number
 new
     " can't create this way, return zero "
     ^ 0
+
 
 
 !
@@ -5660,10 +6143,12 @@ absolute
     (self negative) ifTrue: [ ^ self negated ]
 
 
+
 !
 !Number
 asChar
     ^ Char new: (self asSmallInt)
+
 
 
 !
@@ -5674,6 +6159,7 @@ asDigit
     ^(Char new: (self asSmallInt + 55)) asString
 
 
+
 !
 !Number
 atRandom
@@ -5682,10 +6168,12 @@ atRandom
     ^ ((1 to: self) atRandom)
 
 
+
 !
 !Number
 bitAnd: arg
     ^ (self asSmallInt bitAnd: arg)
+
 
 
 !
@@ -5694,10 +6182,12 @@ bitOr: arg
     ^ (self asSmallInt bitOr: arg)
 
 
+
 !
 !Number
 bitShift: arg
     ^ (self asSmallInt bitShift: arg)
+
 
 
 !
@@ -5707,10 +6197,12 @@ factorial
     ifFalse: [ ^ (self - 1) factorial * self ]
 
 
+
 !
 !Number
 negated
     ^0-self
+
 
 
 !
@@ -5719,10 +6211,12 @@ negative
     ^self < 0
 
 
+
 !
 !Number
 overflow
     self error: 'Numeric overflow'
+
 
 
 !
@@ -5731,10 +6225,12 @@ printString
     ^self printWidth: 1 base: 10
 
 
+
 !
 !Number
 printWidth: width
     ^self printWidth: width base: 10
+
 
 
 !
@@ -5763,16 +6259,19 @@ printWidth: width base: base | res n dig wasNeg wide |
     ]
 
 
+
 !
 !Number
 to: limit
     ^ Interval from: self to: limit step: 1
 
 
+
 !
 !Number
 to: limit by: step
     ^ Interval from: self to: limit step: step
+
 
 
 !
@@ -5782,12 +6281,14 @@ to: limit by: step do: aBlock  | i |
     [ i <= limit ] whileTrue: [ aBlock value: i. i <- i + step ]
 
 
+
 !
 !Number
 to: limit do: aBlock  | i |
         " optimize arithmetic loops "
     i <- self.
     [ i <= limit ] whileTrue: [ aBlock value: i. i <- i + 1 ]
+
 
 
 !
@@ -5800,6 +6301,7 @@ new: low
     self primitiveFailed
 
 
+
 !
 " instance methods for Integer "
 !Integer
@@ -5807,6 +6309,7 @@ new: low
     <28 self arg>
     (arg isMemberOf: Integer) ifFalse: [^self * arg asInteger].
     self primitiveFailed
+
 
 
 !
@@ -5817,12 +6320,14 @@ new: low
     self primitiveFailed
 
 
+
 !
 !Integer
 - arg
     <29 self arg>
     (arg isMemberOf: Integer) ifFalse: [^self - arg asInteger].
     self primitiveFailed
+
 
 
 !
@@ -5833,6 +6338,7 @@ new: low
     self primitiveFailed
 
 
+
 !
 !Integer
 = arg
@@ -5841,10 +6347,12 @@ new: low
     self primitiveFailed
 
 
+
 !
 !Integer
 asInteger
     ^self
+
 
 
 !
@@ -5854,11 +6362,13 @@ asSmallInt
     self overflow
 
 
+
 !
 !Integer
 hash
     <33 self>.
     ^ (self rem: 65536) asSmallInt
+
 
 
 !
@@ -5870,6 +6380,7 @@ quo: arg
     self primitiveFailed
 
 
+
 !
 !Integer
 rem: arg
@@ -5879,11 +6390,13 @@ rem: arg
     self primitiveFailed
 
 
+
 !
 !Integer
 truncSmallInt
     <40 self>.
     self primitiveFailed
+
 
 
 !
@@ -5900,6 +6413,7 @@ atRandom
     ^ seed.
 
 
+
 !
 " instance methods for SmallInt "
 !SmallInt
@@ -5907,6 +6421,7 @@ atRandom
     <15 self arg>
     (arg isMemberOf: SmallInt) ifFalse: [^self * arg asSmallInt].
     self primitiveFailed
+
 
 
 !
@@ -5917,12 +6432,14 @@ atRandom
     self primitiveFailed
 
 
+
 !
 !SmallInt
 - arg
     <16 self arg>
     (arg isMemberOf: SmallInt) ifFalse: [^self - arg asSmallInt].
     self primitiveFailed
+
 
 
 !
@@ -5933,6 +6450,7 @@ atRandom
     self primitiveFailed
 
 
+
 !
 !SmallInt
 = arg
@@ -5941,16 +6459,19 @@ atRandom
     self primitiveFailed
 
 
+
 !
 !SmallInt
 asInteger
     ^Integer new: self
 
 
+
 !
 !SmallInt
 asSmallInt
     ^self
+
 
 
 !
@@ -5960,11 +6481,13 @@ bitAnd: arg
     ^ (self bitAnd: arg asSmallInt)
 
 
+
 !
 !SmallInt
 bitOr: arg
     <36 self arg>.
     ^ (self bitOr: arg asSmallInt)
+
 
 
 !
@@ -5975,10 +6498,12 @@ bitShift: arg
     ^ (self bitShift: arg asSmallInt)
 
 
+
 !
 !SmallInt
 hash
     ^ self
+
 
 
 !
@@ -5990,6 +6515,7 @@ quo: arg
     self primitiveFailed
 
 
+
 !
 !SmallInt
 rem: arg
@@ -5999,10 +6525,12 @@ rem: arg
     self primitiveFailed
 
 
+
 !
 !SmallInt
 truncSmallInt
     ^self
+
 
 
 !
@@ -6012,11 +6540,13 @@ intern: string
     <23 string Symbol>
 
 
+
 !
 =Symbol
 new: fromString | sym |
     ^ symbols at: fromString
         ifAbsent: [ symbols add: (self intern: fromString) ]
+
 
 
 !
@@ -6027,11 +6557,13 @@ new: fromString | sym |
     ^ self printString < arg printString
 
 
+
 !
 !Symbol
 = aString
         " works with either symbol or string arguments "
     ^ self printString = aString printString
+
 
 
 !
@@ -6040,16 +6572,19 @@ asString
     ^self printString
 
 
+
 !
 !Symbol
 asSymbol
     ^self
 
 
+
 !
 !Symbol
 hash
     ^self printString hash
+
 
 
 !
@@ -6068,10 +6603,12 @@ implementors | result classes literals |
         
     
 
+
 !
 !Symbol
 printString
     <23 self String>
+
 
 
 !
@@ -6096,12 +6633,14 @@ senders | result classes literals |
         
     
 
+
 !
 " class methods for Method "
 =Method
 flushCache
     <34>.
     self primitiveFailed
+
 
 
 !
@@ -6119,11 +6658,13 @@ name: n byteCodes: b literals: l stackSize: s temporarySize: ts class: c text: t
     ^ newMethod
 
 
+
 !
 " instance methods for Method "
 !Method
 args: argNames inst: instNames temp: tempNames
     " Hook for recording symbolic debug "
+
 
 
 !
@@ -6132,10 +6673,12 @@ byteCodes
     ^ byteCodes
 
 
+
 !
 !Method
 containingClass
     ^ class
+
 
 
 !
@@ -6144,10 +6687,12 @@ literals
     ^ literals
 
 
+
 !
 !Method
 name
     ^ name
+
 
 
 !
@@ -6156,10 +6701,12 @@ stackSize
     ^ stackSize
 
 
+
 !
 !Method
 temporarySize
     ^temporarySize
+
 
 
 !
@@ -6168,12 +6715,14 @@ text
     ^ text
 
 
+
 !
 " class methods for Node "
 =Node
 new: value
     " creation, left left and right empty "
     ^ self in: self new at: 1 put: value
+
 
 
 !
@@ -6189,6 +6738,7 @@ add: anElement
             ifFalse: [ left <- Node new: anElement ] ]
 
 
+
 !
 !Node
 at: key ifAbsent: exceptionBlock
@@ -6202,6 +6752,7 @@ at: key ifAbsent: exceptionBlock
             ifFalse: [ ^ exceptionBlock value ] ]
 
 
+
 !
 !Node
 do: aBlock
@@ -6210,12 +6761,14 @@ do: aBlock
     ^ right notNil ifTrue: [ right do: aBlock ]
 
 
+
 !
 !Node
 first
     left notNil
         ifTrue: [ ^ left first ]
         ifFalse: [ ^ value ]
+
 
 
 !
@@ -6236,12 +6789,14 @@ remove: key ifAbsent: exceptionBlock
             ifFalse: [ ^ exceptionBlock value ] ]
 
 
+
 !
 !Node
 removeFirst
     left notNil
         ifTrue: [ left <- left removeFirst. ^ self ]
         ifFalse: [ ^ right ]
+
 
 
 !
@@ -6252,10 +6807,12 @@ reverseDo: aBlock
     left notNil ifTrue: [ left do: aBlock ]
 
 
+
 !
 !Node
 value
     ^ value
+
 
 
 !
@@ -6270,6 +6827,7 @@ addArgName: name
     argNames <- argNames with: name
 
 
+
 !
 !Parser
 addTempName: name
@@ -6281,12 +6839,14 @@ addTempName: name
     maxTemps <- maxTemps max: tempNames size
 
 
+
 !
 !Parser
 arrayLiteral	| node |
     tokenType isAlphabetic
         ifTrue: [ node <- Symbol new: token. self nextLex. ^ node ].
     ^ self readLiteral
+
 
 
 !
@@ -6303,16 +6863,19 @@ binaryContinuation: base | receiver name lnum |
     ^ receiver
 
 
+
 !
 !Parser
 charIsSyntax: c
     ^ ('.()[]#^$;' includes: c) or: [ c = $' ]
 
 
+
 !
 !Parser
 currentChar
     ^ text at: index ifAbsent: [ Char eof ]
+
 
 
 !
@@ -6323,6 +6886,7 @@ error: aString
     ': ' print.
     aString printNl.
     errBlock value
+
 
 
 !
@@ -6342,6 +6906,7 @@ keywordContinuation: base  | receiver name args lnum |
         receiver name: name asSymbol arguments: args
 
 
+
 !
 !Parser
 lexAlphabetic | cc start |
@@ -6350,6 +6915,7 @@ lexAlphabetic | cc start |
             whileTrue: [ nil ].
         " add any trailing colons "
     token <- text from: start to: index - 1
+
 
 
 !
@@ -6368,6 +6934,7 @@ lexBinary	| c d |
     self nextChar
 
 
+
 !
 !Parser
 lexInteger	| start |
@@ -6375,6 +6942,7 @@ lexInteger	| start |
     [ self nextChar isDigit ]
         whileTrue: [ nil ].
     token <- text from: start to: index - 1
+
 
 
 !
@@ -6409,6 +6977,7 @@ nameNode: name
                 'unrecognized name: ' + name printString ])
 
 
+
 !
 !Parser
 nextChar
@@ -6417,6 +6986,7 @@ nextChar
     ].
     index <- index + 1.
     ^ self currentChar
+
 
 
 !
@@ -6431,10 +7001,12 @@ nextLex
     ^ self lexBinary
 
 
+
 !
 !Parser
 parse: c
     ^ self parse: c with: Encoder
+
 
 
 !
@@ -6452,6 +7024,7 @@ parse: c with: encoderClass	| encoder meth |
     ^ meth
 
 
+
 !
 !Parser
 readArray	| value |
@@ -6460,6 +7033,7 @@ readArray	| value |
         whileTrue: [ value <- value with: self arrayLiteral ].
     self nextLex.
     ^ value
+
 
 
 !
@@ -6479,6 +7053,7 @@ readBlock    | stmts saveTemps lnum |
         ifFalse: [ self error: 'unterminated block']
 
 
+
 !
 !Parser
 readBlockTemporaries
@@ -6495,11 +7070,13 @@ readBlockTemporaries
         ifFalse: [ self error: 'invalid block argument list ']
 
 
+
 !
 !Parser
 readBody | lnum |
     lnum <- lineNum.
     ^ (BodyNode at: lnum) statements: self readStatementList
+
 
 
 !
@@ -6517,6 +7094,7 @@ readCascade: base   | node list |
     ^ node
 
 
+
 !
 !Parser
 readExpression   | node lnum |
@@ -6532,6 +7110,7 @@ readExpression   | node lnum |
     ^ self readCascade: node
 
 
+
 !
 !Parser
 readInteger  | value |
@@ -6539,6 +7118,7 @@ readInteger  | value |
     value isNil ifTrue: [ self error: 'integer expected' ].
     self nextLex.
     ^ value
+
 
 
 !
@@ -6556,6 +7136,7 @@ readLiteral   | node |
     tokenType = $#
         ifTrue: [ ^ self readSymbol ].
     self error: 'invalid literal: ' + token
+
 
 
 !
@@ -6581,6 +7162,7 @@ readMethodName   | name |
     ^ name
 
 
+
 !
 !Parser
 readMethodVariables
@@ -6591,6 +7173,7 @@ readMethodVariables
     tokenType = $|
         ifTrue: [ self nextLex ]
         ifFalse: [ self error: 'illegal method variable declaration']
+
 
 
 !
@@ -6606,6 +7189,7 @@ readPrimitive  | num args lnum |
     ^ (PrimitiveNode at: lnum) number: num arguments: args
 
 
+
 !
 !Parser
 readStatement | lnum |
@@ -6614,6 +7198,7 @@ readStatement | lnum |
             ^ (ReturnNode at: lnum)
                 expression: self readExpression ].
     ^ self readExpression
+
 
 
 !
@@ -6626,6 +7211,7 @@ readStatementList   | list |
             (token isNil or: [ tokenType = $] ] )
                 ifTrue: [ ^ list ] ].
     ^ list
+
 
 
 !
@@ -6643,6 +7229,7 @@ readString  | first last cc |
     ^ text from: first to: last
 
 
+
 !
 !Parser
 readSymbol   | cc |
@@ -6655,6 +7242,7 @@ readSymbol   | cc |
     self nextLex.
     cc <- Symbol new: token. self nextLex.
     ^ cc
+
 
 
 !
@@ -6676,12 +7264,14 @@ readTerm   | node lnum |
     ^ (LiteralNode at: lnum) value: self readLiteral
 
 
+
 !
 !Parser
 skipBlanks  | cc |
     cc <- self currentChar.
     [ cc isBlank ] whileTrue: [ cc <- self nextChar ].
     ( cc = $" ) ifTrue: [ self skipComment ]
+
 
 
 !
@@ -6691,6 +7281,7 @@ skipComment  | cc |
       cc isEOF ifTrue: [ ^ self error: 'unterminated comment'].
       cc ~= $" ] whileTrue: [ nil ].
     self nextChar. self skipBlanks
+
 
 
 !
@@ -6706,11 +7297,13 @@ text: aString instanceVars: anArray
     maxTemps <- 0
 
 
+
 !
 !Parser
 tokenIsArrow
     (token isKindOf: String) ifFalse: [ ^ false ].
     ^ token = '<-'
+
 
 
 !
@@ -6723,6 +7316,7 @@ tokenIsBinary
     ^ true
 
 
+
 !
 !Parser
 tokenIsKeyword
@@ -6730,11 +7324,13 @@ tokenIsKeyword
     ^ (token at: token size) = $:
 
 
+
 !
 !Parser
 tokenIsName
     tokenType isAlphabetic ifFalse: [ ^ false ].
     ^ (token at: token size) isAlphanumeric
+
 
 
 !
@@ -6750,6 +7346,7 @@ unaryContinuation: base | receiver lnum |
     ^ receiver
 
 
+
 !
 " class methods for ParserNode "
 =ParserNode
@@ -6759,10 +7356,12 @@ at: l | ret |
     ^ ret
 
 
+
 !
 =ParserNode
 new
     self error: 'Must use at: for creation'
+
 
 
 !
@@ -6772,10 +7371,12 @@ assignable
     ^ false
 
 
+
 !
 !ParserNode
 compile: encoder
     encoder lineNum: lineNum
+
 
 
 !
@@ -6784,10 +7385,12 @@ isBlock
     ^ false
 
 
+
 !
 !ParserNode
 isSuper
     ^ false
+
 
 
 !
@@ -6801,16 +7404,19 @@ compile: encoder block: inBlock
         ifFalse: [ encoder genHigh: 2 low: position - 1 ]
 
 
+
 !
 !ArgumentNode
 isSuper
     ^ position = 0
 
 
+
 !
 !ArgumentNode
 position: p
     position <- p
+
 
 
 !
@@ -6823,11 +7429,13 @@ compile: encoder block: inBlock
     target assign: encoder
 
 
+
 !
 !AssignNode
 target: t expression: e
     target <- t.
     expression <- e
+
 
 
 !
@@ -6843,6 +7451,7 @@ compile: encoder block: inBlock | patchLocation |
     encoder patch: patchLocation
 
 
+
 !
 !BlockNode
 compileInLine: encoder block: inBlock
@@ -6852,10 +7461,12 @@ compileInLine: encoder block: inBlock
     encoder backUp
 
 
+
 !
 !BlockNode
 isBlock
     ^ true
+
 
 
 !
@@ -6863,6 +7474,7 @@ isBlock
 statements: s temporaryLocation: t
     statements <- s.
     temporaryLocation <- t
+
 
 
 !
@@ -6877,10 +7489,12 @@ compile: encoder block: inBlock
     encoder genHigh: 15 low: 1 " return self "
 
 
+
 !
 !BodyNode
 statements: s
     statements <- s
+
 
 
 !
@@ -6896,16 +7510,19 @@ compile: encoder block: inBlock
         encoder genHigh: 15 low: 5 "pop from stack " ]
 
 
+
 !
 !CascadeNode
 head: h
     head <- h
 
 
+
 !
 !CascadeNode
 list: l
     list <- l
+
 
 
 !
@@ -6916,10 +7533,12 @@ assign: encoder
     encoder genHigh: 6 low: position - 1
 
 
+
 !
 !InstNode
 assignable
     ^ true
+
 
 
 !
@@ -6929,10 +7548,12 @@ compile: encoder block: inBlock
     encoder genHigh: 1 low: position - 1
 
 
+
 !
 !InstNode
 position: p
     position <- p
+
 
 
 !
@@ -6950,10 +7571,12 @@ compile: encoder block: inBlock
     encoder genHigh: 4 low: (encoder genLiteral: value)
 
 
+
 !
 !LiteralNode
 value: v
     value <- v
+
 
 
 !
@@ -6965,11 +7588,13 @@ argumentsAreBlock
     ^ true
 
 
+
 !
 !MessageNode
 cascade: encoder block: inBlock
     self evaluateArguments: encoder block: inBlock.
     self sendMessage: encoder block: inBlock
+
 
 
 !
@@ -6994,6 +7619,7 @@ compile2: encoder block: inBlock
     self sendMessage: encoder block: inBlock
 
 
+
 !
 !MessageNode
 compile: encoder block: inBlock
@@ -7011,6 +7637,7 @@ compile: encoder block: inBlock
     self compile2: encoder block: inBlock
 
 
+
 !
 !MessageNode
 compile: encoder test: t constant: c block: inBlock | save ssave |
@@ -7025,12 +7652,14 @@ compile: encoder test: t constant: c block: inBlock | save ssave |
     encoder patch: ssave
 
 
+
 !
 !MessageNode
 evaluateArguments: encoder block: inBlock
     encoder pushArgs: 1 + arguments size.
     arguments reverseDo: [ :arg |
         arg compile: encoder block: inBlock ]
+
 
 
 !
@@ -7045,6 +7674,7 @@ optimizeIf: encoder block: inBlock | save ssave |
     encoder patch: save.
     arguments first compileInLine: encoder block: inBlock.
     encoder patch: ssave
+
 
 
 !
@@ -7064,12 +7694,14 @@ optimizeWhile: encoder block: inBlock | start save |
     encoder genHigh: 5 low: 10  " push nil "
 
 
+
 !
 !MessageNode
 receiver: r name: n arguments: a
     receiver <- r.
     name <- n.
     arguments <- a
+
 
 
 !
@@ -7081,6 +7713,7 @@ sendMessage: encoder block: inBlock
     encoder genHigh: 9 low: (encoder genLiteral: name)
 
 
+
 !
 !MessageNode
 sendToSuper: encoder block: inBlock
@@ -7088,6 +7721,7 @@ sendToSuper: encoder block: inBlock
     encoder genHigh: 8 low: 1 + arguments size.
     encoder genHigh: 15 low: 11.
     encoder genCode: (encoder genLiteral: name)
+
 
 
 !
@@ -7104,11 +7738,13 @@ compile: encoder block: inBlock | argsize |
     encoder popArgs: argsize
 
 
+
 !
 !PrimitiveNode
 number: n arguments: a
     number <- n.
     arguments <- a.
+
 
 
 !
@@ -7123,10 +7759,12 @@ compile: encoder block: inBlock
         ifFalse: [ encoder genHigh: 15 low: 2 " stack return " ]
 
 
+
 !
 !ReturnNode
 expression: e
     expression <- e
+
 
 
 !
@@ -7137,10 +7775,12 @@ assign: encoder
     encoder genHigh: 7 low: position - 1
 
 
+
 !
 !TemporaryNode
 assignable
     ^ true
+
 
 
 !
@@ -7150,10 +7790,12 @@ compile: encoder block: inBlock
     encoder genHigh: 3 low: position - 1
 
 
+
 !
 !TemporaryNode
 position: p
     position <- p
+
 
 
 !
@@ -7164,16 +7806,19 @@ context
     ^ context
 
 
+
 !
 !Process
 context: aContext
     context <- aContext
 
 
+
 !
 !Process
 doExecute: ticks
     <6 self ticks>
+
 
 
 !
@@ -7191,6 +7836,7 @@ execute | r |
             context backtrace. ^ nil ]
 
 
+
 !
 " class methods for Socket "
 =Socket
@@ -7200,16 +7846,19 @@ acceptOn: fd
     self primitiveFailed
 
 
+
 !
 =Socket
 newFD: anFD
     ^ self in: (super new) at: 1 put: anFD.
 
 
+
 !
 =Socket
 newType: sockType
     ^ self in: (super new) at: 1 put: (self open: sockType).
+
 
 
 !
@@ -7222,6 +7871,7 @@ open: sockType
     self primitiveFailed
 
 
+
 !
 " instance methods for Socket "
 !Socket
@@ -7229,6 +7879,7 @@ bindTo: host onPort: port
     <200 3 fd host port>.
 
     self primitiveFailed
+
 
 
 !
@@ -7239,12 +7890,14 @@ canRead
     self primitiveFailed
 
 
+
 !
 !Socket
 canWrite
     <200 5 fd>.
 
     self primitiveFailed
+
 
 
 !
@@ -7255,10 +7908,12 @@ close
     self primitiveFailed
 
 
+
 !
 !Socket
 getFD
     ^ fd
+
 
 
 !
@@ -7269,11 +7924,13 @@ hasError
     self primitiveFailed
 
 
+
 !
 " class methods for TCPSocket "
 =TCPSocket
 new
     ^ self newType: 1
+
 
 
 !
@@ -7284,6 +7941,7 @@ accept | newFD |
     ^ (self class) newFD: newFD.
 
 
+
 !
 !TCPSocket
 read
@@ -7292,12 +7950,14 @@ read
     self primitiveFailed
 
 
+
 !
 !TCPSocket
 write: str
     <200 8 (self getFD) str>.
 
     self primitiveFailed
+
 
 
 !
@@ -7320,6 +7980,7 @@ new: tmplString | tmpl |
 
 
 
+
 !
 " instance methods for StringTemplate "
 !StringTemplate
@@ -7328,12 +7989,14 @@ footer: f
 
     ^ self
 
+
 !
 !StringTemplate
 header: h
     header <- h.
 
     ^ self
+
 
 !
 !StringTemplate
@@ -7348,6 +8011,7 @@ parse: aStr
     ].
 
     ^ self
+
 
 
 
@@ -7367,6 +8031,7 @@ parseText: aStr | endIndex |
     (endIndex < (aStr size)) ifTrue: [ self parseValue: (aStr from: (endIndex + 1) to: (aStr size)) ].
 
     ^ self
+
 
 
 
@@ -7392,16 +8057,19 @@ parseValue: aStr | endIndex val |
 
 
 
+
 !
 !StringTemplate
 parts
     ^ parts
 
 
+
 !
 !StringTemplate
 render | buf val |
     ^ 'not supported.'
+
 
 !
 !StringTemplate
@@ -7427,6 +8095,7 @@ render: anObj | buf val |
     ].
 
     ^ (buf asString)
+
 
 
 
@@ -7461,10 +8130,12 @@ renderObjs: aCollection | buf val |
 
 
 
+
 !
 !StringTemplate
 values
     ^ values
+
 
 
 !
@@ -7479,12 +8150,14 @@ do: aBlock
 
     ^ self
 
+
 !
 =Transcript
 history
     " get history from the global transcript object "
 
     ^ ((self new) history)
+
 
 !
 =Transcript
@@ -7501,6 +8174,7 @@ new | t |
     ^ t
 
 
+
 !
 =Transcript
 put: anObj
@@ -7508,12 +8182,14 @@ put: anObj
 
     (self new) put: anObj
 
+
 !
 =Transcript
 reset
     " get history from the global transcript object "
 
     (self new) reset
+
 
 !
 " instance methods for Transcript "
@@ -7525,10 +8201,12 @@ do: aBlock
 
 
 
+
 !
 !Transcript
 history 
     ^ history
+
 
 !
 !Transcript
@@ -7540,12 +8218,14 @@ put: anObj
     ^ anObj
 
 
+
 !
 !Transcript
 reset
     history <- List new.
 
     ^ self
+
 
 
 
@@ -7557,12 +8237,14 @@ new
     ^ nil
 
 
+
 !
 " instance methods for Undefined "
 !Undefined
 isNil
     " yes, we are nil "
     ^ true
+
 
 
 !
@@ -7572,10 +8254,12 @@ notNil
     ^ false
 
 
+
 !
 !Undefined
 printString
     ^ 'nil'
+
 
 
 !
@@ -7592,6 +8276,7 @@ new: content  | elem |
 
     ^ elem
 
+
 !
 =WWWElement
 new: content style: style  | elem |
@@ -7605,11 +8290,13 @@ new: content style: style  | elem |
 
     ^ elem
 
+
 !
 " instance methods for WWWElement "
 !WWWElement
 content
     ^ content
+
 
 !
 !WWWElement
@@ -7626,10 +8313,12 @@ evaluateContent: buf
     ^ buf.
 
 
+
 !
 !WWWElement
 style
     ^ style.
+
 
 !
 !WWWElement
@@ -7637,6 +8326,7 @@ value | buf |
     buf <- StringBuffer new.
 
     ^ self value: buf
+
 
 
 !
@@ -7647,6 +8337,7 @@ value: buf
     self evaluateContent: buf.
 
     ^ buf.
+
 
 
 !
@@ -7663,6 +8354,7 @@ value: buf
     ^ buf
 
 
+
 !
 " class methods for WWWPage "
 " instance methods for WWWPage "
@@ -7675,6 +8367,7 @@ value: buf
     buf addLast: '</HTML>'.
 
     ^ buf
+
 
 
 
