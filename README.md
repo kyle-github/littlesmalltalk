@@ -170,7 +170,7 @@ There have been several new features added since Dr. Budd's original 4.0 release
   - I changed how the cache index is calculated to make something a little bit more hash-like but fast.  Still needs work.
 - The image format was changed to be more compact and to be platform-neutral (Kyle Hayes)
 - A web-based class browser/editor has been added.   This still needs a lot of work as multiple attempts at reasonable, simple HTML handling all are present. (Kyle Hayes)
-- The code has been moved around and split and several changes to the directory structure have been done. Ongoing. (Kyle Hayes) 
+- The code has been moved around and split and several changes to the directory structure have been done. Ongoing. (Kyle Hayes)
 - The bootstrapping code shares as much as possible with the VM code to reduce duplication.   Ongoing. (Kyle Hayes)
 - Conversion to CMake for the build system. (Kyle Hayes)
 - Several primitives were added:
