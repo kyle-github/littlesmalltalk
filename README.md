@@ -5,6 +5,7 @@
   - [Releases](#releases)
   - [Copyright/License](#copyrightlicense)
   - [History](#history)
+    - [Archive](#archive)
   - [Performance](#performance)
   - [New Features and Changes from Version 4.0](#new-features-and-changes-from-version-40)
   - [Class Browser/Editor](#class-browsereditor)
@@ -15,7 +16,7 @@
   - [End Notes](#end-notes)
 
 Little Smalltalk is a version, or dialect, of Smalltalk that does not conform
-to the Smalltalk-80 standard.  Little Smalltalk has been around for about 30 years.
+to the Smalltalk-80 standard.  Little Smalltalk has been around for about 35 years.
 
 In 1984, Dr. Timothy Budd of Oregon State University
 released the first version of Little Smalltalk.  It was a very simple, command-line
@@ -146,18 +147,28 @@ Andy's version had.  The result I called LST 4.5.  That is the base for this rel
 
 It isn't done or even half-baked, but it is an amusing little toy now.
 
+### Archive
+
+I have included an archive of all the versions I could find.   These were collected by
+Danny or Charles over time.   Please see the `archive` directory and the `README` therein for
+more information and individual versions.
+
+*Note:* if you have an original copy of Parla and can share it, please let me know!   The version
+I had in the archive was a copy of the Wayback Machine web page and not the original source.  I have
+not been able to find a copy on the Internet.
+
 ## Performance
 
 Little Smalltalk is not fast.  Not fast at all compared to modern JIT-powered
 VMs for Java and Smalltalk.  However, it is very small and very accessible.  It is
 a good tool to learn how to do a complete language implementation including
-garbage collection, compiling, interpretation etc.
+garbage collection, compiling, interpretation, bootstrapping etc.
 
 It is a basic bytecoded VM with bytecodes much like those used in other languages.
 The VM implements a simple stack-based execution environment for compiled Smalltalk
 code.
 
-The base image has about 3400 objects.  The web ID has about 5200 objects.
+The base image has about 3400 objects.  The web IDE has about 5200 objects.
 
 ## New Features and Changes from Version 4.0
 
@@ -167,10 +178,10 @@ There have been several new features added since Dr. Budd's original 4.0 release
 - Integer operations are done via 64-bit boxed integers in most cases. (Andy Valencia)
 - Dictionary now uses a sorted array instead of a tree internally. (Andy Valencia)
 - Method cache changes to enable cache flushing when methods are updated. (Andy Valencia)
-  - I changed how the cache index is calculated to make something a little bit more hash-like but fast.  Still needs work.
+  - change the method cache hash calculation to have fewer collisions.   (Kyle Hayes)
 - The image format was changed to be more compact and to be platform-neutral (Kyle Hayes)
 - A web-based class browser/editor has been added.   This still needs a lot of work as multiple attempts at reasonable, simple HTML handling all are present. (Kyle Hayes)
-- The code has been moved around and split and several changes to the directory structure have been done. Ongoing. (Kyle Hayes) 
+- The code has been moved around and split and several changes to the directory structure have been done. Ongoing. (Kyle Hayes)
 - The bootstrapping code shares as much as possible with the VM code to reduce duplication.   Ongoing. (Kyle Hayes)
 - Conversion to CMake for the build system. (Kyle Hayes)
 - Several primitives were added:
@@ -188,6 +199,9 @@ There have been several new features added since Dr. Budd's original 4.0 release
   - Log class with log levels. (Kyle Hayes)
   - Transcript. (Kyle Hayes)
   - Socket classes. (Kyle Hayes)
+- The bootstrapping process now uses the same input format as the class `fileIn` and `fileOut` methods. This is a major change from earlier versions. (Kyle Hayes)
+  - The web IDE can output a valid single Smalltalk file containing the entire source.
+  - The bootstrapper can use that single file to bootstrap an image.
 
 ## Class Browser/Editor
 
@@ -245,7 +259,7 @@ $> ./lst ./lst.img
 $> ./lst ./webide.img
 ```
 
-If you run the web IDE, you will need to start your browser and point it at [http://localhost:6789](http://localhost:6789).   There is a basic Do It implementation at [http://localhost:6789/do_it](http://localhost:6789/do_it)
+If you run the web IDE, you will need to start your browser and point it at [http://localhost:6789](http://localhost:6789).   There is a basic `Do It` implementation at [http://localhost:6789/do_it](http://localhost:6789/do_it)
 
 ## End Notes
 
