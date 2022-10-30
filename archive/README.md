@@ -196,7 +196,7 @@ By Douglas Hammond (based on v3)
 
 
 
-Smallworld
+SmallWorld
 ===============
 
 Budd's original Java port (more than a port) of Little Smalltalk.
