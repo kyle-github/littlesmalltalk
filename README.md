@@ -17,7 +17,7 @@
   - [End Notes](#end-notes)
 
 Little Smalltalk is a version, or dialect, of Smalltalk that does not conform
-to the Smalltalk-80 standard.  Little Smalltalk has been around for about 35 years.
+to the Smalltalk-80 standard.  Little Smalltalk has been around for about 40 years.
 
 In 1984, Dr. Timothy Budd of Oregon State University
 released the first version of Little Smalltalk.  It was a very simple, command-line
