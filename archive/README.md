@@ -196,12 +196,15 @@ By Douglas Hammond (based on v3)
 
 
 
-Smallworld 2007
+Smallworld
 ===============
 
-By Russel Allen (based on Budd's original Smallworld in Java)
+Budd's original Java port (more than a port) of Little Smalltalk.
 
-*file:* SmallWorld2007.2.src.zip
+*file:* SmallWorld.tar.zip
+
+(Note that Russell Allen has an updated version for newer JVMs with more bug fixes and features on his
+[SmallWorld GitHub repo](https://github.com/russellallen/SmallWorld).)
 
 
 
