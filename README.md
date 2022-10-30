@@ -7,6 +7,7 @@
   - [History](#history)
     - [Archive](#archive)
   - [Performance](#performance)
+  - [Size](#size)
   - [New Features and Changes from Version 4.0](#new-features-and-changes-from-version-40)
   - [Class Browser/Editor](#class-browsereditor)
   - [Building Little Smalltalk](#building-little-smalltalk)
@@ -153,6 +154,10 @@ I have included an archive of all the versions I could find.   These were collec
 Danny or Charles over time.   Please see the `archive` directory and the `README` therein for
 more information and individual versions.
 
+Russell Allen has been updating SmallWorld, Budd's Java port of Little Smalltalk.   Please visit his
+GitHub repository [SmallWorld](https://github.com/russellallen/SmallWorld) for the most recent version.
+As of the last update to this README, that was 2015.
+
 *Note:* if you have an original copy of Parla and can share it, please let me know!   The version
 I had in the archive was a copy of the Wayback Machine web page and not the original source.  I have
 not been able to find a copy on the Internet.
@@ -168,7 +173,10 @@ It is a basic bytecoded VM with bytecodes much like those used in other language
 The VM implements a simple stack-based execution environment for compiled Smalltalk
 code.
 
-The base image has about 3400 objects.  The web IDE has about 5200 objects.
+## Size
+
+The base image has about 3400 objects.  The web IDE has about 5200 objects.  The interpreter executable is
+smaller than L2 cache on most recent CPUs and smaller than L1 on some.
 
 ## New Features and Changes from Version 4.0
 
