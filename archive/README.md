@@ -195,6 +195,13 @@ By Douglas Hammond (based on v3)
 *file:* pdst_20070506_01.zip
 
 
+Susie
+=====
+
+Susie (Scripting Using a Smalltalk Interpreter Engine) is an attempt to provide a light weight scripting engine using Smalltalk as the language. it is based on Public Domain SmallTalk (PDST).
+
+(Downloaded from [SourceForge](https://sourceforge.net/projects/susie/) thanks to Kirtai.)
+
 
 SmallWorld
 ===============
