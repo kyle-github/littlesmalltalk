@@ -21,6 +21,8 @@ static void log(const char *func, int line_num, const char *templ, va_list va)
 
     /* print it out. */
     vfprintf(stderr,output,va);
+
+    fflush(stderr);
 }
 
 void info_impl(const char *func, int line_num, const char *templ, ...)
