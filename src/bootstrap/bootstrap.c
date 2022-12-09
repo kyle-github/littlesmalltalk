@@ -185,37 +185,36 @@ int main(int argc, char **argv)
 
     debugging = 0;
 
+    info("Little Smalltalk bootstrap program starting...");
+
+    for (int i = 1; i < argc; i++) {
+        info("\targv[%d]=\"%s\"\n", i, argv[i]);
+    }
+
     /* first parse arguments */
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-v") == 0) {
-            fprintf(stderr, "Little Smalltalk, version " VERSION_STRING "\n");
+            info("Little Smalltalk, version " VERSION_STRING "\n");
         } else if (strcmp(argv[i], "-g") == 0) {
-            fprintf(stderr, "Turning on debugging.\n");
+            info("Turning on debugging.\n");
             debugging = 1;
         } else if (strcmp(argv[i], "-o") == 0) {
             if(i + 1 >= argc) {
-                fprintf(stderr, "You need to provide an output file if you use the -o option.\n");
+                info("You need to provide an output file if you use the -o option.\n");
                 usage();
             }
 
             output_file = argv[i+1];
-            if(debugging) {
-                fprintf(stderr, "Output file: \"%s\"\n", output_file);
-            }
-
             i++;
+
+            info("Output file: \"%s\"\n", output_file);
         } else {
             image_source = argv[i];
-            if(debugging) {
-                fprintf(stderr, "Input file: \"%s\"\n", image_source);
-            }
-            
+            info("Input file: \"%s\"\n", image_source);            
         }
     }
 
-    fflush(stderr);
-
-    fprintf(stderr, "Processing source Little Smalltalk file \"%s\" into output image file \"%s\"\n", image_source, output_file);
+    info("Processing source Little Smalltalk file \"%s\" into output image file \"%s\"\n", image_source, output_file);
 
     /* big bang -- create the first classes */
     bigBang();
@@ -423,7 +422,7 @@ void bigBang(void)
 int parseError(char *msg)
 {
     info("Parse Error: at line %d, position %d, %s", inputLine, inputPosition, msg);
-    info("%s", inputBuffer);
+    info("\"%s\"", inputBuffer);
 
     /* print a pointer to the location that we found something wrong. */
     for(int i=0; i < (inputPosition-1); i++) {
@@ -431,6 +430,11 @@ int parseError(char *msg)
     }
 
     fprintf(stderr, "^\n");
+
+    info("Parse Error: at line %d, position %d, %s", inputLine, inputPosition, msg);
+    info("\"%s\"", inputBuffer);
+
+    error("Parse error found!");
 
     exit(1);
     return 0;
@@ -1923,13 +1927,18 @@ void ClassCommand(void)
     struct object *metaClass, *superClass, *instClass;
     size_t metaclassNameSize;
     int instsize = 0;
+    int match_count = 0;
 
 
-    /* parse lines like:
+    /* 
+     * parse lines like:
      * +SuperClass subclass: #NewClass variables: #( instVars ) classVariables: #( classVars )
      */
-    if(sscanf(inputBuffer, "+%m[a-zA-Z] subclass: #%m[a-zA-Z] variables: #(%m[ a-zA-Z]) classVariables: #(%m[ a-zA-Z])",
-                            &superclassName,      &instClassName,         &instVars,                     &classVars) != 4) {
+    //match_count = sscanf(inputBuffer, "+%m[a-zA-Z] subclass: #%m[a-zA-Z] variables: #(%m[ a-zA-Z]) classVariables: #(%m[ a-zA-Z])",
+    match_count = sscanf(inputBuffer, "+%[a-zA-Z] subclass: #%[a-zA-Z] variables: #(%[ a-zA-Z]) classVariables: #(%[ a-zA-Z])",
+                                        &superclassName,      &instClassName,        &instVars,                    &classVars);
+    if(match_count != 4) {
+        info("Only %d of an expected 4 parts matched!");
         parseError("Unable to parse class creation line!");
     }
 
