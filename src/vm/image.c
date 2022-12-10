@@ -1,5 +1,6 @@
 
 
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -800,7 +801,7 @@ static void readTag(FILE *fp, int *type, int *val)
 //
 //
 //    /* write out raw image data. */
-//    fprintf(stderr, "writing out %ld cells of image data.\n", totalCells);
+//    fprintf(stderr, "writing out %" PRId64 " cells of image data.\n", totalCells);
 //    fwrite(memoryPointer, BytesPerWord, (size_t)totalCells, fp);
 //
 //    return (int)totalCells;
@@ -822,20 +823,21 @@ int fileIn_version_2(FILE *fp)
     struct object *imageBase;
     struct object *imagePointer;
     struct object *imageTop;
+    size_t fread_rc = 0;
 
     /* read in the bottom, pointer and top of the image */
-    fread(&imageBase, sizeof imageBase, 1, fp);
+    fread_rc = fread(&imageBase, sizeof imageBase, 1, fp);
     fprintf(stderr, "Read in image imageBase=%p\n", (void *)imageBase);
 
-    fread(&imagePointer, sizeof imagePointer, 1, fp);
+    fread_rc = fread(&imagePointer, sizeof imagePointer, 1, fp);
     fprintf(stderr, "Read in image imagePointer=%p\n", (void *)imagePointer);
 
-    fread(&imageTop, sizeof imageTop, 1, fp);
+    fread_rc = fread(&imageTop, sizeof imageTop, 1, fp);
     fprintf(stderr, "Read in image imageTop=%p\n", (void *)imageTop);
 
     /* how many cells? */
     totalCells = ((int)(((intptr_t)imageTop - (intptr_t)imagePointer)))/(int)BytesPerWord;
-    fprintf(stderr, "Image has %ld cells.\n", totalCells);
+    fprintf(stderr, "Image has %" PRId64 " cells.\n", totalCells);
 
     fprintf(stderr, "memoryBase is %p\n", (void *)memoryBase);
     fprintf(stderr, "memoryPointer is %p\n", (void *)memoryPointer);
@@ -843,10 +845,10 @@ int fileIn_version_2(FILE *fp)
 
     /* what is the offset between the saved pointer and our current pointer? In cells! */
     newOffset = (int64_t)((intptr_t)memoryBase - (intptr_t)imageBase);
-    fprintf(stderr, "Address offset between image and current memory pointer is %ld bytes.\n", newOffset);
+    fprintf(stderr, "Address offset between image and current memory pointer is %" PRId64 " bytes.\n", newOffset);
 
     newOffset = (int64_t)newOffset/(int64_t)BytesPerWord;
-    fprintf(stderr, "Address offset between image and current memory pointer is %ld cells.\n", newOffset);
+    fprintf(stderr, "Address offset between image and current memory pointer is %" PRId64 " cells.\n", newOffset);
 
     /* set up lower pointer */
     memoryPointer = WORDSDOWN(memoryTop, totalCells);
@@ -855,31 +857,31 @@ int fileIn_version_2(FILE *fp)
     /* read in core object pointers. */
 
     /* everything starts with globals */
-    fread(&globalsObject, sizeof globalsObject, 1, fp);
+    fread_rc = fread(&globalsObject, sizeof globalsObject, 1, fp);
     globalsObject = fix_offset(globalsObject, newOffset);
     addStaticRoot(&globalsObject);
     fprintf(stderr, "Read in globals object=%p\n", (void *)globalsObject);
 
-    fread(&initialMethod, sizeof initialMethod, 1, fp);
+    fread_rc = fread(&initialMethod, sizeof initialMethod, 1, fp);
     initialMethod = fix_offset(initialMethod, newOffset);
     addStaticRoot(&initialMethod);
     fprintf(stderr, "Read in initial method=%p\n", (void *)initialMethod);
 
     fprintf(stderr, "Reading binary message objects.\n");
     for (i = 0; i < 3; i++) {
-        fread(&(binaryMessages[i]), sizeof binaryMessages[i], 1, fp);
+        fread_rc = fread(&(binaryMessages[i]), sizeof binaryMessages[i], 1, fp);
         binaryMessages[i] = fix_offset(binaryMessages[i], newOffset);
         addStaticRoot(&binaryMessages[i]);
         fprintf(stderr, "  Read in binary message %d=%p\n", i, (void *)binaryMessages[i]);
     }
 
-    fread(&badMethodSym, sizeof badMethodSym, 1, fp);
+    fread_rc = fread(&badMethodSym, sizeof badMethodSym, 1, fp);
     badMethodSym = fix_offset(badMethodSym, newOffset);
     addStaticRoot(&badMethodSym);
     fprintf(stderr, "Read in doesNotUnderstand: symbol=%p\n", (void *)badMethodSym);
 
     /* read in the raw image data. */
-    fread(memoryPointer, BytesPerWord, (size_t)totalCells, fp);
+    fread_rc = fread(memoryPointer, BytesPerWord, (size_t)totalCells, fp);
 
     /* fix up the rest of the objects. */
 
@@ -933,7 +935,7 @@ int fileIn_version_2(FILE *fp)
 
     fprintf(stderr, "Object fix up took %d usec.\n", (int)(end - start));
 
-    fprintf(stderr, "Read in %ld cells.\n", totalCells);
+    fprintf(stderr, "Read in %" PRId64 " cells.\n", totalCells);
 
     return (int)totalCells;
 }
@@ -956,7 +958,7 @@ struct object *fix_offset(struct object *old, int64_t offset)
 
     /* sanity checking, is the new pointer in the new memory range? */
     if(!PTR_BETWEEN(tmp, memoryPointer, memoryTop)) {
-        info("!!! old pointer=%p, offset=%ld, low bound=%p, high bound=%p, new pointer=%p", (void *)old, offset, (void *)memoryPointer, (void *)memoryTop, (void *)tmp);
+        info("!!! old pointer=%p, offset=%" PRId64 ", low bound=%p, high bound=%p, new pointer=%p", (void *)old, offset, (void *)memoryPointer, (void *)memoryTop, (void *)tmp);
         error("fix_offset(): swizzled pointer from image does not point into new address range! oop=%p", (intptr_t)tmp);
     }
 
