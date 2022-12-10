@@ -1934,8 +1934,7 @@ void ClassCommand(void)
      * parse lines like:
      * +SuperClass subclass: #NewClass variables: #( instVars ) classVariables: #( classVars )
      */
-    //match_count = sscanf(inputBuffer, "+%m[a-zA-Z] subclass: #%m[a-zA-Z] variables: #(%m[ a-zA-Z]) classVariables: #(%m[ a-zA-Z])",
-    match_count = sscanf(inputBuffer, "+%[a-zA-Z] subclass: #%[a-zA-Z] variables: #(%[ a-zA-Z]) classVariables: #(%[ a-zA-Z])",
+    match_count = sscanf(inputBuffer, "+%m[a-zA-Z] subclass: #%m[a-zA-Z] variables: #(%m[ a-zA-Z]) classVariables: #(%m[ a-zA-Z])",
                                         &superclassName,      &instClassName,        &instVars,                    &classVars);
     if(match_count != 4) {
         info("Only %d of an expected 4 parts matched!");
