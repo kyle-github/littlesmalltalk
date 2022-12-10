@@ -9,7 +9,7 @@
 #include "interp.h"
 
 
-static void log(const char *func, int line_num, const char *templ, va_list va)
+static void log_impl(const char *func, int line_num, const char *templ, va_list va)
 {
     char output[2048];
 
@@ -23,6 +23,7 @@ static void log(const char *func, int line_num, const char *templ, va_list va)
     vfprintf(stderr,output,va);
 }
 
+
 void info_impl(const char *func, int line_num, const char *templ, ...)
 {
     va_list va;
@@ -33,7 +34,7 @@ void info_impl(const char *func, int line_num, const char *templ, ...)
     }
 
     va_start(va,templ);
-    log(func, line_num, templ, va);
+    log_impl(func, line_num, templ, va);
     va_end(va);
 }
 
@@ -42,7 +43,7 @@ void error_impl(const char *func, int line_num, const char *templ, ...)
     va_list va;
 
     va_start(va,templ);
-    log(func, line_num, templ, va);
+    log_impl(func, line_num, templ, va);
     va_end(va);
 
     exit(1);
