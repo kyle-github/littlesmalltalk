@@ -209,11 +209,11 @@ int main(int argc, char **argv)
     }
 
     printf("\nGC statistics:\n");
-    printf("  %ld garbage collections\n", gc_count);
+    printf("  %" PRId64 " garbage collections\n", gc_count);
     if(gc_count > 0) {
-        printf("  %" PRId64 " total microseconds in GC for %ld microseconds per GC pass.\n", gc_total_time, gc_total_time/gc_count);
+        printf("  %" PRId64 " total microseconds in GC for %" PRId64 " microseconds per GC pass.\n", gc_total_time, gc_total_time/gc_count);
         printf("  %" PRId64 " microseconds for longest GC pause.\n", gc_max_time);
-        printf("  %" PRId64 " total bytes copied for %ld bytes per GC on average.\n", gc_total_mem_copied, gc_total_mem_copied/gc_count);
+        printf("  %" PRId64 " total bytes copied for %" PRId64 " bytes per GC on average.\n", gc_total_mem_copied, gc_total_mem_copied/gc_count);
         printf("  %" PRId64 " maximum bytes copied during GC.\n", gc_mem_max_copied);
     }
 
