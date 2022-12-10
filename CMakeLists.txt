@@ -13,22 +13,22 @@ set (VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 CONFIGURE_FILE("${PROJECT_SOURCE_DIR}/src/vm/version.h.in" "${PROJECT_SOURCE_DIR}/src/vm/version.h" @ONLY)
 
 # old bootstrap
-add_executable(bootstrap   "${PROJECT_SOURCE_DIR}/src/bootstrap/bootstrap.c"
-                           "${PROJECT_SOURCE_DIR}/src/vm/err.c"
-                           "${PROJECT_SOURCE_DIR}/src/vm/err.h"
-                           "${PROJECT_SOURCE_DIR}/src/vm/globals.c"
-                           "${PROJECT_SOURCE_DIR}/src/vm/globals.h"
-                           "${PROJECT_SOURCE_DIR}/src/vm/image.c"
-                           "${PROJECT_SOURCE_DIR}/src/vm/image.h"
-                           "${PROJECT_SOURCE_DIR}/src/vm/interp.c"
-                           "${PROJECT_SOURCE_DIR}/src/vm/interp.h"
-                           "${PROJECT_SOURCE_DIR}/src/vm/memory.c"
-                           "${PROJECT_SOURCE_DIR}/src/vm/memory.h"
-                           "${PROJECT_SOURCE_DIR}/src/vm/prim.c"
-                           "${PROJECT_SOURCE_DIR}/src/vm/prim.h"
-                           "${PROJECT_SOURCE_DIR}/src/vm/prim.h"
-                           "${PROJECT_SOURCE_DIR}/src/vm/version.h"
-              )
+# add_executable(bootstrap   "${PROJECT_SOURCE_DIR}/src/bootstrap/bootstrap.c"
+#                            "${PROJECT_SOURCE_DIR}/src/vm/err.c"
+#                            "${PROJECT_SOURCE_DIR}/src/vm/err.h"
+#                            "${PROJECT_SOURCE_DIR}/src/vm/globals.c"
+#                            "${PROJECT_SOURCE_DIR}/src/vm/globals.h"
+#                            "${PROJECT_SOURCE_DIR}/src/vm/image.c"
+#                            "${PROJECT_SOURCE_DIR}/src/vm/image.h"
+#                            "${PROJECT_SOURCE_DIR}/src/vm/interp.c"
+#                            "${PROJECT_SOURCE_DIR}/src/vm/interp.h"
+#                            "${PROJECT_SOURCE_DIR}/src/vm/memory.c"
+#                            "${PROJECT_SOURCE_DIR}/src/vm/memory.h"
+#                            "${PROJECT_SOURCE_DIR}/src/vm/prim.c"
+#                            "${PROJECT_SOURCE_DIR}/src/vm/prim.h"
+#                            "${PROJECT_SOURCE_DIR}/src/vm/prim.h"
+#                            "${PROJECT_SOURCE_DIR}/src/vm/version.h"
+#               )
 
 
 add_executable(lst "${PROJECT_SOURCE_DIR}/src/vm/main.c"
@@ -49,18 +49,18 @@ add_executable(lst "${PROJECT_SOURCE_DIR}/src/vm/main.c"
 
 
 # bootstrap the initial image
-add_custom_target(baseimage ALL
-    COMMAND bootstrap -v ${PROJECT_SOURCE_DIR}/src/smalltalk/system/lst.st -o "${CMAKE_BINARY_DIR}/lst.img"
-    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
-    COMMENT "Bootstrapping initial image file." VERBATIM
-    SOURCES ${PROJECT_SOURCE_DIR}/src/smalltalk/system/lst.st
-)
+# add_custom_target(baseimage ALL
+#     COMMAND bootstrap -v ${PROJECT_SOURCE_DIR}/src/smalltalk/system/lst.st -o "${CMAKE_BINARY_DIR}/lst.img"
+#     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+#     COMMENT "Bootstrapping initial image file." VERBATIM
+#     SOURCES ${PROJECT_SOURCE_DIR}/src/smalltalk/system/lst.st
+# )
 
 # bootstrap the web IDE image
-add_custom_target(ideimage ALL
-    COMMAND bootstrap -v ${PROJECT_SOURCE_DIR}/src/smalltalk/webide/webide.st -o "${CMAKE_BINARY_DIR}/webide.img"
-    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
-    COMMENT "Bootstrapping web IDE image file." VERBATIM
-    SOURCES ${PROJECT_SOURCE_DIR}/src/smalltalk/webide/webide.st
-)
+# add_custom_target(ideimage ALL
+#     COMMAND bootstrap -v ${PROJECT_SOURCE_DIR}/src/smalltalk/webide/webide.st -o "${CMAKE_BINARY_DIR}/webide.img"
+#     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+#     COMMENT "Bootstrapping web IDE image file." VERBATIM
+#     SOURCES ${PROJECT_SOURCE_DIR}/src/smalltalk/webide/webide.st
+# )
 
