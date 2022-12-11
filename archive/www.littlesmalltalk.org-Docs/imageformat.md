@@ -1,4 +1,6 @@
 
+[KRH - I think this might be _my_ description of one of my first changes to LST 4 years ago.   I did modify the image format so that objects were as described here.   However it has evolved since then.   Assume that this only applies to the LST 4.5 in this archive folder. ]
+
 The image format is described here.  This is different from
 the image format of the original LST 4 for several reasons.
 The primary reason was that the old image format, while simple

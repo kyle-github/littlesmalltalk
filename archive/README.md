@@ -8,6 +8,8 @@ These were gathered by Charles Childers, Danny Reinhold and others over the year
 hosted on www.littlesmalltalk.org until that site went away.  These
 copies are curtesy of the Internet Archive.
 
+The directory www.littlesmalltalk.org-Docs contains copies of documentation done by Danny Reinhold on the (sadly defunct) www.littlesmalltalk.org site.   It is _NOT_ current for the main version of LST that I maintain.
+
 I have duplicated the text that www.littlesmalltalk.org had for each version below.
 
 Note that "I" below is not me, Kyle Hayes, but the owner of littlesmalltalk.org, Danny Reinhold.
@@ -17,7 +19,7 @@ Little Smalltalk v1
 
 *file:* lst-1.tar.gz
 
-This is the version described in the book "A Little Smalltalk" by Timothy A. Budd.
+This is the version described in the book "A Little Smalltalk" by Timothy A. Budd. [KRH - I don't think this is actually true.  I think the book described LST version 3.  See below.]
 
 In this version most interesting stuff is done directly in the C source code.
 When you compare the different versions of the system you'll see that in later versions
@@ -75,7 +77,7 @@ Leif, thank you very much!
 Little Smalltalk v3
 ===================
 
-(Note from Kyle Hayes: I think this might actually be the version described in the book, but I am not sure.)
+[KRH - this is the version described in the book.]
 
 *file:* lst-3.tar.gz
 
@@ -108,6 +110,7 @@ Well, of course I was interested.
 Little Smalltalk v4
 ===================
 
+[KRH - the number of changes and bug fixes required to get LST 4.0 to actually work strongly suggests that Dr. Budd had not finished it.  It was very close though.]
 
 This was the last version done by Timothy A. Budd before he developed something similar
 to LittleSmalltalk based on Java technologies.
@@ -146,9 +149,8 @@ Little Smalltalk v4.5
 
 *file:* lst-4.5.tar.gz
 
-(This is my (Kyle Hayes) original version.  I think.  It is not clear what changes
-were made to my original version 4.5.  I do not seem to have an original copy of that
-archive.  So I am including this along with the text from www.littlesmalltalk.org.)
+[KRH - This is my (Kyle Hayes) original version.  I think as I lost my original back ups years ago.  It is not clear what changes
+were made to my original version 4.5.  So I am including this along with the text from www.littlesmalltalk.org.]
 
 This specific version of LittleSmalltalk is another fork of the system.
 It is called version 4.5 and is based either on a 4.0 version or of another
@@ -168,11 +170,13 @@ I haven't tried this version, but it looks quite interesting.
 But since I am not a big fan of the GPL I don't want to take over parts of this fork 
 to our version to avoid mixing code of the different licenses.
 
+[KRH - I have since relicensed it under the BSD license as many people were not happy about the license terms of the GPL.]
+
 Little Smalltalk v5
 ===================
 
-(This is Danny Reinhold's version, but I am not sure what it was based on.  He was rewriting
-it based on the original v4 and there do not seem to be any copies of that around.)
+[KRH - This is Danny Reinhold's version.  He was rewriting
+it based on the a version of LST v4 but I do not know which one.]
 
 *file:* lst-5-alpha-7.zip
 
@@ -200,7 +204,7 @@ Susie
 
 Susie (Scripting Using a Smalltalk Interpreter Engine) is an attempt to provide a light weight scripting engine using Smalltalk as the language. it is based on Public Domain SmallTalk (PDST).
 
-(Downloaded from [SourceForge](https://sourceforge.net/projects/susie/) thanks to Kirtai.)
+(Downloaded from [SourceForge](https://sourceforge.net/projects/susie/) thanks to Kirtai on Discord.)
 
 
 SmallWorld
@@ -210,8 +214,8 @@ Budd's original Java port (more than a port) of Little Smalltalk.
 
 *file:* SmallWorld.tar.zip
 
-(Note that Russell Allen has an updated version for newer JVMs with more bug fixes and features on his
-[SmallWorld GitHub repo](https://github.com/russellallen/SmallWorld).)
+[KRH - Note that Russell Allen has an updated version for newer JVMs with more bug fixes and features on his
+[SmallWorld GitHub repo](https://github.com/russellallen/SmallWorld).]
 
 
 
