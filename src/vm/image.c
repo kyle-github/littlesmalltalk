@@ -452,19 +452,20 @@ int getIntSize(int val)
     /* negatives need sign extension.  this is a to do. */
     if (val < 0) {
         error("Writing negative value to image without using negative int tag type!");
-        return BytesPerWord;
     }
 
-    if (val < LST_SMALL_TAG_LIMIT) {
+    if(val <= LST_SMALL_TAG_LIMIT) {
         return 0;
-    }
-
-    /* how many bytes? */
-
-    for (i = 1; i < BytesPerWord; i++) {
-        if (val < (1 << (8 * i))) {
-            return i;
-        }
+    } else if(val <= 127) {
+        return 1;
+    } else if(val <= 32767) {
+        return 2;
+    } else if(val <= 8388608) {
+        return 3;
+    } else if(val <= 2147483647) {
+        return 4;
+    } else {
+        error("Unusually large value %d requires 8-byte values!", val);
     }
 
     return BytesPerWord;
