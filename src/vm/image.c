@@ -953,7 +953,7 @@ struct object *fix_offset(struct object *old, int64_t offset)
 //        sysErrorInt("pointer from image is not within image address range! oop=", (intptr_t)old);
 //    }
 
-    tmp = (struct object *)((intptr_t)old + (offset * (intptr_t)BytesPerWord));
+    tmp = (struct object *)((intptr_t)old + ((intptr_t)offset * (intptr_t)BytesPerWord));
 
     /* sanity checking, is the new pointer in the new memory range? */
     if(!PTR_BETWEEN(tmp, memoryPointer, memoryTop)) {
