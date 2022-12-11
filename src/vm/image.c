@@ -74,6 +74,8 @@ static int fileOut_object_version_3(FILE *img, struct object *globs);
 static int indirtop = 0;
 static struct object **indirArray;
 
+static int64_t image_obj_count = 0;
+
 
 /* used for bootstrap version 1 image */
 #define imageMaxNumberOfObjects 10000
@@ -432,8 +434,12 @@ int fileOut_object_version_3(FILE *img, struct object *globs)
     /* write the header. */
     put_image_version(img, IMAGE_VERSION_3);
 
+    image_obj_count = 0;
+
     /* write the main objects. */
     objectWrite(img, globs);
+
+    info("Wrote out %" PRId64 " objects.", image_obj_count);
 
     return indirtop;
 }
@@ -451,8 +457,8 @@ int getIntSize(int val)
 
     /* negatives need sign extension.  this is a to do. */
     if (val < 0) {
-        info("Writing negative value to image without using negative int tag type!");
-        return BytesPerWord;
+        info("Attempted write of object %" PRId64 " with a negative value!", image_obj_count);
+        error("Writing negative value to image without using negative int tag type!");
     }
 
     if (val < LST_SMALL_TAG_LIMIT) {
@@ -530,6 +536,9 @@ void objectWrite(FILE * fp, struct object *obj)
     if (obj == NULL) {
         error("objectWrite(): writing out a NULL object!");
     }
+
+    /* count the number of objects we write. */
+    image_obj_count++;
 
     /* small integer?, if so, treat this specially as this is not a pointer */
 
@@ -718,7 +727,7 @@ static void readTag(FILE *fp, int *type, int *val)
         tempSize = tempSize & LST_SMALL_TAG_LIMIT;
 
         if(tempSize>BytesPerWord) {
-            error("readTag(): Error reading image file: tag value field exceeds machine word size.  Image created on another machine? Field size=%d", tempSize);
+            error("readTag(): Error reading image file: tag value field size exceeds machine word size.  Image created on another machine? Field size=%d", tempSize);
         }
 
         for(i=0; i<tempSize; i++) {

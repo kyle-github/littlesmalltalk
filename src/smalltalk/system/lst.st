@@ -222,7 +222,8 @@ print
 !
 !Object
 printNl
-    self print. Char newline print
+    self print. 
+    Char newline print
 
 
 !
