@@ -451,7 +451,7 @@ int getIntSize(int val)
 
     /* negatives need sign extension.  this is a to do. */
     if (val < 0) {
-        info("Writing negative value to image without using negative int tag type!");
+        error("Writing negative value to image without using negative int tag type!");
         return BytesPerWord;
     }
 

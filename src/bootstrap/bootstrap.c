@@ -3,11 +3,13 @@
     image building utility
 */
 
+#include <ctype.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 /* must do this before any of the internal includes! */
 #define BOOTSTRAP
@@ -183,7 +185,7 @@ int main(int argc, char **argv)
     struct object *REPLClass = NULL;
     int num_objs = 0;
 
-    debugging = 0;
+    //debugging = 0;
 
     info("Little Smalltalk bootstrap program starting...");
 
@@ -196,8 +198,11 @@ int main(int argc, char **argv)
         if (strcmp(argv[i], "-v") == 0) {
             info("Little Smalltalk, version " VERSION_STRING "\n");
         } else if (strcmp(argv[i], "-g") == 0) {
-            info("Turning on debugging.\n");
             debugging = 1;
+            info("Turning on debugging.\n");
+        } else if (strcmp(argv[i], "-d") == 0) {
+            debugging = 1;
+            info("Turning on debugging.\n");
         } else if (strcmp(argv[i], "-o") == 0) {
             if(i + 1 >= argc) {
                 info("You need to provide an output file if you use the -o option.\n");
@@ -431,10 +436,7 @@ int parseError(char *msg)
 
     fprintf(stderr, "^\n");
 
-    info("Parse Error: at line %d, position %d, %s", inputLine, inputPosition, msg);
-    info("\"%s\"", inputBuffer);
-
-    error("Parse error found!");
+    fflush(stderr);
 
     exit(1);
     return 0;
@@ -1169,11 +1171,17 @@ int nameTerm(char *name)
     if (currentClass) {
         int low;
 
+        info("Looking up possible instance variable \"%s\" in class \"%*s\".", name, SIZE(currentClass->data[nameInClass]), bytePtr(currentClass->data[nameInClass]));
+
         i = lookupInstance(currentClass, name, &low);
         if (i >= 0) {
             genInstruction(PushInstance, i);
             return 1;
         }
+
+        info("\"%s\" is not an instance variable in this class.");
+    } else {
+        info("No currentClass while finding \"%s\".", name);
     }
 
     /* see if global */
@@ -1917,6 +1925,221 @@ void MethodCommand(void)
  *
  */
 
+static int eatSpaces(const char *line, size_t *start)
+{
+    size_t old_start = *start;
+
+    while(line[*start] == ' ') {
+        (*start)++;
+    }
+
+    if(old_start != *start) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+
+static int matchString(const char *line, size_t *start, const char *match_str)
+{
+    size_t index = 0;
+
+    while(line[*start+index] == match_str[index]) {
+        index++;
+    }
+
+    if(index == strlen(match_str)) {
+        *start += index;
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+
+static char *getWord(const char *line, size_t *end)
+{
+    char *result = NULL;
+    size_t start = *end;
+
+    /* skip whitespace */
+    eatSpaces(line, &start);
+
+    /* skip leading '#' chars. */
+    if(line[start] == '#') {
+        start++;
+    }
+
+    *end = start;
+
+    /* read until we hit space or nul */
+    while(line[*end] != ' ' && line[*end] != 0) {
+        (*end)++;
+    }
+
+    result = calloc(1, (*end - start) + 1);
+    if(result) {
+        strncpy(result, &line[start], *end - start);
+    }
+
+    info("Read word \"%s\".", result);
+
+    return result;
+
+
+}
+
+
+int matchVarList(const char *line, size_t *end, char **varList)
+{
+    size_t start = *end;
+    size_t list_start = start;
+    size_t list_end = start;
+
+    eatSpaces(line, &start);
+
+    /* match '#' */
+    if(line[start] != '#') {
+        info("Expected '#' in \"%s\" at position %zu!", line, start);
+        return 0;
+    }
+
+    start++;
+
+    /* match '(' */
+    if(line[start] != '(') {
+        info("Expected '(' in \"%s\" at position %zu!", line, start);
+        return 0;
+    }
+
+    start++;
+
+    /* skip early spaces */
+    eatSpaces(line, &start);
+
+    list_start = start;
+
+    /* find the end */
+    *end = start;
+
+    while(line[*end] != ')' && line[*end] != 0) {
+        (*end)++;
+    }
+
+    if(line[*end] == 0) {
+        info("Unexpected end of string when expecting closing parenthesis in \"%s\"!", line);
+        return 0;
+    }
+
+    /* so line[*end] == ')' */
+    list_end = (*end) - 1;
+
+    if(list_end <= list_start) {
+        list_end = list_start;
+    }
+
+    *varList = calloc(1, (list_end - list_start) + 1);
+    strncpy(*varList, &line[list_start], (list_end - list_start));
+
+    /* bump end past the ')' character */
+    (*end)++;
+
+    return 1;
+}
+
+
+/* 
+ * parse lines like:
+ * +SuperClass subclass: #NewClass variables: #( instVars ) classVariables: #( classVars )
+ */
+
+static int parseClassCommand(const char *line, char **superclassName,  char **instClassName,  char **instVars, char **classVars)
+{
+    int rc = 0;
+    size_t start = 0;
+    size_t end = 0;
+
+    if(line[start] != '+') {
+        info("Malformed line \"%s\".  Expected first character to be '+'!");
+        return rc;
+    }
+
+    /* get the superclass name */
+    start++; /* skip the + char */
+    end = start;
+
+    *superclassName = getWord(line, &end);
+    if(! *superclassName) {
+        info("Failed to find the superclass name!");
+        return 0;
+    }
+
+    start = end;
+
+    /* now skip the whitespace */
+    eatSpaces(line, &start);
+
+    /* match the string "subclass:" */
+    if(!matchString(line, &start, "subclass:")) {
+        info("Failed to match \"subclass:\" in class creation string.");
+        return 0;
+    }
+
+    /* skip any spaces */
+    eatSpaces(line, &start);
+
+    end = start;
+
+    /* get the new class name, as a symbol */
+    *instClassName = getWord(line, &end);
+    if(! *instClassName) {
+        info("Failed to find the new class name!");
+        return 0;
+    }
+
+    start = end;
+
+    /* skip any spaces */
+    eatSpaces(line, &start);
+
+    /* match the string "variables:" */
+    if(!matchString(line, &start, "variables:")) {
+        info("Failed to match \"variables:\" in class creation string.");
+        return 0;
+    }
+
+    eatSpaces(line, &start);
+
+    /* get the instance var list */
+    if(! matchVarList(line, &start, instVars)) {
+        info("Unable to find instance var list!");
+        return 0;
+    }
+
+    /* trim the leading spaces. */
+    eatSpaces(line, &start);
+
+    /* match the string "classVariables:" */
+    if(!matchString(line, &start, "classVariables:")) {
+        info("Failed to match \"classVariables:\" before the class variable list in the class creation string.");
+        return 0;
+    }
+
+    eatSpaces(line, &start);
+
+    /* get the class var list */
+    if(! matchVarList(line, &start, classVars)) {
+        info("Unable to find class var list!");
+        return 0;
+    }
+
+    info("Parsed class creation string successfully: parent class %s, new class %s with instance vars #( %s ) and class vars #( %s ).", *superclassName, *instClassName, *instVars, *classVars);
+    return 1;
+}
+
+
+
 void ClassCommand(void)
 {
     char *superclassName = NULL;
@@ -1934,19 +2157,17 @@ void ClassCommand(void)
      * parse lines like:
      * +SuperClass subclass: #NewClass variables: #( instVars ) classVariables: #( classVars )
      */
-    match_count = sscanf(inputBuffer, "+%m[a-zA-Z] subclass: #%m[a-zA-Z] variables: #(%m[ a-zA-Z]) classVariables: #(%m[ a-zA-Z])",
-                                        &superclassName,      &instClassName,        &instVars,                    &classVars);
-    if(match_count != 4) {
-        info("Only %d of an expected 4 parts matched!");
+    if(!parseClassCommand(inputBuffer, &superclassName, &instClassName, &instVars, &classVars)) {
         parseError("Unable to parse class creation line!");
     }
 
-    info("ClassCommand() found superclass=%s, instclass=%s, instvars=%s, classvars=%s", superclassName, instClassName, instVars, classVars);
+    info("info: ClassCommand() found superclass=%s, instclass=%s, instvars=%s, classvars=%s", superclassName, instClassName, instVars, classVars);
+    fprintf(stderr, "ClassCommand() found superclass=%s, instclass=%s, instvars=%s, classvars=%s\n", superclassName, instClassName, instVars, classVars);
 
     /* look up the superclass */
     superClass = lookupGlobalName(superclassName, 1);
     if(!superClass) {
-        error("Line %d, unable to find class %s!", superclassName);
+        error("Line %d, unable to find class %s in \"%s\"!", inputLine, superclassName, inputBuffer);
     }
 
     /* make the metaclass first. */
@@ -1956,6 +2177,7 @@ void ClassCommand(void)
 
     metaClass = lookupGlobalName(metaclassName, 1);
     if(!metaClass) {
+        info("Creating metaclass %s.", metaclassName);    
         metaClass = newClass(metaclassName, 0);
         addGlobalName(metaclassName, metaClass);
     } else {
@@ -1975,7 +2197,7 @@ void ClassCommand(void)
     /* get any class vars. */
     litTop = 0;
 
-    if(strlen(classVars) > 2) {
+    if(classVars && strlen(classVars) > 0) {
         /* copy the class vars string into the input buffer. */
         strncpy(inputBuffer, classVars, sizeof(inputBuffer));
 
@@ -2006,6 +2228,7 @@ void ClassCommand(void)
     /* now make the new class. */
     instClass = lookupGlobalName(instClassName, 1);
     if(!instClass) {
+        info("Creating class %s.", instClassName);
         instClass = newClass(instClassName, litTop);
         addGlobalName(instClassName, instClass);
     } else {
@@ -2015,8 +2238,7 @@ void ClassCommand(void)
     /* get the instance vars */
     litTop = 0;
 
-    if(strlen(instVars) > 2) {
-        /* copy the class vars string into the input buffer. */
+    if(instVars && strlen(instVars) > 0) {
         strncpy(inputBuffer, instVars, sizeof(inputBuffer));
 
         p = inputBuffer;
@@ -2030,7 +2252,7 @@ void ClassCommand(void)
             }
             readIdentifier();
 
-            info("Found variable %s.", tokenBuffer);
+            info("Found variable \"%s\".", tokenBuffer);
             addLiteral(newSymbol(tokenBuffer));
         }
     }
@@ -2049,11 +2271,11 @@ void ClassCommand(void)
     instClass->data[methodsInClass] = newDictionary();
     instClass->class = metaClass;
 
-    free(superclassName);
-    free(instClassName);
-    free(metaclassName);
-    free(instVars);
-    free(classVars);
+    if(superclassName) free(superclassName);
+    if(instClassName) free(instClassName);
+    if(metaclassName) free(metaclassName);
+    if(instVars) free(instVars);
+    if(classVars) free(classVars);
 }
 
 
