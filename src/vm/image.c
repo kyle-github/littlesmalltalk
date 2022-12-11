@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 #include "err.h"
 #include "globals.h"
 #include "image.h"
@@ -450,20 +451,21 @@ int getIntSize(int val)
 
     /* negatives need sign extension.  this is a to do. */
     if (val < 0) {
-        info("Writing negative value to image without using negative int tag type!");
-        return BytesPerWord;
+        error("Writing negative value to image without using negative int tag type!");
     }
 
-    if (val < LST_SMALL_TAG_LIMIT) {
+    if(val <= LST_SMALL_TAG_LIMIT) {
         return 0;
-    }
-
-    /* how many bytes? */
-
-    for (i = 1; i < BytesPerWord; i++) {
-        if (val < (1 << (8 * i))) {
-            return i;
-        }
+    } else if(val <= 127) {
+        return 1;
+    } else if(val <= 32767) {
+        return 2;
+    } else if(val <= 8388608) {
+        return 3;
+    } else if(val <= 2147483647) {
+        return 4;
+    } else {
+        error("Unusually large value %d requires 8-byte values!", val);
     }
 
     return BytesPerWord;
@@ -835,7 +837,7 @@ int fileIn_version_2(FILE *fp)
 
     /* how many cells? */
     totalCells = ((int)(((intptr_t)imageTop - (intptr_t)imagePointer)))/(int)BytesPerWord;
-    fprintf(stderr, "Image has %ld cells.\n", totalCells);
+    fprintf(stderr, "Image has %" PRId64 " cells.\n", totalCells);
 
     fprintf(stderr, "memoryBase is %p\n", (void *)memoryBase);
     fprintf(stderr, "memoryPointer is %p\n", (void *)memoryPointer);
@@ -843,10 +845,10 @@ int fileIn_version_2(FILE *fp)
 
     /* what is the offset between the saved pointer and our current pointer? In cells! */
     newOffset = (int64_t)((intptr_t)memoryBase - (intptr_t)imageBase);
-    fprintf(stderr, "Address offset between image and current memory pointer is %ld bytes.\n", newOffset);
+    fprintf(stderr, "Address offset between image and current memory pointer is %" PRId64 " bytes.\n", newOffset);
 
     newOffset = (int64_t)newOffset/(int64_t)BytesPerWord;
-    fprintf(stderr, "Address offset between image and current memory pointer is %ld cells.\n", newOffset);
+    fprintf(stderr, "Address offset between image and current memory pointer is %" PRId64 " cells.\n", newOffset);
 
     /* set up lower pointer */
     memoryPointer = WORDSDOWN(memoryTop, totalCells);
@@ -933,7 +935,7 @@ int fileIn_version_2(FILE *fp)
 
     fprintf(stderr, "Object fix up took %d usec.\n", (int)(end - start));
 
-    fprintf(stderr, "Read in %ld cells.\n", totalCells);
+    fprintf(stderr, "Read in %" PRId64 " cells.\n", totalCells);
 
     return (int)totalCells;
 }
@@ -952,7 +954,7 @@ struct object *fix_offset(struct object *old, int64_t offset)
 //        sysErrorInt("pointer from image is not within image address range! oop=", (intptr_t)old);
 //    }
 
-    tmp = (struct object *)((intptr_t)old + (offset * (intptr_t)BytesPerWord));
+    tmp = (struct object *)((intptr_t)old + ((intptr_t)offset * (intptr_t)BytesPerWord));
 
     /* sanity checking, is the new pointer in the new memory range? */
     if(!PTR_BETWEEN(tmp, memoryPointer, memoryTop)) {

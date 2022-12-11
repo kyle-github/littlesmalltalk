@@ -6,7 +6,7 @@ project(${PROJECT_NAME})
 
 set (VERSION_MAJOR 4)
 set (VERSION_MINOR 7)
-set (VERSION_PATCH 0)
+set (VERSION_PATCH 1)
 set (VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
 # make the version file.
@@ -50,7 +50,7 @@ add_executable(lst "${PROJECT_SOURCE_DIR}/src/vm/main.c"
 
 # bootstrap the initial image
 add_custom_target(baseimage ALL
-    COMMAND bootstrap -v ${PROJECT_SOURCE_DIR}/src/smalltalk/system/lst.st -o "${CMAKE_BINARY_DIR}/lst.img"
+    COMMAND bootstrap -v ${PROJECT_SOURCE_DIR}/src/smalltalk/system/lst.st -o "${CMAKE_BINARY_DIR}/lst_repl.img"
     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
     COMMENT "Bootstrapping initial image file." VERBATIM
     SOURCES ${PROJECT_SOURCE_DIR}/src/smalltalk/system/lst.st
@@ -58,7 +58,7 @@ add_custom_target(baseimage ALL
 
 # bootstrap the web IDE image
 add_custom_target(ideimage ALL
-    COMMAND bootstrap -v ${PROJECT_SOURCE_DIR}/src/smalltalk/webide/webide.st -o "${CMAKE_BINARY_DIR}/webide.img"
+    COMMAND bootstrap -v ${PROJECT_SOURCE_DIR}/src/smalltalk/webide/webide.st -o "${CMAKE_BINARY_DIR}/lst_webide.img"
     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
     COMMENT "Bootstrapping web IDE image file." VERBATIM
     SOURCES ${PROJECT_SOURCE_DIR}/src/smalltalk/webide/webide.st

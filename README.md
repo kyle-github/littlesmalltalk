@@ -34,11 +34,16 @@ TCP socket operations and wrote a very minimal class browser/editor web IDE.
 
 ## Platforms
 
-This version of Little Smalltalk is only tested with Linux!   It will need some C source code additions to allow compilation on Windows using Microsoft's compiler.  It might work with WLS.   It might work on macOS.   Eventually the goal is to make it work better cross platform.
-
-All development is done on 64-bit x86 Ubuntu.   Some testing has been done on 32-bit x86 Debian.  Very basic testing was done using a big-endian (MIPS) version of Debian.
+Lightly tested on:
+- macOS ARM64/M1
+- Linux ARM64
 
 ## Releases
+
+v4.7.1 - released 20221211 - By Kyle Hayes.
+- Removed GNU-specific use of sscanf() that was used in the bootstrap program.   Replaced with handwritten parser.
+- Removed partially completed files and extra garbage that had been accumulating.
+- Renamed the CMake image products to lst_repl.img and lst_webide.img
 
 v4.7.0 - released 20200612 - By Kyle Hayes. Many changes:
 
@@ -210,6 +215,7 @@ There have been several new features added since Dr. Budd's original 4.0 release
 - The bootstrapping process now uses the same input format as the class `fileIn` and `fileOut` methods. This is a major change from earlier versions. (Kyle Hayes)
   - The web IDE can output a valid single Smalltalk file containing the entire source.
   - The bootstrapper can use that single file to bootstrap an image.
+- Initial port to macOS on ARM64.
 
 ## Class Browser/Editor
 
@@ -248,8 +254,8 @@ The build is based on CMake.
 - watch the pretty output.   If all goes well, you should end up with several files.
   - `lst` - this is the main Little Smalltalk binary.
   - `bootstrap` - this program is used to build the initial images.
-  - `lst.img` - this is the command line REPL image.   It contains about 3400 objects.
-  - `webide.img` - this is the web-based IDE image.   It contains about 5200 objects.
+  - `lst_repl.img` - this is the command line REPL image.   It contains about 3400 objects.
+  - `lst_webide.img` - this is the web-based IDE image.   It contains about 5200 objects.
 
 ## Running Little Smalltalk
 
