@@ -34,11 +34,16 @@ TCP socket operations and wrote a very minimal class browser/editor web IDE.
 
 ## Platforms
 
-This version of Little Smalltalk is only tested with Linux!   It will need some C source code additions to allow compilation on Windows using Microsoft's compiler.  It might work with WLS.   It might work on macOS.   Eventually the goal is to make it work better cross platform.
-
-All development is done on 64-bit x86 Ubuntu.   Some testing has been done on 32-bit x86 Debian.  Very basic testing was done using a big-endian (MIPS) version of Debian.
+Lightly tested on:
+- macOS ARM64/M1
+- Linux ARM64
 
 ## Releases
+
+v4.7.1 - released 20221211 - By Kyle Hayes.
+- Removed GNU-specific use of sscanf() that was used in the bootstrap program.   Replaced with handwritten parser.
+- Removed partially completed files and extra garbage that had been accumulating.
+- Renamed the CMake image products to lst_repl.img and lst_webide.img
 
 v4.7.0 - released 20200612 - By Kyle Hayes. Many changes:
 
