@@ -2162,7 +2162,6 @@ void ClassCommand(void)
     }
 
     info("info: ClassCommand() found superclass=%s, instclass=%s, instvars=%s, classvars=%s", superclassName, instClassName, instVars, classVars);
-    fprintf(stderr, "ClassCommand() found superclass=%s, instclass=%s, instvars=%s, classvars=%s\n", superclassName, instClassName, instVars, classVars);
 
     /* look up the superclass */
     superClass = lookupGlobalName(superclassName, 1);
