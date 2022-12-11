@@ -215,6 +215,7 @@ There have been several new features added since Dr. Budd's original 4.0 release
 - The bootstrapping process now uses the same input format as the class `fileIn` and `fileOut` methods. This is a major change from earlier versions. (Kyle Hayes)
   - The web IDE can output a valid single Smalltalk file containing the entire source.
   - The bootstrapper can use that single file to bootstrap an image.
+- Initial port to macOS on ARM64.
 
 ## Class Browser/Editor
 
@@ -253,8 +254,8 @@ The build is based on CMake.
 - watch the pretty output.   If all goes well, you should end up with several files.
   - `lst` - this is the main Little Smalltalk binary.
   - `bootstrap` - this program is used to build the initial images.
-  - `lst.img` - this is the command line REPL image.   It contains about 3400 objects.
-  - `webide.img` - this is the web-based IDE image.   It contains about 5200 objects.
+  - `lst_repl.img` - this is the command line REPL image.   It contains about 3400 objects.
+  - `lst_webide.img` - this is the web-based IDE image.   It contains about 5200 objects.
 
 ## Running Little Smalltalk
 
