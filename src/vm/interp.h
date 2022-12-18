@@ -218,5 +218,3 @@ struct methodObject {
 
 #define methodSize SPECIAL_OBJ_SIZE(struct methodObject)
 
-
-
