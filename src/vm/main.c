@@ -49,7 +49,8 @@ static void find_initial_method(void);
 
 int main(int argc, char **argv)
 {
-    struct object *aProcess, *aContext, *o;
+    struct processObject *aProcess = NULL;
+    struct object *aContext, *o;
     int size, i, staticSize, dynamicSize;
     FILE *fp;
     char imageFileName[120], *p;
@@ -121,12 +122,12 @@ int main(int argc, char **argv)
 
     info("Setting up root process.");
 
-    aProcess = gcalloc(processSize);
+    aProcess = (struct processObject *)gcalloc(processSize);
     aProcess->class = lookupGlobal("Process");
     for(int i=0; i< processSize; i++) {
-        aProcess->data[i] = nilObject;
+        ((struct object *)aProcess)->data[i] = nilObject;
     }
-    addStaticRoot(&aProcess);
+    addStaticRoot((struct object **)&aProcess);
 
     info("Setting up root context.");
 
@@ -138,7 +139,7 @@ int main(int argc, char **argv)
     }
 
     /* add the context to the process. */
-    aProcess->data[contextInProcess] = aContext;
+    aProcess->context = aContext;
 
     /* set up context stack */
     size = integerValue(initialMethod->data[stackSizeInMethod]);
@@ -165,7 +166,7 @@ int main(int argc, char **argv)
     aContext->data[methodInContext] = initialMethod;
 
     /* now go do it */
-    rootStack[rootTop++] = aProcess;
+    rootStack[rootTop++] = (struct object *)aProcess;
 
 #if defined(PROFILE)
     take_samples(1);
@@ -180,10 +181,10 @@ int main(int argc, char **argv)
 
     case 3:
         printf("can't find method in call\n");
-        aProcess = rootStack[--rootTop];
-        o = aProcess->data[resultInProcess];
+        aProcess = (struct processObject *)rootStack[--rootTop];
+        o = aProcess->result;
         printf("Unknown method: %s\n", bytePtr(o));
-        aContext = aProcess->data[contextInProcess];
+        aContext = aProcess->context;
         backTrace(aContext);
         break;
 

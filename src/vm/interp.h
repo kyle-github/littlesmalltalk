@@ -18,11 +18,6 @@
 
 
 
-extern int execute(struct object *aProcess, int ticks);
-extern void flushCache(void);
-
-extern int64_t cache_hit;
-extern int64_t cache_miss;
 
 
 /*
@@ -217,4 +212,11 @@ struct methodObject {
 };
 
 #define methodSize SPECIAL_OBJ_SIZE(struct methodObject)
+
+
+extern int execute(struct processObject *aProcess, int ticks);
+extern void flushCache(void);
+
+extern int64_t cache_hit;
+extern int64_t cache_miss;
 

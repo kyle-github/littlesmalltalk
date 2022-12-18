@@ -52,14 +52,15 @@ extern const char **prog_argv;
     field offsets
 */
 /*
-    A Process has two fields
+    A Process has three fields
         * a current context
         * status of process (running, waiting, etc)
+        * result of the process
 */
 //# define processSize 3
-# define contextInProcess 0
-# define statusInProcess 1
-# define resultInProcess 2
+// # define contextInProcess 0
+// # define statusInProcess 1
+// # define resultInProcess 2
 
 /*
     A Context has:

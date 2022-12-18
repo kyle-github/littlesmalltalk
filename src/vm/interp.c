@@ -289,7 +289,7 @@ static int bulkReplace(struct object *dest, struct object *start,
 #define VAL (bp[bytePointer] | (bp[bytePointer+1] << 8))
 #define VALSIZE 2
 
-int execute(struct object *aProcess, int ticks)
+int execute(struct processObject *aProcess, int ticks)
 {
     int low, high, x, stackTop, bytePointer;
     struct object *context, *method, *arguments, *temporaries,
@@ -301,10 +301,10 @@ int execute(struct object *aProcess, int ticks)
     int64_t *i64p;
 
     /* push process, so as to save it */
-    rootStack[rootTop++] = aProcess;
+    rootStack[rootTop++] = (struct object *)aProcess;
 
     /* get current context information */
-    context = aProcess->data[contextInProcess];
+    context = aProcess->context;
 
     method = context->data[methodInContext];
 
@@ -325,9 +325,9 @@ int execute(struct object *aProcess, int ticks)
          * when we expire the given number of ticks.
          */
         if (ticks && (--ticks == 0)) {
-            aProcess = rootStack[--rootTop];
-            aProcess->data[contextInProcess] = context;
-            aProcess->data[resultInProcess] = returnedValue;
+            aProcess = (struct processObject *)rootStack[--rootTop];
+            aProcess->context = context;
+            aProcess->result = returnedValue;
             context->data[bytePointerInContext] = newInteger(bytePointer);
             context->data[stackTopInContext] = newInteger(stackTop);
             return(ReturnTimeExpired);
@@ -650,6 +650,7 @@ checkCache:
                     }
                     break;
                 case 2: /* + */
+                    /* FIXME - this is broken code. */
                     /* no possibility of garbage col */
                     returnedValue = newInteger(i+j);
                     break;
@@ -759,7 +760,7 @@ checkCache:
             case 6:     /* new process execute */
                 low = integerValue(stack->data[--stackTop]);
                 op = stack->data[--stackTop];
-                low = execute(op, low);
+                low = execute((struct processObject *)op, low);
 
                 /* return value as a SmallInt */
                 returnedValue = newInteger(low);
@@ -906,8 +907,8 @@ checkCache:
 
             case 19:    /* error trap -- halt execution */
                 --rootTop; /* pop context */
-                aProcess = rootStack[--rootTop];
-                aProcess->data[contextInProcess] = context;
+                aProcess = (struct processObject *)rootStack[--rootTop];
+                aProcess->context = context;
                 return(ReturnError);
 
             case 20:    /* byteArray allocation */
@@ -1182,9 +1183,9 @@ doReturn:
                 context = context->data[previousContextInContext];
 doReturn2:
                 if ((context == 0) || (context == nilObject)) {
-                    aProcess = rootStack[--rootTop];
-                    aProcess->data[contextInProcess] = context;
-                    aProcess->data[resultInProcess] = returnedValue;
+                    aProcess = (struct processObject *)rootStack[--rootTop];
+                    aProcess->context = context;
+                    aProcess->result = returnedValue;
                     return(ReturnReturned);
                 }
 
@@ -1256,9 +1257,9 @@ doReturn2:
                 bytePointer -= 1;
 
                 /* Return to our master process */
-                aProcess = rootStack[--rootTop];
-                aProcess->data[contextInProcess] = context;
-                aProcess->data[resultInProcess] = returnedValue;
+                aProcess = (struct processObject *)rootStack[--rootTop];
+                aProcess->context = context;
+                aProcess->result = returnedValue;
                 context->data[bytePointerInContext] =
                     newInteger(bytePointer);
                 context->data[stackTopInContext] = newInteger(stackTop);
