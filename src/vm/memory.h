@@ -38,15 +38,18 @@
 
 /* ints must be at least 32-bit in size! */
 
+typedef struct object *oop;
+
 struct object {
     uintptr_t header;
     struct object *class;
     struct object *data[];
 };
 
+
 /*
-    byte objects are used to represent strings and symbols
-        bytes per word must be correct
+    byte objects are used to represent strings and bytecode arrays.
+    bytes per word must be correct
 */
 
 struct byteObject {
@@ -66,12 +69,14 @@ struct mobject {
 };
 
 
+
 #define BytesPerWord ((int)(sizeof (intptr_t)))
 #define bytePtr(x) (((struct byteObject *) x)->bytes)
 #define WORDSUP(ptr, amt) ((struct object *)(((char *)(ptr)) + ((amt) * BytesPerWord)))
 #define WORDSDOWN(ptr, amt) WORDSUP(ptr, 0 - (amt))
 
 #define TO_WORDS(isz) (((isz) + BytesPerWord - 1)/BytesPerWord)
+
 
 /*
  * SmallInt objects are used to represent short integers.  They are

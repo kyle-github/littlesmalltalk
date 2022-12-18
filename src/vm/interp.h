@@ -3,14 +3,20 @@
     Written by Tim Budd, Oregon State University, budd@cs.orst.edu
     All rights reserved, no guarantees given whatsoever.
     May be freely redistributed if not for profit.
+
+    Changes Copyright(c) Kyle Hayes 2022
+
+    Provided under the BSD license.   See LICENSE.
 */
 
 #pragma once
 
 #include <stdint.h>
+#include <memory.h>
 
-//extern int64_t cache_hit;
-//extern int64_t cache_miss;
+
+
+
 
 extern int execute(struct object *aProcess, int ticks);
 extern void flushCache(void);
@@ -20,8 +26,8 @@ extern int64_t cache_miss;
 
 
 /*
-    symbolic definitions for the bytecodes
-*/
+ * symbolic definitions for the bytecodes
+ */
 
 # define Extended 0
 # define PushInstance 1
@@ -65,4 +71,152 @@ extern int64_t cache_miss;
 #define ReturnReturned 4    /* Top level method returned */
 #define ReturnTimeExpired 5 /* Time quantum exhausted */
 #define ReturnBreak 6       /* Breakpoint instruction */
+
+
+
+/* 
+ * handy struct definitions to access common objects
+ * that the interpreter knows about. 
+ */
+
+
+#define SPECIAL_OBJ_SIZE(obj_class) ((sizeof(obj_class) - sizeof(struct object))/sizeof(struct object *))
+
+
+/*
+    A Class has:
+        * pointer to parent class
+        * pointer to tree of methods
+*/
+
+struct classObject {
+    uintptr_t header;
+    struct object *class; /* MetaClass */
+
+    struct object *name;
+    struct object *parentClass;
+    struct object *methods;
+    struct object *instanceSize;
+    struct object *variables;
+};
+
+#define classSize SPECIAL_OBJ_SIZE(struct classObject)
+
+
+
+/* Dictionary */
+struct dictionaryObject {
+    uintptr_t header;
+    struct object *class;
+
+    struct object *keys;
+    struct object *values;
+};
+
+#define dictionarySize SPECIAL_OBJ_SIZE(struct dictionaryObject)
+
+
+/*
+    A Process has three fields
+        * a current context
+        * status of process (running, waiting, etc)
+        * a result of the process execution
+*/
+struct processObject {
+    uintptr_t header;
+    struct object *class;
+
+    struct object *context;
+    struct object *status;
+    struct object *result;
+};
+
+#define processSize SPECIAL_OBJ_SIZE(struct processObject)
+
+
+
+
+/*
+    A Context has:
+        * method (which has bytecode pointer)
+        * arguments - an array
+        * temporaries - an array
+        * stack - an array
+        * bytecode offset (an integer)
+        * stack pointer
+        * a reference to the previous context in the chain.
+*/
+
+struct contextObject {
+    uintptr_t header;
+    struct object *class;
+
+    struct object *method;
+    struct object *arguments;
+    struct object *temporaries;
+    struct object *stack;
+    struct object *bytePointer;
+    struct object *stackTop;
+    struct object *previousContext;
+};
+
+#define contextSize SPECIAL_OBJ_SIZE(struct contextObject)
+
+
+
+/*
+    A Block is subclassed from Context
+    shares fields with creator, plus a couple new ones
+*/
+
+struct blockObject {
+    uintptr_t header;
+    struct object *class;
+
+    /* same as block */
+    struct object *method;
+    struct object *arguments;
+    struct object *temporaries;
+    struct object *stack;
+    struct object *bytePointer;
+    struct object *stackTop;
+    struct object *previousContext;
+
+    /* specific to Block class */
+    struct object *argumentLocation;
+    struct object *creatingContext;
+    struct object *blockBytePointer;
+};
+
+#define blockSize SPECIAL_OBJ_SIZE(struct blockObject)
+
+
+
+/*
+    A Method has:
+        * name (a Symbol)
+        * bytecodes (a ByteArray)
+        * literals (an Array)
+        * stack size
+        * temp size
+        * class that owns the method
+        * method source code
+*/
+
+struct methodObject {
+    uintptr_t header;
+    struct object *class;
+
+    struct object *name;
+    struct object *byteCodes;
+    struct object *literals;
+    struct object *stackSize;
+    struct object *temporarySize;
+    struct object *owningClass;
+    struct object *text;
+};
+
+#define methodSize SPECIAL_OBJ_SIZE(struct methodObject)
+
+
 

@@ -341,11 +341,11 @@ void bigBang(void)
      * this will allow newClass to work correctly
      */
 
-    SymbolClass = gcalloc(ClassSize + 1);
+    SymbolClass = gcalloc(classSize + 1);
     addGlobalName("Symbol", SymbolClass);
     SymbolClass->data[nameInClass] = newSymbol("Symbol");
 
-    DictionaryClass = gcalloc(ClassSize);
+    DictionaryClass = gcalloc(classSize);
     addGlobalName("Dictionary", DictionaryClass);
     DictionaryClass->data[nameInClass] = newSymbol("Dictionary");
 
@@ -764,7 +764,7 @@ struct object *newClass(char *name, int numVars)
 {
     struct object *newC;
 
-    newC = gcalloc(ClassSize + numVars);
+    newC = gcalloc(classSize + numVars);
     newC->data[nameInClass] = newSymbol(name);
 
     return newC;
@@ -2217,7 +2217,7 @@ void ClassCommand(void)
     }
 
     /* That's the total of our instance variables */
-    instsize = litTop + ClassSize;
+    instsize = litTop + classSize;
 
     /* fix up as much as possible of the metaclass. */
     metaClass->data[instanceSizeInClass] = newInteger(instsize);

@@ -56,7 +56,7 @@ extern const char **prog_argv;
         * a current context
         * status of process (running, waiting, etc)
 */
-# define processSize 3
+//# define processSize 3
 # define contextInProcess 0
 # define statusInProcess 1
 # define resultInProcess 2
@@ -72,7 +72,7 @@ extern const char **prog_argv;
         * a reference to the previous context in the chain.
 */
 
-# define contextSize 7
+//# define contextSize 7
 # define methodInContext 0
 # define argumentsInContext 1
 # define temporariesInContext 2
@@ -86,7 +86,7 @@ extern const char **prog_argv;
     shares fields with creator, plus a couple new ones
 */
 
-# define blockSize 10
+//# define blockSize 10
 # define methodInBlock methodInContext
 # define argumentsInBlock argumentsInContext
 # define temporariesInBlock temporariesInContext
@@ -109,7 +109,7 @@ extern const char **prog_argv;
         * method source code
 */
 
-# define methodSize 7
+//# define methodSize 7
 # define nameInMethod 0
 # define byteCodesInMethod 1
 # define literalsInMethod 2
@@ -124,7 +124,7 @@ extern const char **prog_argv;
         * pointer to tree of methods
 */
 
-# define ClassSize 5
+//# define ClassSize 5
 # define nameInClass 0
 # define parentClassInClass 1
 # define methodsInClass 2
