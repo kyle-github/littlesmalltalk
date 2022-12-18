@@ -12,6 +12,24 @@ set (VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 # make the version file.
 CONFIGURE_FILE("${PROJECT_SOURCE_DIR}/src/vm/version.h.in" "${PROJECT_SOURCE_DIR}/src/vm/version.h" @ONLY)
 
+set(COMMON_SRCS 
+            "${PROJECT_SOURCE_DIR}/src/vm/err.c"
+            "${PROJECT_SOURCE_DIR}/src/vm/err.h"
+            "${PROJECT_SOURCE_DIR}/src/vm/globals.c"
+            "${PROJECT_SOURCE_DIR}/src/vm/globals.h"
+            "${PROJECT_SOURCE_DIR}/src/vm/image.c"
+            "${PROJECT_SOURCE_DIR}/src/vm/image.h"
+            "${PROJECT_SOURCE_DIR}/src/vm/interp.c"
+            "${PROJECT_SOURCE_DIR}/src/vm/interp.h"
+            "${PROJECT_SOURCE_DIR}/src/vm/memory.c"
+            "${PROJECT_SOURCE_DIR}/src/vm/memory.h"
+            "${PROJECT_SOURCE_DIR}/src/vm/prim.c"
+            "${PROJECT_SOURCE_DIR}/src/vm/prim.h"
+            "${PROJECT_SOURCE_DIR}/src/vm/version.h"
+)
+
+SET_SOURCE_FILES_PROPERTIES( "${COMMON_SRCS}" PROPERTIES LANGUAGE C )
+
 # old bootstrap
 add_executable(bootstrap   "${PROJECT_SOURCE_DIR}/src/bootstrap/bootstrap.c"
                            "${PROJECT_SOURCE_DIR}/src/vm/err.c"
@@ -25,7 +43,6 @@ add_executable(bootstrap   "${PROJECT_SOURCE_DIR}/src/bootstrap/bootstrap.c"
                            "${PROJECT_SOURCE_DIR}/src/vm/memory.c"
                            "${PROJECT_SOURCE_DIR}/src/vm/memory.h"
                            "${PROJECT_SOURCE_DIR}/src/vm/prim.c"
-                           "${PROJECT_SOURCE_DIR}/src/vm/prim.h"
                            "${PROJECT_SOURCE_DIR}/src/vm/prim.h"
                            "${PROJECT_SOURCE_DIR}/src/vm/version.h"
               )
