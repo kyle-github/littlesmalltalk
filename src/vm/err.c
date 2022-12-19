@@ -51,7 +51,7 @@ void error_impl(const char *func, int line_num, const char *templ, ...)
 }
 
 
-void backTrace(struct object * aContext)
+void backTrace(struct contextObject *aContext)
 {
     printf("back trace\n");
 
@@ -72,7 +72,7 @@ void backTrace(struct object * aContext)
     }
 
     while (NOT_NIL(aContext)) {
-        struct object *method = aContext->data[methodInContext];
+        struct object *method = aContext->method;
         struct object *class;
         struct object *symbol;
         struct object *arguments;
@@ -103,7 +103,7 @@ void backTrace(struct object * aContext)
             printf(" nil method ");
         }
 
-        arguments = aContext->data[argumentsInContext];
+        arguments = aContext->arguments;
         if (NOT_NIL(arguments)) {
             printf("(");
             for (i = 0; i < (int)SIZE(arguments); i++) {
@@ -137,7 +137,7 @@ void backTrace(struct object * aContext)
         }
         printf("\n");
 
-        aContext = aContext->data[previousContextInContext];
+        aContext = aContext->previousContext;
     }
 }
 
