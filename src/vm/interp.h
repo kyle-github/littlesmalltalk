@@ -152,7 +152,7 @@ struct contextObject {
     struct object *stack;
     struct object *bytePointer;
     struct object *stackTop;
-    struct object *previousContext;
+    struct contextObject *previousContext;
 };
 
 #define contextSize SPECIAL_OBJ_SIZE(struct contextObject)
@@ -164,26 +164,26 @@ struct contextObject {
     shares fields with creator, plus a couple new ones
 */
 
-struct blockObject {
+struct blockContextObject {
     uintptr_t header;
     struct object *class;
 
-    /* same as block */
+    /* same as context */
     struct object *method;
     struct object *arguments;
     struct object *temporaries;
     struct object *stack;
     struct object *bytePointer;
     struct object *stackTop;
-    struct object *previousContext;
+    struct contextObject *previousContext;
 
-    /* specific to Block class */
+    /* specific to block */
     struct object *argumentLocation;
-    struct object *creatingContext;
+    struct contextObject *creatingContext;
     struct object *blockBytePointer;
 };
 
-#define blockSize SPECIAL_OBJ_SIZE(struct blockObject)
+#define blockSize SPECIAL_OBJ_SIZE(struct blockContextObject)
 
 
 

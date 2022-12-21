@@ -74,13 +74,13 @@ extern const char **prog_argv;
 */
 
 //# define contextSize 7
-# define methodInContext 0
-# define argumentsInContext 1
-# define temporariesInContext 2
-# define stackInContext 3
-# define bytePointerInContext 4
-# define stackTopInContext 5
-# define previousContextInContext 6
+// # define methodInContext 0
+// # define argumentsInContext 1
+// # define temporariesInContext 2
+// # define stackInContext 3
+// # define bytePointerInContext 4
+// # define stackTopInContext 5
+// # define previousContextInContext 6
 
 /*
     A Block is subclassed from Context
@@ -88,15 +88,16 @@ extern const char **prog_argv;
 */
 
 //# define blockSize 10
-# define methodInBlock methodInContext
-# define argumentsInBlock argumentsInContext
-# define temporariesInBlock temporariesInContext
-# define stackInBlock stackInContext
-# define stackTopInBlock stackTopInContext
-# define previousContextInBlock previousContextInContext
+# define methodInBlock 0
+# define argumentsInBlock 1
+# define temporariesInBlock 2
+# define stackInBlock 3
+# define bytePointerInBlockContext 4
+# define stackTopInBlock 5
+# define previousContextInBlock 6
+/* the following are saved in different place so they don't get clobbered*/
 # define argumentLocationInBlock 7
 # define creatingContextInBlock 8
-/* the following are saved in different place so they don't get clobbered*/
 # define bytePointerInBlock 9
 
 /*

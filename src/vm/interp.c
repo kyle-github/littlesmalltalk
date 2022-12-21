@@ -292,7 +292,14 @@ static int bulkReplace(struct object *dest, struct object *start,
 int execute(struct processObject *aProcess, int ticks)
 {
     int low, high, x, stackTop, bytePointer;
-    struct object *context, *method, *arguments, *temporaries,
+    struct contextObject *c = NULL;
+    // union {
+    //     struct contextObject *ctx;
+    //     struct object *blk;
+    // } execCtx;
+    /* we use a Block and not a Context because sometimes we need all the fields */
+    struct blockContextObject *executionContext;
+    struct object *method, *arguments, *temporaries,
             *instanceVariables, *literals, *stack,
             *returnedValue = nilObject, *messageSelector,
              *receiverClass, *op;
@@ -304,17 +311,17 @@ int execute(struct processObject *aProcess, int ticks)
     rootStack[rootTop++] = (struct object *)aProcess;
 
     /* get current context information */
-    context = aProcess->context;
+    executionContext = (struct blockObject *)aProcess->context;
 
-    method = context->data[methodInContext];
+    method = executionContext->method;
 
     /* load byte pointer */
     bp = (uint8_t *)bytePtr(method->data[byteCodesInMethod]);
-    bytePointer = integerValue(context->data[bytePointerInContext]);
+    bytePointer = integerValue(executionContext->bytePointer);
 
     /* load stack */
-    stack = context->data[stackInContext];
-    stackTop = integerValue(context->data[stackTopInContext]);
+    stack = executionContext->stack;
+    stackTop = integerValue(executionContext->stackTop);
 
     /* everything else can wait, as maybe won't be needed at all */
     temporaries = instanceVariables = arguments = literals = 0;
@@ -326,10 +333,10 @@ int execute(struct processObject *aProcess, int ticks)
          */
         if (ticks && (--ticks == 0)) {
             aProcess = (struct processObject *)rootStack[--rootTop];
-            aProcess->context = context;
+            aProcess->context = (struct object *)executionContext;
             aProcess->result = returnedValue;
-            context->data[bytePointerInContext] = newInteger(bytePointer);
-            context->data[stackTopInContext] = newInteger(stackTop);
+            executionContext->bytePointer = newInteger(bytePointer);
+            executionContext->stackTop = newInteger(stackTop);
             return(ReturnTimeExpired);
         }
 
@@ -347,18 +354,18 @@ int execute(struct processObject *aProcess, int ticks)
         case PushInstance:
             DBG1("PushInstance", low);
             if (! arguments) {
-                arguments = context->data[argumentsInContext];
+                arguments = executionContext->arguments;
             }
-            if (! instanceVariables)
-                instanceVariables =
-                    arguments->data[receiverInArguments];
+            if (! instanceVariables) {
+                instanceVariables = arguments->data[receiverInArguments];
+            }
             stack->data[stackTop++] = instanceVariables->data[low];
             break;
 
         case PushArgument:
             DBG1("PushArgument", low);
             if (! arguments) {
-                arguments = context->data[argumentsInContext];
+                arguments = executionContext->arguments;
             }
             stack->data[stackTop++] = arguments->data[low];
             break;
@@ -366,7 +373,7 @@ int execute(struct processObject *aProcess, int ticks)
         case PushTemporary:
             DBG1("PushTemporary", low);
             if (! temporaries) {
-                temporaries = context->data[temporariesInContext];
+                temporaries = executionContext->temporaries;
             }
             stack->data[stackTop++] = temporaries->data[low];
             break;
@@ -415,33 +422,28 @@ int execute(struct processObject *aProcess, int ticks)
             /* next byte is goto value */
             high = VAL;
             bytePointer += VALSIZE;
-            rootStack[rootTop++] = context;
+            rootStack[rootTop++] = (struct object *)executionContext;
             op = rootStack[rootTop++] = gcalloc(x = integerValue(method->data[stackSizeInMethod]));
             op->class = ArrayClass;
             bzero(bytePtr(op), (size_t)(x * BytesPerWord));
             returnedValue = gcalloc(blockSize);
             returnedValue->class = BlockClass;
-            returnedValue->data[bytePointerInContext] =
-                returnedValue->data[stackTopInBlock] =
-                    returnedValue->data[previousContextInBlock] = NULL;
-            returnedValue->data[bytePointerInBlock] =
-                newInteger(bytePointer);
+            returnedValue->data[bytePointerInBlockContext] = NULL; // FIXME - shouldn't this be SmallInt of 0?
+            returnedValue->data[stackTopInBlock] = NULL; // same
+            returnedValue->data[previousContextInBlock] = NULL; // why not nil?
+            returnedValue->data[bytePointerInBlock] = newInteger(bytePointer);
             returnedValue->data[argumentLocationInBlock] = newInteger(low);
             returnedValue->data[stackInBlock] = rootStack[--rootTop];
-            context = rootStack[--rootTop];
-            if (CLASS(context) == BlockClass) {
-                returnedValue->data[creatingContextInBlock] =
-                    context->data[creatingContextInBlock];
+            executionContext = (struct blockContextObject *)rootStack[--rootTop];
+            if (CLASS(executionContext) == BlockClass) {
+                ((struct blockContextObject *)returnedValue)->creatingContext = executionContext->creatingContext;
             } else {
-                returnedValue->data[creatingContextInBlock] = context;
+                ((struct blockContextObject *)returnedValue)->creatingContext = (struct contextObject *)executionContext;
             }
-            method = returnedValue->data[methodInBlock] =
-                         context->data[methodInBlock];
-            arguments = returnedValue->data[argumentsInBlock] =
-                            context->data[argumentsInBlock];
-            temporaries = returnedValue->data[temporariesInBlock] =
-                              context->data[temporariesInBlock];
-            stack = context->data[stackInContext];
+            method = ((struct blockContextObject *)returnedValue)->method = executionContext->method;
+            arguments = ((struct blockContextObject *)returnedValue)->arguments = executionContext->arguments;
+            temporaries = ((struct blockContextObject *)returnedValue)->temporaries = executionContext->temporaries;
+            stack = executionContext->stack;
             bp = bytePtr(method->data[byteCodesInMethod]);
             stack->data[stackTop++] = returnedValue;
             /* zero these out just in case GC occurred */
@@ -452,7 +454,7 @@ int execute(struct processObject *aProcess, int ticks)
         case AssignInstance:
             DBG1("AssignInstance", low);
             if (!arguments)  {
-                arguments = context->data[argumentsInContext];
+                arguments = executionContext->arguments;
             }
             if (!instanceVariables) {
                 instanceVariables =
@@ -463,6 +465,8 @@ int execute(struct processObject *aProcess, int ticks)
 
             /*
              * If changing a static area, need to add to roots
+
+             FIXME - there is no more static memory.
              */
             if (!isDynamicMemory(instanceVariables)
                 && isDynamicMemory(stack->data[stackTop-1])) {
@@ -473,23 +477,23 @@ int execute(struct processObject *aProcess, int ticks)
         case AssignTemporary:
             DBG1("AssignTemporary", low);
             if (! temporaries) {
-                temporaries = context->data[temporariesInContext];
+                temporaries = executionContext->temporaries;
             }
             temporaries->data[low] = stack->data[stackTop-1];
             break;
 
         case MarkArguments:
             DBG1("MarkArguments", low);
-            rootStack[rootTop++] = context;
+            rootStack[rootTop++] = (struct object *)executionContext;
             arguments = gcalloc(low);
             arguments->class = ArrayClass;
-            if (context != rootStack[--rootTop]) { /* gc has occurred */
+            if (executionContext != rootStack[--rootTop]) { /* gc has occurred */
                 /* reload context */
                 instanceVariables = temporaries = literals = 0;
-                context = rootStack[rootTop];
-                method = context->data[methodInContext];
+                executionContext = rootStack[rootTop];
+                method = executionContext->method;
                 bp = bytePtr(method->data[byteCodesInMethod]);
-                stack = context->data[stackInContext];
+                stack = executionContext->stack;
             }
             /* now load new argument array */
             while (low > 0) {
@@ -521,7 +525,7 @@ checkCache:
                 method = lookupMethod(messageSelector, receiverClass);
                 if (!method) {
                     if (messageSelector == badMethodSym) {
-                        backTrace(context);
+                        backTrace(executionContext);
                         error("doesNotUnderstand: missing");
                     }
                     op = gcalloc(2);
@@ -550,7 +554,7 @@ checkCache:
             /* build temporaries for new context */
             rootStack[rootTop++] = arguments;
             rootStack[rootTop++] = method;
-            rootStack[rootTop++] = context;
+            rootStack[rootTop++] = executionContext;
             low = integerValue(method->data[temporarySizeInMethod]);
             op = rootStack[rootTop++] =
                      gcalloc(x = integerValue(method->data[stackSizeInMethod]));
@@ -568,34 +572,41 @@ checkCache:
             } else {
                 rootStack[rootTop++] = NULL;    /* why bother */
             }
-            context = rootStack[rootTop-3];
-            context->data[stackTopInContext] = newInteger(stackTop);
-            context->data[bytePointerInContext] = newInteger(bytePointer);
+            executionContext = rootStack[rootTop-3];
+            executionContext->stackTop = newInteger(stackTop);
+            executionContext->bytePointer = newInteger(bytePointer);
 
             /* now go off and build the new context */
-            context = gcalloc(contextSize);
-            context->class = ContextClass;
-            temporaries = context->data[temporariesInContext] = rootStack[--rootTop];
-            stack = context->data[stackInContext] = rootStack[--rootTop];
+            executionContext = gcalloc(contextSize);
+            executionContext->class = ContextClass;
+            executionContext->temporaries = rootStack[--rootTop];
+            temporaries = executionContext->temporaries;
+            executionContext->stack = rootStack[--rootTop];
+            stack = executionContext->stack;
             stack->class = ArrayClass;
-            context->data[stackTopInContext] = newInteger(0);
+            executionContext->stackTop = newInteger(0);
             stackTop = 0;
-            context->data[previousContextInContext] = rootStack[--rootTop];
+            executionContext->previousContext = (struct contextObject *)rootStack[--rootTop];
             if (high == 1) {
-                context->data[previousContextInContext] =
-                    context->data[previousContextInContext]->
-                    data[previousContextInContext];
+                executionContext->previousContext = executionContext->previousContext->previousContext;
             } else if (high == 2) {
-                context->data[previousContextInContext] =
-                    context->data[previousContextInContext]->
-                    data[creatingContextInBlock]->
-                    data[previousContextInContext];
+                /* non-local return.  We return to the parent of the creating context of the block. */
+                struct object *blockContext = (struct object *)(executionContext->previousContext);
+                struct contextObject *creatingContext = (struct contextObject *)(blockContext->data[creatingContextInBlock]);
+
+                executionContext->previousContext = creatingContext->previousContext;
+
+                // context->data[previousContextInContext] =
+                //     context->data[previousContextInContext]->
+                //     data[creatingContextInBlock]->
+                //     data[previousContextInContext];
             }
-            method = context->data[methodInContext] = rootStack[--rootTop];
-            arguments = context->data[argumentsInContext]
-                        = rootStack[--rootTop];
+            executionContext->method = rootStack[--rootTop];
+            method = executionContext->method;
+            executionContext->arguments = rootStack[--rootTop];
+            arguments = executionContext->arguments;
             instanceVariables = literals = 0;
-            context->data[bytePointerInContext] = newInteger(0);
+            executionContext->bytePointer = newInteger(0);
             bytePointer = 0;
             bp = (uint8_t *) (method->data[byteCodesInMethod]->data);
             /* now go execute new method */
@@ -660,16 +671,16 @@ checkCache:
             }
 
             /* not integers, do as message send */
-            rootStack[rootTop++] = context;
+            rootStack[rootTop++] = executionContext;
             arguments = gcalloc(2);
             arguments->class = ArrayClass;
-            if (context != rootStack[--rootTop]) { /* gc has occurred */
+            if (executionContext != rootStack[--rootTop]) { /* gc has occurred */
                 /* reload context */
                 instanceVariables = temporaries = literals = 0;
-                context = rootStack[rootTop];
-                method = context->data[methodInContext];
+                executionContext = rootStack[rootTop];
+                method = executionContext->method;
                 bp = bytePtr(method->data[byteCodesInMethod]);
-                stack = context->data[stackInContext];
+                stack = executionContext->stack;
             }
 
             /* now load new argument array */
@@ -700,7 +711,7 @@ checkCache:
             /* next byte is primitive number */
             high = bp[bytePointer++];
             DBG1("DoPrimitive", high);
-            rootStack[rootTop++] = context;
+            rootStack[rootTop++] = executionContext;
             switch (high) {
             case 1:     /* object identity */
                 returnedValue = stack->data[--stackTop];
@@ -789,21 +800,20 @@ checkCache:
                     goto failPrimitive;
                 }
                 while (low >= 0) {
-                    temporaries->data[high + low] =
-                        stack->data[--stackTop];
+                    temporaries->data[high + low] = stack->data[--stackTop];
                     low--;
                 }
-                returnedValue->data[previousContextInBlock] =
-                    context->data[previousContextInContext];
-                context = returnedValue;
-                arguments = instanceVariables =
-                                literals = 0;
-                stack = context->data[stackInContext];
+
+                /* returnedValue is a Block */
+                returnedValue->data[previousContextInBlock] = (struct object *)executionContext->previousContext;
+
+                execCtx.blk = returnedValue;
+                arguments = instanceVariables = literals = 0;
+                stack = execCtx.blk->data[stackInBlock];
                 stackTop = 0;
-                method = context->data[methodInBlock];
+                method = execCtx.blk->data[methodInBlock];
                 bp = bytePtr(method->data[byteCodesInMethod]);
-                bytePointer = integerValue(
-                                  context->data[bytePointerInBlock]);
+                bytePointer = integerValue(execCtx.blk->data[bytePointerInBlock]);
                 --rootTop;
                 goto endPrimitive;
 
@@ -908,7 +918,7 @@ checkCache:
             case 19:    /* error trap -- halt execution */
                 --rootTop; /* pop context */
                 aProcess = (struct processObject *)rootStack[--rootTop];
-                aProcess->context = context;
+                aProcess->context = executionContext;
                 return(ReturnError);
 
             case 20:    /* byteArray allocation */
@@ -1140,7 +1150,7 @@ checkCache:
              * force a stack return due to successful
              * primitive.
              */
-            context = rootStack[--rootTop];
+            executionContext = (struct blockContextObject *)rootStack[--rootTop];
             goto doReturn;
 
 failPrimitive:
@@ -1151,10 +1161,10 @@ failPrimitive:
              * for the failed primitive.
              */
             returnedValue = nilObject;
-            if (context != rootStack[--rootTop]) {
-                context = rootStack[rootTop];
-                method = context->data[methodInContext];
-                stack = context->data[stackInContext];
+            if (executionContext != (struct contextObject *)rootStack[--rootTop]) {
+                executionContext = (struct contextObject *)rootStack[rootTop];
+                method = executionContext->method;
+                stack = executionContext->stack;
                 bp = bytePtr(method->data[byteCodesInMethod]);
                 arguments = temporaries = literals = instanceVariables = 0;
             }
@@ -1171,7 +1181,7 @@ endPrimitive:
             switch(low) {
             case SelfReturn:
                 if (! arguments) {
-                    arguments = context->data[argumentsInContext];
+                    arguments = executionContext->arguments;
                 }
                 returnedValue = arguments->data[receiverInArguments];
                 goto doReturn;
@@ -1180,29 +1190,28 @@ endPrimitive:
                 returnedValue = stack->data[--stackTop];
 
 doReturn:
-                context = context->data[previousContextInContext];
+                executionContext = executionContext->previousContext;
 doReturn2:
-                if ((context == 0) || (context == nilObject)) {
+                if ((executionContext == NULL) || (executionContext == nilObject)) {
                     aProcess = (struct processObject *)rootStack[--rootTop];
-                    aProcess->context = context;
+                    aProcess->context = executionContext;
                     aProcess->result = returnedValue;
                     return(ReturnReturned);
                 }
 
-                arguments = instanceVariables = literals = temporaries = 0;
+                arguments = instanceVariables = literals = temporaries = NULL;
 
-                stack = context->data[stackInContext];
-                stackTop = integerValue(context->data[stackTopInContext]);
+                stack = executionContext->data[stackInContext];
+                stackTop = integerValue(executionContext->stackTop);
                 stack->data[stackTop++] = returnedValue;
-                method = context->data[methodInContext];
+                method = executionContext->method;
                 bp = bytePtr(method->data[byteCodesInMethod]);
-                bytePointer = integerValue(context->data[bytePointerInContext]);
+                bytePointer = integerValue(executionContext->bytePointer);
                 break;
 
             case BlockReturn:
                 returnedValue = stack->data[--stackTop];
-                context = context->data[creatingContextInBlock]
-                          ->data[previousContextInContext];
+                executionContext = ((struct contextObject *)(execCtx.blk->data[creatingContextInBlock]))->previousContext;
                 goto doReturn2;
 
             case Duplicate:
@@ -1246,9 +1255,7 @@ doReturn2:
                     literals = method->data[literalsInMethod];
                 }
                 messageSelector = literals->data[low];
-                receiverClass =
-                    method->data[classInMethod]
-                    ->data[parentClassInClass];
+                receiverClass = method->data[classInMethod]->data[parentClassInClass];
                 arguments = stack->data[--stackTop];
                 goto checkCache;
 
@@ -1258,11 +1265,10 @@ doReturn2:
 
                 /* Return to our master process */
                 aProcess = (struct processObject *)rootStack[--rootTop];
-                aProcess->context = context;
+                aProcess->context = executionContext;
                 aProcess->result = returnedValue;
-                context->data[bytePointerInContext] =
-                    newInteger(bytePointer);
-                context->data[stackTopInContext] = newInteger(stackTop);
+                executionContext->bytePointer = newInteger(bytePointer);
+                executionContext->stackTop = newInteger(stackTop);
                 return(ReturnBreak);
 
             default:
