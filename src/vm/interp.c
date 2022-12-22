@@ -540,8 +540,7 @@ checkCache:
             /* see if we can optimize tail call */
             if (bp[bytePointer] == (DoSpecial * 16 + StackReturn)) {
                 high = 1;
-            } else if (bp[bytePointer] ==
-                       (DoSpecial * 16 + BlockReturn)) {
+            } else if (bp[bytePointer] == (DoSpecial * 16 + BlockReturn)) {
                 high = 2;
             } else {
                 high = 0;
@@ -551,11 +550,17 @@ checkCache:
             rootStack[rootTop++] = arguments;
             rootStack[rootTop++] = method;
             rootStack[rootTop++] = context;
+
+            /* get temporary size before allocation might cause GC and move the method pointer. */
             low = integerValue(method->data[temporarySizeInMethod]);
-            op = rootStack[rootTop++] =
-                     gcalloc(x = integerValue(method->data[stackSizeInMethod]));
+
+            /* create the stack for the context. */
+            op = rootStack[rootTop++] = gcalloc(x = integerValue(method->data[stackSizeInMethod]));
             op->class = ArrayClass;
+            // FIXME - why are the entries not set to nil?
             bzero(bytePtr(op), (size_t)(x * BytesPerWord));
+
+            /* create temporary array */
             if (low > 0) {
                 int i;
 
@@ -566,8 +571,11 @@ checkCache:
                 }
                 rootStack[rootTop++] = temporaries; /* temporaries */
             } else {
+                // FIXME - why is this not set to nil?
                 rootStack[rootTop++] = NULL;    /* why bother */
             }
+
+            /* save where we are */
             context = rootStack[rootTop-3];
             context->data[stackTopInContext] = newInteger(stackTop);
             context->data[bytePointerInContext] = newInteger(bytePointer);
@@ -580,24 +588,44 @@ checkCache:
             stack->class = ArrayClass;
             context->data[stackTopInContext] = newInteger(0);
             stackTop = 0;
+
+            /* where does this context return to? */
             context->data[previousContextInContext] = rootStack[--rootTop];
+
+            /* maybe we do a little tail call optimization to skip some bytecodes */
+            // FIXME - why are we doing this? Is this extra step here really worth it?
             if (high == 1) {
+                /* optimize out tail call for method return */
                 context->data[previousContextInContext] =
                     context->data[previousContextInContext]->
                     data[previousContextInContext];
             } else if (high == 2) {
+                /* optimize out tail call for block return */
                 context->data[previousContextInContext] =
                     context->data[previousContextInContext]->
                     data[creatingContextInBlock]->
                     data[previousContextInContext];
             }
+
+            /* stitch up the rest of the new context and get the local execution variables ready. */
+
+            /* save the method and set the local variable */
             method = context->data[methodInContext] = rootStack[--rootTop];
-            arguments = context->data[argumentsInContext]
-                        = rootStack[--rootTop];
+
+            /* save the arguments into the new context and set the local variable */
+            arguments = context->data[argumentsInContext] = rootStack[--rootTop];
+
+            /* clear out the local pointers */
             instanceVariables = literals = 0;
+
+            /* the new context will start executing at the first bytecode */
             context->data[bytePointerInContext] = newInteger(0);
             bytePointer = 0;
+
+            /* set up the local bytecode pointer */
+            // FIXME - why isn't this using bytePointer()?
             bp = (uint8_t *) (method->data[byteCodesInMethod]->data);
+
             /* now go execute new method */
             break;
 
