@@ -1,23 +1,11 @@
 /*
-    Little Smalltalk version 4
+    Little Smalltalk
+    Written by Tim Budd, budd@cs.orst.edu
 
-    Written by Tim Budd, Oregon State University, July 1994
+    Relicensed under BSD 3-clause license per permission from Dr. Budd by
+    Kyle Hayes.
 
-        budd@cs.orst.edu
-
-    bytecode interpreter module
-
-    given a process object, execute bytecodes in a tight loop.
-
-    performs subroutine calls for
-    a) garbage collection
-        b) finding a non-cached method
-        c) executing a primitive
-    d) creating an integer
-
-    otherwise simply loops until time slice has ended
-
-    Modified by Kyle Hayes for 64-bit systems.
+    See LICENSE file.
 */
 
 #include <stdio.h>
@@ -679,6 +667,7 @@ checkCache:
                     break;
                 case 2: /* + */
                     /* no possibility of garbage col */
+                    // FIXME - this can overflow!
                     returnedValue = newInteger(i+j);
                     break;
                 }

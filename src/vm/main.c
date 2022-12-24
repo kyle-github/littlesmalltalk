@@ -1,12 +1,14 @@
 /*
-    Little Smalltalk main program, unix version
+    Little Smalltalk
     Written by Tim Budd, budd@cs.orst.edu
-    All rights reserved, no guarantees given whatsoever.
-    May be freely redistributed if not for profit.
 
-    starting point, primitive handler for unix
-    version of the little smalltalk system
+    Relicensed under BSD 3-clause license per permission from Dr. Budd by
+    Kyle Hayes.
+
+    See LICENSE file.
 */
+
+
 #include <inttypes.h>
 #include <stdio.h>
 #include <errno.h>

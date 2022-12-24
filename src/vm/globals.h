@@ -1,7 +1,12 @@
 /*
- * globs.h
- *	Global defs for VM modules
- */
+    Little Smalltalk
+    Written by Tim Budd, budd@cs.orst.edu
+
+    Relicensed under BSD 3-clause license per permission from Dr. Budd by
+    Kyle Hayes.
+
+    See LICENSE file.
+*/
 
 #pragma once
 

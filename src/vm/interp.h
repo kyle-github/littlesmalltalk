@@ -1,8 +1,11 @@
 /*
-    Little Smalltalk, version 4
-    Written by Tim Budd, Oregon State University, budd@cs.orst.edu
-    All rights reserved, no guarantees given whatsoever.
-    May be freely redistributed if not for profit.
+    Little Smalltalk
+    Written by Tim Budd, budd@cs.orst.edu
+
+    Relicensed under BSD 3-clause license per permission from Dr. Budd by
+    Kyle Hayes.
+
+    See LICENSE file.
 */
 
 #pragma once
