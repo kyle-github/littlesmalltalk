@@ -1,28 +1,24 @@
 /*
-    memory management for the Little Smalltalk system
-    Uses a variation on the Baker two-space algorithm
+    Little Smalltalk
+    Written by Tim Budd, budd@cs.orst.edu
 
-    Written by Tim Budd, Oregon State University, 1994
-    Comments to budd@cs.orst.edu
-    All rights reserved, no guarantees given whatsoever.
-    May be freely redistributed if not for profit.
+    Relicensed under BSD 3-clause license per permission from Dr. Budd by
+    Kyle Hayes.
+
+    See LICENSE file.
 */
 
 /*
     The fundamental data type is the object.
     The first field in an object is a size, the low order two
-        bits being used to maintain:
+    bits are used to maintain:
             * binary flag, used if data is binary
             * indirection flag, used if object has been relocated
-    The next data field is the class
-    The following fields are either objects, or character values
+            
+    The next data field is the class.
 
+    The following fields are either objects, or byte/character values
 
-    KRH - the following is no longer correct.
-
-    The initial image is loaded into static memory space --
-    space which is never garbage collected
-    This improves speed, as these items are not moved during GC.
 
     Now we use a simple two-space algorithm without a static space.
     This is not as efficient for GC as the minimal generational
@@ -32,11 +28,12 @@
 #pragma once
 
 #include <limits.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/types.h>
 
-/* ints must be at least 32-bit in size! */
+/* Basic object memory structure */
 
 struct object {
     uintptr_t header;
@@ -159,17 +156,77 @@ extern int symstrcomp(struct object *left, const char *right);
 extern int strsymcomp(const char *left, struct object *right);
 extern int isDynamicMemory(struct object *);
 
+#define STATICROOTLIMIT (200)
+extern struct object **staticRoots[STATICROOTLIMIT];
+extern int staticRootTop;
+
+
+/* count args */
+#define COUNT_NARG(...)                                                \
+         COUNT_NARG_(__VA_ARGS__,COUNT_RSEQ_N())
+
+#define COUNT_NARG_(...)                                               \
+         COUNT_ARG_N(__VA_ARGS__)
+
+#define COUNT_ARG_N(                                                   \
+          _1, _2, _3, _4, _5, _6, _7, _8, _9,_10, \
+         _11,_12,_13,_14,_15,_16,_17,_18,_19,_20, \
+         _21,_22,_23,_24,_25,_26,_27,_28,_29,_30, \
+         _31,_32,_33,_34,_35,_36,_37,_38,_39,_40, \
+         _41,_42,_43,_44,_45,_46,_47,_48,_49,_50, \
+         _51,_52,_53,_54,_55,_56,_57,_58,_59,_60, \
+         _61,_62,_63,N,...) N
+
+#define COUNT_RSEQ_N()                                                 \
+         63,62,61,60,                   \
+         59,58,57,56,55,54,53,52,51,50, \
+         49,48,47,46,45,44,43,42,41,40, \
+         39,38,37,36,35,34,33,32,31,30, \
+         29,28,27,26,25,24,23,22,21,20, \
+         19,18,17,16,15,14,13,12,11,10, \
+         9,8,7,6,5,4,3,2,1,0
+
+
 #ifndef BOOTSTRAP
 
-    #define gcalloc(sz) (((intptr_t)(memoryPointer = WORDSDOWN(memoryPointer, (sz) + 2)) < \
-                          (intptr_t)memoryBase) ? gcollect(sz) : \
-                         (SET_SIZE(memoryPointer, (sz)), memoryPointer))
+    // #define gcalloc(sz) (((intptr_t)(memoryPointer = WORDSDOWN(memoryPointer, (sz) + 2)) < \
+    //                       (intptr_t)memoryBase) ? gcollect(sz) : \
+    //                      (SET_SIZE(memoryPointer, (sz)), memoryPointer))
 
+    inline static struct object *gcalloc(int size) 
+    {
+        return (((intptr_t)(memoryPointer = WORDSDOWN(memoryPointer, (size) + 2)) < (intptr_t)memoryBase) ? 
+                                gcollect(size) : 
+                                (SET_SIZE(memoryPointer, (size)), memoryPointer));
+    }
 
-#endif
+    inline static struct object *gcalloc_protect_impl(int size, int num_protect_objs, ...) 
+    {
+        struct object *result = NULL;
+        int oldStaticRootTop = staticRootTop;
+        va_list va;
 
-#ifndef gcalloc
-extern struct object *gcalloc(int);
+        fprintf(stderr, "size=%d, number of objects to protect %d.\n", size, num_protect_objs);
+
+        /* push all the objects to be protected on the static root stack */
+        va_start(va, num_protect_objs);
+        for(int i=0; i < num_protect_objs; i++) {
+            struct object **protected_obj = va_arg(va, struct object **);
+            staticRoots[staticRootTop++] = protected_obj;
+        }
+        va_end(va);
+
+        result = gcalloc(size);
+
+        /* restore the old stack top */
+        staticRootTop = oldStaticRootTop;
+
+        return result;
+    }
+
+    #define gcalloc_protect(size, ...) gcalloc_protect_impl(size, COUNT_NARG(__VA_ARGS__), __VA_ARGS__)
+#else
+    extern struct object *gcalloc(int);
 #endif
 
 

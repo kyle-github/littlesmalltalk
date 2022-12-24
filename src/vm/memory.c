@@ -54,9 +54,11 @@ static struct object *oldBase, *oldTop;
 */
 struct object *rootStack[ROOTSTACKLIMIT];
 int rootTop = 0;
-#define STATICROOTLIMIT (200)
-static struct object **staticRoots[STATICROOTLIMIT];
-static int staticRootTop = 0;
+
+
+// #define STATICROOTLIMIT (200)
+struct object **staticRoots[STATICROOTLIMIT];
+int staticRootTop = 0;
 
 
 
@@ -340,22 +342,22 @@ struct object *gcollect(int sz)
 */
 
 
-/*
-    if definition is not in-lined, here  is what it should be
-*/
-#if !defined(gcalloc) && !defined(BOOTSTRAP)
-struct object *gcalloc(int sz)
-{
-    struct object *result;
+// /*
+//     if definition is not in-lined, here  is what it should be
+// */
+// #if !defined(gcalloc) && !defined(BOOTSTRAP)
+// struct object *gcalloc(int sz)
+// {
+//     struct object *result;
 
-    memoryPointer = WORDSDOWN(memoryPointer, sz + 2);
-    if (memoryPointer < memoryBase) {
-        return gcollect(sz);
-    }
-    SET_SIZE(memoryPointer, sz);
-    return(memoryPointer);
-}
-#endif
+//     memoryPointer = WORDSDOWN(memoryPointer, sz + 2);
+//     if (memoryPointer < memoryBase) {
+//         return gcollect(sz);
+//     }
+//     SET_SIZE(memoryPointer, sz);
+//     return(memoryPointer);
+// }
+// #endif
 
 struct object *gcialloc(int sz)
 {

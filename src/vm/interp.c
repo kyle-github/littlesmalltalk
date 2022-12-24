@@ -494,6 +494,9 @@ int execute(struct object *aProcess, int ticks)
             messageSelector = literals->data[low];
             arguments = stack->data[--stackTop];
 
+            /* testing gcalloc_protect() */
+            op = gcalloc_protect(42, messageSelector, arguments);
+
 findMethodFromSymbol:
             receiverClass = CLASS(arguments->data[receiverInArguments]);
             DBGS("SendMessage", receiverClass->data[nameInClass], messageSelector);
