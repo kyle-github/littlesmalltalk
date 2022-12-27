@@ -66,12 +66,11 @@ jobs:
     #   If the Autobuild fails above, remove it and uncomment the following three lines.
     #   modify them (or add more) to build your code if your project, please refer to the EXAMPLE below for guidance.
 
-    - name: Build
-      - run: |
-        echo "Build Little Smalltalk and images"
-        mkdir build
-        cd build
-        cmake -DCMAKE_BUILD_TYPE=Debug ..
+    - name: Build Little Smalltalk and images
+    - run: |
+      mkdir build
+      cd build
+      cmake -DCMAKE_BUILD_TYPE=Debug ..
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
