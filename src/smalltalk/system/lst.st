@@ -1158,12 +1158,12 @@ methodCommand: classCmd | name aClass text line |
     name <- self readLine asSymbol.
 
     aClass <- globals at: name ifAbsent: [
-        ^ self error: 'unknown class name in file-in: ' + name printString 
+        ^ self error: 'unknown class name in file-in: ' + name printString
     ].
 
     text <- ''.
-    [ line <- self readLine. line isNil ifTrue: [ ^ self error: 'unexpected end of input during fileIn' ]. line ~= '!' ] whileTrue: [ 
-          text <- text + line + Char newline asString 
+    [ line <- self readLine. line isNil ifTrue: [ ^ self error: 'unexpected end of input during fileIn' ]. line ~= '!' ] whileTrue: [
+          text <- text + line + Char newline asString
     ].
     classCmd
         ifTrue: [ (aClass addMethod: text) printNl ]
@@ -2615,7 +2615,7 @@ asString | size index result |
 !StringBuffer
 printString
     ^ (self asString)
-    
+
 
 
 !
@@ -3896,7 +3896,7 @@ text: aString instanceVars: anArray
 !Parser
 tokenIsArrow
     (token isKindOf: String) ifFalse: [ ^ false ].
-    ^ token = '<-'
+    ^ token = '<-' or: [token = ':=']
 
 
 !

@@ -1591,7 +1591,7 @@ int parseExpression(void)
 
     if (isIdentifierChar(*p)) {
         readIdentifier();
-        if ((*p == '<') && (*(p + 1) == '-')) {
+        if (((*p == '<') && (*(p + 1) == '-')) || ((*p == ':') && (*(p + 1) == '='))) {
             p++;
             p++;
             skipSpaces();

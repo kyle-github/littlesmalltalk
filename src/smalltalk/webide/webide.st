@@ -736,7 +736,7 @@ methodDefSource | nl outFile outBuf instMethods metaClass classMethods |
     outBuf addLast: (self name printString).
     outBuf addLast: ' "'.
     outBuf addLast: nl.
-    (classMethods notNil) ifTrue: [ 
+    (classMethods notNil) ifTrue: [
         classMethods binaryDo: [ :methName :method |
             outBuf addLast: '='.
             outBuf addLast: (self name printString).
@@ -753,7 +753,7 @@ methodDefSource | nl outFile outBuf instMethods metaClass classMethods |
     outBuf addLast: (self name printString).
     outBuf addLast: ' "'.
     outBuf addLast: nl.
-    (instMethods notNil) ifTrue: [ 
+    (instMethods notNil) ifTrue: [
         instMethods binaryDo: [ :methName :method |
             outBuf addLast: '!'.
             outBuf addLast: (self name printString).
@@ -1127,7 +1127,7 @@ attrAt: aKey ifAbsent: aBlock
 !DOMElement
 attrAt: aKey put: aVal
     attribs isNil ifTrue: [ attribs <- Dictionary new ].
-    
+
     attribs at: aKey put: aVal.
 
     ^ self
@@ -1149,8 +1149,8 @@ endTag: aStr
 !DOMElement
 renderOn: aStream | total |
     " handle opening tag. "
-    startTag notNil ifTrue: [ 
-        aStream write: '<'. 
+    startTag notNil ifTrue: [
+        aStream write: '<'.
         aStream write: startTag.
 
         attribs notNil ifTrue: [
@@ -1175,10 +1175,10 @@ renderOn: aStream | total |
         ].
     ].
 
-    endTag notNil ifTrue: [ 
+    endTag notNil ifTrue: [
         aStream write: '</'.
         aStream write: endTag.
-        aStream write: '>' 
+        aStream write: '>'
     ].
 
     sibling notNil ifTrue: [
@@ -1219,9 +1219,9 @@ size | total |
 
     ^ total
 
-   
-            
-            
+
+
+
 
 
 !
@@ -1366,7 +1366,7 @@ new | aForm |
 !
 " instance methods for DOMForm "
 !DOMForm
-action: anUrl 
+action: anUrl
     self attrAt: #action put: anUrl.
 
     ^ self
@@ -1438,10 +1438,10 @@ new | aPage head body |
     aPage addChild: head.
 
     body <- DOMBody new.
-    aPage addChild: body. 
+    aPage addChild: body.
 
-    self in: aPage at: ((self superclass size) + 1) put: head. 
-    self in: aPage at: ((self superclass size) + 2) put: body. 
+    self in: aPage at: ((self superclass size) + 1) put: head.
+    self in: aPage at: ((self superclass size) + 2) put: body.
 
     ^ aPage
 
@@ -1451,7 +1451,7 @@ new | aPage head body |
 !
 " instance methods for DOMPage "
 !DOMPage
-body 
+body
     ^ body
 
 
@@ -1884,12 +1884,12 @@ methodCommand: classCmd | name aClass text line |
     name <- self readLine asSymbol.
 
     aClass <- globals at: name ifAbsent: [
-        ^ self error: 'unknown class name in file-in: ' + name printString 
+        ^ self error: 'unknown class name in file-in: ' + name printString
     ].
 
     text <- ''.
-    [ line <- self readLine. line isNil ifTrue: [ ^ self error: 'unexpected end of input during fileIn' ]. line ~= '!' ] whileTrue: [ 
-          text <- text + line + Char newline asString 
+    [ line <- self readLine. line isNil ifTrue: [ ^ self error: 'unexpected end of input during fileIn' ]. line ~= '!' ] whileTrue: [
+          text <- text + line + Char newline asString
     ].
     classCmd
         ifTrue: [ (aClass addMethod: text) printNl ]
@@ -2479,7 +2479,7 @@ encodeAttrsOn: aString at: anIndex | i kStr vStr |
 
         vStr <- (v asString).
 
-        
+
         (k asString) do: [ :c |
              aString at: i put: c.
              i <- i + 1.
@@ -2560,7 +2560,7 @@ outputOn: aString at: anIndex
 
 !
 !HTMLTag
-size 
+size
     " subclasses need to implement this. "
     self subclassResponsibility
 
@@ -2585,7 +2585,7 @@ new | a |
     a <- self new: '' target: '' content: ''.
 
     ^ a
-    
+
 
 
 !
@@ -2595,7 +2595,7 @@ new: hStr content: cStr | a |
     a <- self new: hStr target: '' content: cStr.
 
     ^ a
-    
+
 
 
 !
@@ -2607,7 +2607,7 @@ new: hStr target: tStr content: cStr | a offset |
     " debugging "
     " 'Before HTMLAnchor new: ' print. hStr print.  "
     " ' target: ' print. tStr print.  "
-    " ' content: ' print. cStr printNl. " 
+    " ' content: ' print. cStr printNl. "
 
     " self in: a at: ((self superclass size) + 1) put: hStr.
     self in: a at: ((self superclass size) + 2) put: tStr.
@@ -2623,13 +2623,13 @@ new: hStr target: tStr content: cStr | a offset |
     " ' content: ' print. (a content notNil ifTrue: [ a content ] ifFalse: [ 'NIL' ]) printNl. "
 
     ^ a
-    
+
 
 
 !
 " instance methods for HTMLAnchor "
 !HTMLAnchor
-asHTMLOn: aBuf 
+asHTMLOn: aBuf
 
     aBuf addLast: '<a href="'.
     aBuf addLast: href.
@@ -2649,7 +2649,7 @@ asHTMLOn: aBuf
 
     aBuf addLast: '</a>'.
 
-   
+
 
 
 !
@@ -2684,10 +2684,10 @@ href: aUrlStr
 
 !
 !HTMLAnchor
-size | total | 
+size | total |
     total <- 0.
 
-    total <- total + ('<a href="' size) 
+    total <- total + ('<a href="' size)
                    + (href size)
                    + ('"' size).
 
@@ -2707,7 +2707,7 @@ size | total |
 
     ^ total
 
-   
+
 
 
 !
@@ -2730,8 +2730,8 @@ target: aStr
 =HTMLHead
 new | head offset |
     head <- super new.
-    
-    (self superclass isNil) 
+
+    (self superclass isNil)
         ifTrue: [ offset <- 0 ]
         ifFalse: [ offset <- (self superclass) size ].
 
@@ -2779,18 +2779,18 @@ content: aList
 
 !
 !HTMLHead
-size | total | 
+size | total |
     total <- 0.
 
     total <- total + ('<head>' size).
-    
+
     content do: [ :t | t notNil ifTrue: [total <- total + (t size)] ].
 
     total <- total + ('</head>' size).
 
     ^ total
 
-    
+
 
 
 !
@@ -2798,8 +2798,8 @@ size | total |
 =HTMLPage
 new | page offset |
     page <- super new.
-    
-    (self superclass isNil) 
+
+    (self superclass isNil)
         ifTrue: [ offset <- 0 ]
         ifFalse: [ offset <- (self superclass) size ].
 
@@ -2854,11 +2854,11 @@ head: aHead
 
 !
 !HTMLPage
-size | total | 
+size | total |
     total <- 0.
 
     total <- total + ('<html>' size).
-    
+
     total <- total + (head size).
     total <- total + (body size).
 
@@ -2866,7 +2866,7 @@ size | total |
 
     ^ total
 
-    
+
 
 
 !
@@ -2954,20 +2954,20 @@ class: aReq | errorPage page superLink methodTmpl variableTmpl cls |
             'nil'
         ]
     ].
-    page values at: #methods put: [ :c | 
-        (c methods) notNil ifTrue: [ 
+    page values at: #methods put: [ :c |
+        (c methods) notNil ifTrue: [
             ((c methods size) > 0) ifTrue: [
                 " return the methods as a Collection. "
                 methodTmpl renderObjs: (c methods collect: [ :m | m ])
             ] ifFalse: [ 'No instance methods' ]
-        ] ifFalse: [ 'No instance methods' ] 
+        ] ifFalse: [ 'No instance methods' ]
     ].
-    page values at: #variables put: [ :c | 
-        (c variables) notNil ifTrue: [ 
+    page values at: #variables put: [ :c |
+        (c variables) notNil ifTrue: [
             ((c variables size) > 0) ifTrue: [
                 variableTmpl renderObjs: (c variables)
             ] ifFalse: [ 'No instance variables' ]
-        ] ifFalse: [ 'No instance variables' ] 
+        ] ifFalse: [ 'No instance variables' ]
     ].
 
     " get the class, if possible. "
@@ -2977,10 +2977,10 @@ class: aReq | errorPage page superLink methodTmpl variableTmpl cls |
         cls isNil ifTrue: [
             errorPage values at: #error put: ((aReq at: #class) + ' not found!').
             ^ aReq response: (errorPage render: aReq).
-        ] 
+        ]
     ] ifFalse: [
         errorPage values at: #error put: 'No class passed!'.
-        
+
         ^ aReq response: (errorPage render: aReq).
     ].
 
@@ -3061,7 +3061,7 @@ compileMethodOn: aReq | outBuf classStr class methSrc action meth isMeta |
         outBuf addLast: '<B>No such class: '.
         outBuf addLast: classStr.
         outBuf addLast: '!</B></BODY></HTML>'.
-        ^ aReq response: outBuf 
+        ^ aReq response: outBuf
     ].
 
     " DEBUG "
@@ -3077,11 +3077,11 @@ compileMethodOn: aReq | outBuf classStr class methSrc action meth isMeta |
     " get the method source. "
     methSrc <- aReq at: #methsrc.
 
-    methSrc isNil ifTrue: [ 
+    methSrc isNil ifTrue: [
         " DEBUG "
         " Log log: ('#compileMethodOn: no source for method!'). "
         outBuf addLast: '<B>No method source!</B></BODY></HTML>'.
-        ^ aReq response: outBuf 
+        ^ aReq response: outBuf
     ].
 
     " DEBUG "
@@ -3158,7 +3158,7 @@ doIt: aReq	| page doItStr meth result outBuf txt doItDiv resultDiv |
     aReq response: (page asHTML).
 
 
-    
+
 
 
 !
@@ -3170,7 +3170,7 @@ editMethodOn: aReq | outBuf classStr class methStr method methodText isMeta |
 
     outBuf addLast: '<HTML><BODY bgcolor="#FFFFFF">'.
 
-    "debugging" 
+    "debugging"
     "(aReq args) binaryDo: [ :key :val | outBuf addLast: ((key printString) + ' = ' + (val printString) + '<br>') ]."
 
     " get the class name from the arguments. "
@@ -3188,10 +3188,10 @@ editMethodOn: aReq | outBuf classStr class methStr method methodText isMeta |
                  ifFalse: [ isMeta <- true. ].
 
     class <- globals at: (classStr asSymbol) ifAbsent: [ nil ].
-    class isNil ifTrue: [ 
+    class isNil ifTrue: [
         Log warn: ('#editMethodOn: No class ' + classStr + ' found!').
         outBuf addLast: '<B>No such class, ' + classStr + '!</B></BODY></HTML>'.
-        ^ aReq response: outBuf 
+        ^ aReq response: outBuf
     ].
 
     " if this is a meta class, then it won't be in the globals. "
@@ -3211,7 +3211,7 @@ editMethodOn: aReq | outBuf classStr class methStr method methodText isMeta |
         method isNil ifTrue: [
             Log warn: ('#editMethodOn: No method ' + methStr + ' found in class ' + classStr + '!').
             outBuf addLast: '<B>No such method, ' + methStr + ', in class ' + classStr + '!</B></BODY></HTML>'.
-            ^ aReq response: outBuf 
+            ^ aReq response: outBuf
         ] ifFalse: [
             Log detail: ('#editMethodOn: encoding method text as HTML.').
 
@@ -3263,14 +3263,14 @@ listClassesOn: aReq | outBuf objName thePage theBody theList theUrl a |
 
     thePage <- HTMLPage new.
     theBody <- HTMLBody new.
- 
+
     thePage body: theBody.
 
     globals do: [ :obj |
         (obj isKindOf: Class) ifTrue: [
             objName <- obj printString.
 
-            ((objName position: 'Meta') = 1) ifFalse: [ 
+            ((objName position: 'Meta') = 1) ifFalse: [
                 " debugging "
                 " ('listClassesOn: adding class ' + objName + ' to list of links.') printNl. "
 
@@ -3278,7 +3278,7 @@ listClassesOn: aReq | outBuf objName thePage theBody theList theUrl a |
 
                 theBody add: (HTMLAnchor new: theUrl target: 'method_list_frame' content: objName).
                 theBody add: (HTMLBreak new)
-            ]. 
+            ].
         ].
     ].
 
@@ -3418,7 +3418,7 @@ showClassOn: aReq | outBuf classStr class variables metaName metaClass classVars
         outBuf addLast: (name printString toUrl).
         outBuf addLast: '" target="edit_frame">'.
         outBuf addLast: (name printString encodeHTML).
-        outBuf addLast: '</A><br>' 
+        outBuf addLast: '</A><br>'
     ].
     outBuf addLast: '</td></tr>'.
 
@@ -3460,8 +3460,8 @@ showClassOn: aReq | outBuf classStr class variables metaName metaClass classVars
             outBuf addLast: (name printString toUrl).
             outBuf addLast: '" target="edit_frame">'.
             outBuf addLast: (name printString encodeHTML).
-            outBuf addLast: '</A><br>' 
-        ].   
+            outBuf addLast: '</A><br>'
+        ].
         outBuf addLast: '</td></tr>'.
 
         " add the link to create a new method. "
@@ -3488,11 +3488,11 @@ showClassOn: aReq | outBuf classStr class variables metaName metaClass classVars
             variables <- aReq at: #instvars.
             classVars <- aReq at: #classvars.
 
-            (variables isNil or: [ (variables printString size) = 0 ]) 
+            (variables isNil or: [ (variables printString size) = 0 ])
                 ifTrue: [ variables <- Array new: 0 ]
                 ifFalse: [ variables <- ((variables printString break: ' ') collect: [ :v | v asSymbol]) asArray].
 
-            (classVars isNil or: [ (classVars printString size) = 0 ]) 
+            (classVars isNil or: [ (classVars printString size) = 0 ])
                 ifTrue: [ classVars <- Array new: 0 ]
                 ifFalse: [ classVars <- ((classVars printString break: ' ') collect: [ :v | v asSymbol]) asArray].
 
@@ -3693,10 +3693,10 @@ startOn: aSock | dispatcher |
             at: '/stop'.
 
 
-    dispatcher register: [ :aReq :anEnv | self classes: aReq. nil ] 
+    dispatcher register: [ :aReq :anEnv | self classes: aReq. nil ]
             at: '/classes'.
 
-    dispatcher register: [ :aReq :anEnv | self class: aReq. nil ] 
+    dispatcher register: [ :aReq :anEnv | self class: aReq. nil ]
             at: '/class'.
 
 
@@ -3839,7 +3839,7 @@ args	| i pathArgField argsData keyValList key val argList|
         argList removeFirst.
 
         " skip key if it has no value "
-        (argList size) = 0 
+        (argList size) = 0
             ifTrue: [ val <- nil ]
             ifFalse: [ val <- argList first asString ].
 
@@ -3934,12 +3934,12 @@ rawData		| i termStringCR termStringNL doubleTermCR doubleTermNL tempData conten
     " ('tempData size == ' + ((tempData size) printString)) printNl."
     " 'position of double CR/LN == ' print. (tempData position: doubleTermCR) printString printNl. "
 
-    [ ((tempData position: doubleTermCR) isNil) and: [(tempData position: doubleTermNL) isNil] ] whileTrue: [ 
+    [ ((tempData position: doubleTermCR) isNil) and: [(tempData position: doubleTermNL) isNil] ] whileTrue: [
         " DEBUG "
         " 'Waiting for header separator.' printNl. "
         " 'about to call #asString on result of socket read while waiting for more data.' printNl. "
 
-        tempData <- tempData + (sock read asString) 
+        tempData <- tempData + (sock read asString)
     ].
 
     " OK, we have all the headers, what kind of request is it? "
@@ -3974,7 +3974,7 @@ rawData		| i termStringCR termStringNL doubleTermCR doubleTermNL tempData conten
         reqLength <- contentLength.
 
         " what kind of separator is used? "
-        sepUsesCR <- ((tempData position: doubleTermNL) isNil). 
+        sepUsesCR <- ((tempData position: doubleTermNL) isNil).
 
         " the total length is the length of the header plus separator plus body, -1 for zero start. "
         sepUsesCR ifTrue: [ contentLength <- contentLength + (tempData position: doubleTermCR ) + (doubleTermCR size) - 1 ]
@@ -3985,8 +3985,8 @@ rawData		| i termStringCR termStringNL doubleTermCR doubleTermNL tempData conten
         " DEBUG "
         " 'calling #asString on result of socket read while getting all POST data.' printNl. "
         [ (tempData size) < contentLength ] whileTrue: [tempData <- tempData + (sock read asString)].
-    ] ifFalse: [ 
-        reqLength <- 0 
+    ] ifFalse: [
+        reqLength <- 0
     ].
 
     " we have all the raw data. We've set reqAction, reqLength already, so set reqRawData "
@@ -4591,7 +4591,7 @@ at: value
 !
 !Collection
 at: value ifAbsent: exceptionBlock
-    self do: [ :element | 
+    self do: [ :element |
         ((element class) = (value class)) ifTrue: [
             (element = value) ifTrue: [ ^ element ].
         ].
@@ -4892,7 +4892,7 @@ hash | sz |
 !
 !Array
 includes: aValue
-    self do: [ :element | 
+    self do: [ :element |
         " only compare elements of the same type. "
         ((element class) = (aValue class)) ifTrue: [
             element = aValue ifTrue: [ ^ true ].
@@ -4995,7 +4995,7 @@ startsWith: prefix
 
     ^ true
 
-   
+
 
 
 !
@@ -5194,7 +5194,7 @@ break: separators  | wordStart wordEnd words word |
 
     wordStart <- 1.
     wordEnd <- 0.
-    
+
     (1 to: (self size)) do: [ :i |
          (separators includes: (self at: i)) ifTrue: [
               (wordEnd >= wordStart) ifTrue: [
@@ -5260,7 +5260,7 @@ doIt	| meth |
 
 !
 !String
-doIt: aReq	
+doIt: aReq
      " REMOVE "
     ^ nil
 
@@ -5318,10 +5318,10 @@ encodeHTML | transStr lt gt newSize targIndex |
 
 
     " transform the string into something that can be put into HTML. "
-    " self do: [ :c | 
+    " self do: [ :c |
         ( c = lt )
             ifTrue: [ c <- '<' ]
-            ifFalse: [ 
+            ifFalse: [
                 ( c = gt )
                      ifTrue: [ c <- '>' ]
             ].
@@ -5831,7 +5831,7 @@ asString | size index result |
 !StringBuffer
 printString
     ^ (self asString)
-    
+
 
 
 !
@@ -6600,8 +6600,8 @@ implementors | result classes literals |
 
     ^ result
 
-        
-    
+
+
 
 
 !
@@ -6630,8 +6630,8 @@ senders | result classes literals |
 
     ^ result
 
-        
-    
+
+
 
 
 !
@@ -6964,10 +6964,10 @@ nameNode: name
 
     " newer names shadow older ones; lookup in reverse to get newer ones first. "
     ((instNames size) to: 1 by: -1) do: [:i |
-        (name == (instNames at: i)) ifTrue: [ 
+        (name == (instNames at: i)) ifTrue: [
             " debug "
-            " ('Parser#nameNode found instance var ' + (name printString) + ' at offset ' + (i printString)) printNl. " 
-            ^ (InstNode at: lineNum) position: i 
+            " ('Parser#nameNode found instance var ' + (name printString) + ' at offset ' + (i printString)) printNl. "
+            ^ (InstNode at: lineNum) position: i
         ].
     ].
 
@@ -7302,8 +7302,7 @@ text: aString instanceVars: anArray
 !Parser
 tokenIsArrow
     (token isKindOf: String) ifFalse: [ ^ false ].
-    ^ token = '<-'
-
+    ^ token = '<-' or: [token = ':=']
 
 
 !
@@ -8000,7 +7999,7 @@ header: h
 
 !
 !StringTemplate
-parse: aStr 
+parse: aStr
     " search for {varName} in the string. "
     (aStr size > 0) ifTrue: [
         ( (aStr at: 1) = ${ ) ifTrue: [
@@ -8111,16 +8110,16 @@ renderObjs: aCollection | buf val |
     buf <- StringBuffer new.
 
     " write out header. "
-    header notNil ifTrue: [ 
+    header notNil ifTrue: [
         (header isKindOf: Block) ifTrue: [ buf write: (header value: aCollection) ]
                                 ifFalse: [ buf write: (header asString) ]
     ].
 
     " go through the list of inputs and render. "
-    aCollection do: [ :elem | buf write: (self render: elem) ]. 
+    aCollection do: [ :elem | buf write: (self render: elem) ].
 
     " write out footer. "
-    footer notNil ifTrue: [ 
+    footer notNil ifTrue: [
         (footer isKindOf: Block) ifTrue: [ buf write: (footer value: aCollection) ]
                              ifFalse: [ buf write: (footer asString) ]
     ].
@@ -8194,7 +8193,7 @@ reset
 !
 " instance methods for Transcript "
 !Transcript
-do: aBlock 
+do: aBlock
     history do: aBlock.
 
     ^ self
@@ -8204,7 +8203,7 @@ do: aBlock
 
 !
 !Transcript
-history 
+history
     ^ history
 
 
@@ -8303,10 +8302,10 @@ content
 evaluateContent: buf
 
     " content must be a Block, WWWElement or an Array "
-    ((content class) = Array) 
+    ((content class) = Array)
         ifTrue: [
             content do: [ :elem | (elem isNil) ifFalse: [elem value: buf ] ]
-        ] ifFalse: [ 
+        ] ifFalse: [
             (content isNil) ifFalse: [content value: buf ]
         ].
 
