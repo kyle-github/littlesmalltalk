@@ -3896,7 +3896,7 @@ text: aString instanceVars: anArray
 !Parser
 tokenIsArrow
     (token isKindOf: String) ifFalse: [ ^ false ].
-    ^ token = '<-'
+    ^ token = '<-' or: [token = ':=']
 
 
 !
