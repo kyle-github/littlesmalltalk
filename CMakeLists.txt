@@ -6,7 +6,7 @@ project(${PROJECT_NAME})
 
 set (VERSION_MAJOR 4)
 set (VERSION_MINOR 7)
-set (VERSION_PATCH 1)
+set (VERSION_PATCH 2)
 set (VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
 # make the version file.
