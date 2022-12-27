@@ -142,15 +142,15 @@ static char *p = NULL;
 static char tokenBuffer[MAX_TOKEN];
 
 /* The following are roots for the file out */
-struct object *nilObject;
-struct object *trueObject;
-struct object *falseObject;
+//struct object *nilObject;
+//struct object *trueObject;
+//struct object *falseObject;
 struct object *globalValues;
-struct object *SmallIntClass;
-struct object *ArrayClass;
-struct object *BlockClass;
-struct object *IntegerClass;
-struct object *SymbolClass;
+//struct object *SmallIntClass;
+//struct object *ArrayClass;
+//struct object *BlockClass;
+//struct object *IntegerClass;
+//struct object *SymbolClass;
 
 /* used in the Big Bang to set up other objects. */
 static struct object *ObjectClass;
@@ -215,7 +215,7 @@ int main(int argc, char **argv)
             info("Output file: \"%s\"\n", output_file);
         } else {
             image_source = argv[i];
-            info("Input file: \"%s\"\n", image_source);            
+            info("Input file: \"%s\"\n", image_source);
         }
     }
 
@@ -311,7 +311,7 @@ int main(int argc, char **argv)
 }
 
 
-void usage(void) 
+void usage(void)
 {
     printf(
         "Usage: bootstrap [-v] [-g] [-o outputfile] [inputfile]\n"
@@ -1052,10 +1052,10 @@ int lookupInstance(struct object *class, char *varName, int *low)
 {
     int offset = 0;
 
-    /* 
+    /*
      * Looks up the instance var name in the current class.  If not found, walk
      * up the class chain.  Once found, determine the offset due to the sizes
-     * of any parent classes and return the absolute index of the instance 
+     * of any parent classes and return the absolute index of the instance
      * variable.
      */
 
@@ -1082,7 +1082,7 @@ int lookupInstance(struct object *class, char *varName, int *low)
                     return *low;
                 }
             }
-        } 
+        }
 
     }
 
@@ -1093,7 +1093,7 @@ int lookupInstance(struct object *class, char *varName, int *low)
     return -1;
 
     // int size, i;
-    
+
     // /* first check superclasses */
     // struct object *parent = class->data[parentClassInClass];
     // if (parent && parent != nilObject) {
@@ -1103,7 +1103,7 @@ int lookupInstance(struct object *class, char *varName, int *low)
     // } else {			/* no superclass */
     //     *low = 0;
     // }
-    
+
     // /* Check our own list of variables */
     // struct object *var = class->data[variablesInClass];
     // if (var && var != nilObject) {
@@ -1111,7 +1111,7 @@ int lookupInstance(struct object *class, char *varName, int *low)
     // } else {
     //     size = 0;
     // }
-    
+
     // for (i = 0; i < size; i++) {
     //     if (symbolBareCmp((uint8_t *)varName, (int)strlen(varName), bytePtr(var->data[i]), SIZE(var->data[i])) == 0) {
 
@@ -1580,7 +1580,7 @@ int doAssignment(char *name)
     }
 
     error("unknown target of assignment");
-    
+
     /* error does not return. */
     return 0;
 }
@@ -2049,7 +2049,7 @@ int matchVarList(const char *line, size_t *end, char **varList)
 }
 
 
-/* 
+/*
  * parse lines like:
  * +SuperClass subclass: #NewClass variables: #( instVars ) classVariables: #( classVars )
  */
@@ -2153,7 +2153,7 @@ void ClassCommand(void)
     int match_count = 0;
 
 
-    /* 
+    /*
      * parse lines like:
      * +SuperClass subclass: #NewClass variables: #( instVars ) classVariables: #( classVars )
      */
@@ -2176,7 +2176,7 @@ void ClassCommand(void)
 
     metaClass = lookupGlobalName(metaclassName, 1);
     if(!metaClass) {
-        info("Creating metaclass %s.", metaclassName);    
+        info("Creating metaclass %s.", metaclassName);
         metaClass = newClass(metaclassName, 0);
         addGlobalName(metaclassName, metaClass);
     } else {
