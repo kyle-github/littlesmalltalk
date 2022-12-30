@@ -227,6 +227,20 @@ void find_initial_method(void)
 
     info("Finding initial method.");
 
+    info("Checking for macOS GUI.");
+    startupClass = lookupGlobal("MacGUI");
+    if(startupClass) {
+        initialMethod = dictLookup(startupClass->data[methodsInClass], "start");
+
+        if(!initialMethod) {
+            error("Unable to find method #start in WebIDE class!");
+        }
+
+        info("Found #start method in WebIDE class.");
+
+        return;
+    }
+
     info("Checking for web IDE.");
     startupClass = lookupGlobal("WebIDE");
     if(startupClass) {
