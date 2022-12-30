@@ -1153,7 +1153,13 @@ checkCache:
                 {
                     int failed;
 
-                    returnedValue = primitive(high, arguments, &failed);
+                    if(high >= 100 && high < 300) {
+                        returnedValue = primitive(high, arguments, &failed);
+                    } else
+                    if(high >= 300) {
+                        returnedValue = mac_primitive(high, arguments, &failed);
+                    }
+                    
                     if (failed) {
                         goto failPrimitive;
                     }

@@ -8,6 +8,8 @@
 #pragma once
 
 #include <stdint.h>
+#include "prim.h"
+#include "mac_prims.h"
 
 //extern int64_t cache_hit;
 //extern int64_t cache_miss;
